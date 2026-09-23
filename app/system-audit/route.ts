@@ -5,9 +5,29 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { auth } from '@/lib/auth';
+import { canAccessAdmin } from '@/lib/core-standards';
 import { createSalesJournalEntry, createExpenseJournalEntry, COA_ACCOUNTS } from '@/lib/journaling';
 
 export async function GET(request: NextRequest) {
+  if (process.env.SYSTEM_AUDIT_ENABLED !== 'true') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json(
+      { error: 'Unauthorized — not authenticated' },
+      { status: 401 }
+    );
+  }
+  if (!canAccessAdmin(session.user.role)) {
+    return NextResponse.json(
+      { error: 'Forbidden — admin access required' },
+      { status: 403 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const test = searchParams.get('test');
   
