@@ -340,7 +340,7 @@ CREATE TABLE activity_log (
 ## 🔧 MAINTENANCE RULES
 
 ### Schema Changes
-1. **Create Migration Script:** `scripts/migrations/` with version numbers
+1. **Create Migration Script:** `migrations/` with version numbers
 2. **Use ALTER TABLE:** For schema modifications, never recreate
 3. **Backup Data:** Always backup before major changes
 4. **Test Migrations:** Verify in staging before production
@@ -534,7 +534,7 @@ CREATE TABLE activity_log (
 ## 🔧 MAINTENANCE RULES
 
 ### Schema Changes
-1. **Create Migration Script:** `scripts/migrations/` with version numbers
+1. **Create Migration Script:** `migrations/` with version numbers
 2. **Use ALTER TABLE:** For schema modifications, never recreate
 3. **Backup Data:** Always backup before major changes
 4. **Test Migrations:** Verify in staging before production
