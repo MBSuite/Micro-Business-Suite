@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { runGoogleScript } from "@/lib/googleScriptRunner";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const TASKS = {
@@ -42,6 +42,8 @@ export async function POST(req: Request) {
 
     const results: Record<string, { ok: boolean; stderr: string }> = {};
     let anyFailed = false;
+
+    const { runGoogleScript } = await import("@/lib/googleScriptRunner");
 
     for (const name of TASKS[task] ?? TASKS.all) {
       const res = await runGoogleScript(name);

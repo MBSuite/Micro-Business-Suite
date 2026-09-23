@@ -1,8 +1,8 @@
 import cron from "node-cron";
-import { runGoogleScript } from "../lib/googleScriptRunner";
 
 export function registerMaintenance() {
   cron.schedule("0 2 * * *", async () => {
+    const { runGoogleScript } = await import("../lib/googleScriptRunner");
     const res = await runGoogleScript("auto-backup");
     if (res.ok) {
       console.log(`[CRON] auto-backup OK (${new Date().toISOString()})`);
@@ -12,6 +12,7 @@ export function registerMaintenance() {
   });
 
   cron.schedule("5 2 * * *", async () => {
+    const { runGoogleScript } = await import("../lib/googleScriptRunner");
     const res = await runGoogleScript("dashboard-sheet");
     if (res.ok) {
       console.log(`[CRON] dashboard-sheet OK (${new Date().toISOString()})`);
@@ -24,6 +25,7 @@ export function registerMaintenance() {
 }
 
 export async function runMaintenanceOnce() {
+  const { runGoogleScript } = await import("../lib/googleScriptRunner");
   const results = await Promise.all([
     runGoogleScript("auto-backup"),
     runGoogleScript("dashboard-sheet"),
