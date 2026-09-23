@@ -6,7 +6,7 @@ import { formatDateDisplay } from "@/lib/dateFormatter";
 import {
   ArrowLeft,
   CheckCircle2,
-  CreditCard,
+  AlertCircle,
   FileText,
   Plus,
   Receipt,
@@ -14,28 +14,49 @@ import {
   Users,
 } from "lucide-react";
 
+interface ReceiptRow {
+  id: number;
+  payment_no: string;
+  payment_date?: string | null;
+  customer_name?: string | null;
+  invoice_number?: string | null;
+  invoice_id?: number | null;
+  amount?: number | null;
+}
+
 export default function ReceiptsPage() {
-  const [receipts, setReceipts] = useState<any[]>([]);
+  const [receipts, setReceipts] = useState<ReceiptRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetchReceipts();
-  }, []);
-
-  const fetchReceipts = async () => {
-    try {
-      const res = await fetch("/api/payments");
-      if (res.ok) {
-        const data = await res.json();
-        setReceipts(data.payments || []);
+    let ignore = false;
+    async function loadReceipts() {
+      try {
+        const res = await fetch("/api/payments");
+        if (res.ok) {
+          const data = await res.json();
+          if (!ignore) {
+            setReceipts(data.payments || []);
+            setLoading(false);
+          }
+        } else {
+          if (!ignore) setLoading(false);
+        }
+      } catch (e) {
+        console.error("Fetch receipts error:", e);
+        if (!ignore) {
+          setError("ไม่สามารถโหลดข้อมูลใบเสร็จรับเงินได้ กรุณาลองใหม่อีกครั้ง");
+          setLoading(false);
+        }
       }
-    } catch (e) {
-      console.error("Fetch receipts error:", e);
-    } finally {
-      setLoading(false);
     }
-  };
+    loadReceipts();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   return (
     <main className="min-h-screen bg-[#f8f5ff] p-6 md:p-10">
@@ -74,6 +95,13 @@ export default function ReceiptsPage() {
             className="flex-1 bg-transparent text-sm font-medium outline-none placeholder:text-slate-400"
           />
         </div>
+
+        {error && (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center gap-3 text-rose-700 text-sm">
+            <AlertCircle size={20} className="shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
 
         {/* Receipts Table */}
         <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
