@@ -3,6 +3,10 @@ import { query } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { canAccessAdmin } from '@/lib/core-standards';
 
+export async function GET() {
+  return NextResponse.json({ error: "Not found" }, { status: 404 });
+}
+
 export async function POST() {
   try {
     if (process.env.MIGRATE_ENDPOINT_ENABLED !== 'true') {
