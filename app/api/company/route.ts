@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { auth } from "@/lib/auth";
 
 export async function GET() {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "Unauthorized — not authenticated" },
+        { status: 401 }
+      );
+    }
+
     const result = await query(
       "SELECT * FROM company_settings LIMIT 1"
     );

@@ -35,8 +35,9 @@ export async function proxy(req: NextRequest) {
   const isPublicPrefix = PUBLIC_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
+  const isApi = pathname.startsWith("/api/");
 
-  if (isPublicPath || isPublicPrefix) {
+  if (isPublicPath || isPublicPrefix || isApi) {
     return NextResponse.next();
   }
 
