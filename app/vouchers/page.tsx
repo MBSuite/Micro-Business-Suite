@@ -5,15 +5,13 @@ import {
   ScrollText,
   Plus,
   Printer,
-  CheckCircle2,
   Calendar,
   BookOpen,
   Search,
-  FileText,
-  Download,
   ChevronLeft,
   ChevronRight,
   Filter,
+  AlertCircle,
   X
 } from "lucide-react";
 import Link from "next/link";
@@ -49,6 +47,7 @@ interface MonthlySummary {
 export default function PaymentVouchersPage() {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -118,22 +117,32 @@ export default function PaymentVouchersPage() {
 
   // Fetch vouchers
   useEffect(() => {
-    fetchVouchers();
-  }, []);
-
-  const fetchVouchers = async () => {
-    try {
-      const res = await fetch('/api/vouchers');
-      if (res.ok) {
-        const data = await res.json();
-        setVouchers(data.vouchers || []);
+    let ignore = false;
+    async function loadVouchers() {
+      try {
+        const res = await fetch('/api/vouchers');
+        if (res.ok) {
+          const data = await res.json();
+          if (!ignore) {
+            setVouchers(data.vouchers || []);
+            setLoading(false);
+          }
+        } else {
+          if (!ignore) setLoading(false);
+        }
+      } catch (e) {
+        console.error('Failed to fetch vouchers', e);
+        if (!ignore) {
+          setError("ไม่สามารถโหลดข้อมูลใบสำคัญจ่ายได้ กรุณาลองใหม่อีกครั้ง");
+          setLoading(false);
+        }
       }
-    } catch (e) {
-      console.error('Failed to fetch vouchers');
-    } finally {
-      setLoading(false);
     }
-  };
+    loadVouchers();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   return (
     <main className="p-6 md:p-8 min-h-screen bg-[#f4f6f9]">
@@ -279,6 +288,13 @@ export default function PaymentVouchersPage() {
                 </button>
               )}
             </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-rose-50 border border-rose-200 rounded-lg p-4 flex items-center gap-3 text-rose-700 text-sm mb-6">
+            <AlertCircle size={20} className="shrink-0" />
+            <span>{error}</span>
           </div>
         )}
 

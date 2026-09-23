@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import axios from "axios";
 import { cn } from "@/lib/utils";
@@ -7,7 +7,6 @@ import { Bot, Sparkles, X, BrainCircuit, Zap, Send, ChevronDown, ChevronUp } fro
 
 export default function GlobalAiChat() {
   const pathname = usePathname();
-  const [isVisible, setIsVisible] = useState(true);
   const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [prompt, setPrompt] = useState("");
@@ -15,15 +14,8 @@ export default function GlobalAiChat() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    // Hide AI chatbox on quotations pages
-    if (pathname?.startsWith('/quotations')) {
-      setIsVisible(false);
-    } else {
-      setIsVisible(true);
-    }
-  }, [pathname]);
-
+  // Hide AI chatbox on quotations pages
+  const isVisible = !pathname?.startsWith("/quotations");
   if (!isVisible) return null;
 
   const submit = async (e: React.FormEvent) => {
@@ -37,8 +29,11 @@ export default function GlobalAiChat() {
       const res = await axios.post("/api/ai/accounting", { prompt });
       setAnswer(res.data.answer);
       setMinimized(false); 
-    } catch (err: any) {
-      setError(err.response?.data?.error || "เกิดข้อผิดพลาดในการเชื่อมต่อ");
+    } catch (err: unknown) {
+      const errorMsg = axios.isAxiosError(err) && err.response?.data?.error 
+        ? err.response.data.error 
+        : "เกิดข้อผิดพลาดในการเชื่อมต่อ";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

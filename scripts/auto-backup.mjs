@@ -1,13 +1,17 @@
 import fs from "node:fs";
 import zlib from "node:zlib";
+import crypto from "node:crypto";
 import path from "node:path";
 import { Readable } from "node:stream";
-import { dbPool, googleAuth, drive, root } from "./google-auth.mjs";
+import { dbPool, googleAuth, drive } from "./google-auth.mjs";
 
 const BACKUP_DIR = "Backup-Auto";
 const KEEP_DAYS = 30;
 const SKIP_TABLES = new Set(["users_backup_1773898881424"]);
 
+/**
+ * Dump all database tables with strict password hash redaction
+ */
 async function dumpDatabase(pool) {
   const raw = await pool.query(
     `SELECT table_name FROM information_schema.tables
@@ -16,18 +20,45 @@ async function dumpDatabase(pool) {
   const tables = {};
   for (const { table_name } of raw.rows) {
     if (SKIP_TABLES.has(table_name)) continue;
-    const { rows, rowCount } = await pool.query(`SELECT * FROM "${table_name}"`);
+    let { rows, rowCount } = await pool.query(`SELECT * FROM "${table_name}"`);
+
+    // CRITICAL: Redact password hash for safety
+    if (table_name === "users") {
+      rows = rows.map((u) => {
+        const copy = { ...u };
+        if ("password" in copy) {
+          copy.password = "[REDACTED]";
+        }
+        return copy;
+      });
+    }
+
     tables[table_name] = { type: "rows", rows, count: rowCount };
   }
+
   return {
     meta: {
       kind: "micro-business-suite-db-backup",
       created_at: new Date().toISOString(),
       source: "auto-backup.mjs",
+      passwords_redacted: true,
       table_count: Object.keys(tables).length,
     },
     tables,
   };
+}
+
+/**
+ * Optional encryption with AES-256-GCM using BACKUP_ENCRYPTION_KEY env
+ */
+function encryptBuffer(buffer, keyString) {
+  const key = crypto.createHash("sha256").update(keyString).digest();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+  const enc = Buffer.concat([cipher.update(buffer), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  // Header: 12 bytes IV + 16 bytes auth tag + cipher text
+  return Buffer.concat([iv, authTag, enc]);
 }
 
 async function ensureFolder(service, name) {
@@ -96,19 +127,31 @@ async function main() {
 
   const gz = zlib.gzipSync(Buffer.from(JSON.stringify(dump, null, 0)));
   const stamp = new Date().toISOString().slice(0, 10);
-  const name = `db-backup-${stamp}.json.gz`;
+  
+  const encryptionKey = process.env.BACKUP_ENCRYPTION_KEY;
+  let payloadBuffer = gz;
+  let name = `db-backup-${stamp}.json.gz`;
+  let mimeType = "application/gzip";
+
+  if (encryptionKey) {
+    payloadBuffer = encryptBuffer(gz, encryptionKey);
+    name = `db-backup-${stamp}.json.gz.enc`;
+    mimeType = "application/octet-stream";
+    console.log(`[SECURITY] Backup encrypted with AES-256-GCM using BACKUP_ENCRYPTION_KEY`);
+  } else {
+    console.log(`[SECURITY NOTE] BACKUP_ENCRYPTION_KEY not set. Archive uploaded compressed but unencrypted.`);
+  }
 
   const auth = await googleAuth();
   const service = await drive(auth);
   const folderId = await ensureFolder(service, BACKUP_DIR);
-  const uploaded = await upload(service, folderId, name, gz, "application/gzip");
+  const uploaded = await upload(service, folderId, name, payloadBuffer, mimeType);
   const removed = await cleanupOld(service, folderId);
 
-  const stats = JSON.parse(zlib.gunzipSync(gz).toString("utf8"));
   console.log(
-    `BACKUP OK ${stamp} | ${uploaded.replaced ? "replaced" : "new"} | rows=${stats.meta.table_count} tables`
+    `BACKUP OK ${stamp} | ${uploaded.replaced ? "replaced" : "new"} | tables=${dump.meta.table_count} (passwords redacted)`
   );
-  console.log(`file=${name} size=${Math.round(gz.length / 1024)} KB folder=${BACKUP_DIR}`);
+  console.log(`file=${name} size=${Math.round(payloadBuffer.length / 1024)} KB folder=${BACKUP_DIR}`);
   console.log(`cleanup: removed ${removed} old backups (> ${KEEP_DAYS} days)`);
 }
 

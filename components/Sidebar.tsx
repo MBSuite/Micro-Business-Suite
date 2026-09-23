@@ -17,7 +17,6 @@ import {
   Menu,
   ShieldCheck,
   UserCog,
-  Repeat,
   BookOpen,
   ShoppingCart,
   Wallet,
@@ -25,12 +24,9 @@ import {
   Banknote,
   Library,
   X,
-  User,
   Zap,
-  FileBadge,
   PieChart,
   Database,
-  Users2,
   Briefcase,
   Bell,
   AlertOctagon
@@ -75,15 +71,18 @@ export default function Sidebar({
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
+
+  // Close mobile sidebar on route change during render
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
+    setIsMobileOpen(false);
+  }
+
   const normalizedRole = normalizeRole(userRole);
   const canAccessAdminModule = canAccessAdmin(normalizedRole);
   const [enabledModules, setEnabledModules] = useState<AppModule[]>(getEnabledModules());
   const [alertCount, setAlertCount] = useState(0);
-
-  // Close mobile sidebar on route change
-  useEffect(() => {
-    setIsMobileOpen(false);
-  }, [pathname]);
 
   // Fetch AI auditor alert count
   useEffect(() => {

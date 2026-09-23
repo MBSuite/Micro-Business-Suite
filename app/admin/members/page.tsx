@@ -1,20 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import { UserCog, Plus, Mail, Shield, Trash2, Edit, Users, X, CheckCircle2 } from "lucide-react";
+import { UserCog, Plus, Mail, Shield, Trash2, Edit, Users, X, CheckCircle2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/ToastProvider";
 
+const emptySubscribe = () => () => {};
+function useIsClient() {
+  return useSyncExternalStore(emptySubscribe, () => true, () => false);
+}
+
 // Modal Portal Component - safely renders to body
 function ModalPortal({ children, isOpen }: { children: React.ReactNode; isOpen: boolean }) {
-  const [mounted, setMounted] = useState(false);
-  
-  // Mount once on client
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
+  const mounted = useIsClient();
   
   // Handle body scroll lock
   useEffect(() => {
@@ -57,17 +56,10 @@ export default function MembersPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [userGroups, setUserGroups] = useState<number[]>([]);
-
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchUsers();
-    fetchGroups();
-  }, []);
-
-  const fetchUsers = async () => {
+  const refreshUsers = async () => {
     try {
-      setError(null);
       const response = await fetch("/api/users");
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -75,29 +67,59 @@ export default function MembersPage() {
       }
       const data = await response.json();
       setUsers(data.users || []);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      setError(error instanceof Error ? error.message : "Failed to fetch users");
-      setUsers([
-        { id: 1, name: "Administrator", email: "admin@your-company.com", role: "superadmin", status: "Active" },
-        { id: 2, name: "Urasaya Pruksanusak", email: "urasayap@gmail.com", role: "admin", status: "Active" },
-        { id: 3, name: "New Member", email: "pending@example.com", role: "user", status: "Pending" },
-      ]);
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.error("Error refreshing users:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch users");
+      setUsers([]);
     }
   };
 
-  const fetchGroups = async () => {
-    try {
-      const response = await fetch("/api/groups");
-      if (!response.ok) throw new Error("Failed to fetch groups");
-      const data = await response.json();
-      setGroups(data.groups || []);
-    } catch (error) {
-      console.error("Error fetching groups:", error);
+  useEffect(() => {
+    let ignore = false;
+    async function loadData() {
+      try {
+        const [usersRes, groupsRes] = await Promise.all([
+          fetch("/api/users"),
+          fetch("/api/groups"),
+        ]);
+
+        let fetchedUsers: User[] = [];
+        let fetchedGroups: Group[] = [];
+        let fetchError: string | null = null;
+
+        if (usersRes.ok) {
+          const uData = await usersRes.json();
+          fetchedUsers = uData.users || [];
+        } else {
+          const errorData = await usersRes.json().catch(() => ({}));
+          fetchError = errorData.details || errorData.error || `HTTP ${usersRes.status}`;
+        }
+
+        if (groupsRes.ok) {
+          const gData = await groupsRes.json();
+          fetchedGroups = gData.groups || [];
+        }
+
+        if (!ignore) {
+          setUsers(fetchedUsers);
+          setGroups(fetchedGroups);
+          setError(fetchError);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (!ignore) {
+          console.error("Error loading members page data:", err);
+          setError(err instanceof Error ? err.message : "Failed to fetch users");
+          setLoading(false);
+        }
+      }
     }
-  };
+
+    loadData();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const fetchUserGroups = async (userId: number) => {
     try {
@@ -139,7 +161,7 @@ export default function MembersPage() {
 
       showToast("อัปเดตกลุ่มสำเร็จ", "success");
       setIsGroupModalOpen(false);
-      fetchUsers();
+      refreshUsers();
     } catch (error) {
       console.error("Error saving groups:", error);
       showToast("ไม่สามารถอัปเดตกลุ่มได้", "error");
@@ -186,6 +208,13 @@ export default function MembersPage() {
             </Link>
           </div>
         </div>
+
+        {error && (
+          <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-3 text-rose-700 text-sm">
+            <AlertCircle size={20} className="shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
 
         {/* Member Table Card */}
         <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">

@@ -38,7 +38,7 @@ export async function checkAndInitUsersTable() {
         WHERE table_name = 'users';
       `);
       
-      const columns = colRes.rows.map((r: any) => r.column_name.toLowerCase());
+      const columns = (colRes.rows as { column_name: string }[]).map((r) => r.column_name.toLowerCase());
       console.log("📊 Existing columns:", columns);
       
       const missing = [];
@@ -58,25 +58,40 @@ export async function checkAndInitUsersTable() {
       
       return { success: true, message: "โครงสร้างตารางสมบูรณ์แล้ว" };
     }
-  } catch (error: any) {
-    console.error("❌ DB Init Error:", error);
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : "DB Init Error";
+    console.error("❌ DB Init Error:", errorMsg);
+    return { success: false, error: errorMsg };
   }
 }
 
 export async function promoteUserAction(email: string) {
   try {
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    if (!normalizedEmail) {
+      return { success: false, error: "กรุณาระบุอีเมลที่ต้องการอัปเกรดสิทธิ์" };
+    }
+
     const res = await query(
-      "UPDATE users SET name = 'Admin', role = 'superadmin', status = 'Active' WHERE email = $1 RETURNING id, name, role, status",
-      [email]
+      `UPDATE users 
+       SET role = 'superadmin', 
+           status = 'Active', 
+           name = COALESCE(NULLIF(name, ''), 'Admin') 
+       WHERE LOWER(email) = $1 
+       RETURNING id, name, email, role, status`,
+      [normalizedEmail]
     );
 
     if (res.rows.length > 0) {
-      return { success: true, message: `เปลี่ยนชื่อเป็น Admin และใช้บทบาท superadmin เรียบร้อยแล้ว!` };
+      return { 
+        success: true, 
+        message: `อัปเกรดผู้ใช้ ${res.rows[0].email} เป็นบทบาท superadmin เรียบร้อยแล้ว!` 
+      };
     } else {
-      return { success: false, error: `ไม่พบอีเมล ${email} ในระบบ` };
+      return { success: false, error: `ไม่พบอีเมล ${normalizedEmail} ในระบบ` };
     }
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "เกิดข้อผิดพลาดในการดำเนินการ";
+    return { success: false, error: msg };
   }
 }
