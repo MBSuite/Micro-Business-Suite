@@ -7,9 +7,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { createExpenseJournalEntry } from '@/lib/journaling';
+import { auth } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized — not authenticated' },
+        { status: 401 }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     
@@ -30,7 +39,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
     const dataLines = lines.slice(1);
     
     let imported = 0;
@@ -92,9 +100,9 @@ export async function POST(request: NextRequest) {
         );
 
         imported++;
-      } catch (error: any) {
+      } catch (error) {
         errors++;
-        errorDetails.push(`Line ${i + 2}: ${error.message}`);
+        errorDetails.push(`Line ${i + 2}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -106,9 +114,9 @@ export async function POST(request: NextRequest) {
       total: dataLines.length
     });
 
-  } catch (error: any) {
+  } catch (error) {
     return NextResponse.json(
-      { error: error.message },
+      { error: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

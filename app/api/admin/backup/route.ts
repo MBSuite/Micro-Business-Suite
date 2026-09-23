@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { canAccessAdmin } from "@/lib/core-standards";
 
 export const dynamic = 'force-dynamic';
 
@@ -25,9 +26,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // 2. Verify user has ADMIN role
-    const userRole = session.user.role?.toUpperCase();
-    if (userRole !== "ADMIN") {
+    // 2. Verify user has admin access (ADMIN or SUPERADMIN)
+    if (!canAccessAdmin(session.user.role)) {
       console.warn(`[AUDIT] Unauthorized backup access attempt - user ${session.user.email} (role: ${session.user.role}) denied`);
       return NextResponse.json(
         { error: "Forbidden — admin access required" },
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
       'document_patterns'
     ];
 
-    const backupData: Record<string, any[]> = {};
+    const backupData: Record<string, Array<Record<string, unknown>>> = {};
 
     for (const table of tables) {
       try {
@@ -115,10 +115,10 @@ export async function GET(req: NextRequest) {
       });
     }
 
-  } catch (error: any) {
+  } catch (error) {
     console.error(`[ERROR] Backup operation failed:`, error);
     return NextResponse.json(
-      { error: error.message },
+      { error: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

@@ -1,5 +1,6 @@
 import { query } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { canAccessAdmin } from "@/lib/core-standards";
 import { NextResponse } from "next/server";
 
 /**
@@ -22,9 +23,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Verify user has ADMIN role
-    const userRole = session.user.role?.toUpperCase();
-    if (userRole !== "ADMIN") {
+    // 2. Verify user has admin access (ADMIN or SUPERADMIN)
+    if (!canAccessAdmin(session.user.role)) {
       return NextResponse.json(
         { success: false, error: "Forbidden — admin access required" },
         { status: 403 }
@@ -53,9 +53,9 @@ export async function POST(req: Request) {
     await query("DELETE FROM journal_entries WHERE reference_no LIKE 'INV%' OR reference_no LIKE 'QT%'");
 
     // 6. Reset sequences
-    try { await query('ALTER SEQUENCE quotations_id_seq RESTART WITH 1'); } catch (_) { }
-    try { await query('ALTER SEQUENCE invoices_id_seq RESTART WITH 1'); } catch (_) { }
-    try { await query('ALTER SEQUENCE quotation_items_id_seq RESTART WITH 1'); } catch (_) { }
+    try { await query('ALTER SEQUENCE quotations_id_seq RESTART WITH 1'); } catch { }
+    try { await query('ALTER SEQUENCE invoices_id_seq RESTART WITH 1'); } catch { }
+    try { await query('ALTER SEQUENCE quotation_items_id_seq RESTART WITH 1'); } catch { }
 
     console.log(`[AUDIT] Admin reset_billing completed for user: ${session.user.email}`);
 
@@ -65,10 +65,10 @@ export async function POST(req: Request) {
       cleared: ["quotations", "quotation_items", "invoices", "journal_entries (INV/QT)"],
       nextDocNumbers: { invoice: "INV26-001", quotation: "QT26-001" }
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[ERROR] reset_billing failed:", err);
     return NextResponse.json(
-      { success: false, error: err.message },
+      { success: false, error: err instanceof Error ? err.message : String(err) },
       { status: 500 }
     );
   }

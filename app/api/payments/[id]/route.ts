@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { auth } from "@/lib/auth";
+
+async function isAuthenticated(): Promise<boolean> {
+  const session = await auth();
+  return Boolean(session?.user);
+}
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!(await isAuthenticated())) {
+      return NextResponse.json(
+        { error: "Unauthorized — not authenticated" },
+        { status: 401 }
+      );
+    }
+
     const { id } = await params;
     
     const result = await query(
@@ -42,6 +55,13 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!(await isAuthenticated())) {
+      return NextResponse.json(
+        { error: "Unauthorized — not authenticated" },
+        { status: 401 }
+      );
+    }
+
     const { id } = await params;
     const body = await req.json();
     
@@ -71,6 +91,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!(await isAuthenticated())) {
+      return NextResponse.json(
+        { error: "Unauthorized — not authenticated" },
+        { status: 401 }
+      );
+    }
+
     const { id } = await params;
     
     // ลบ payment และ journal entries ที่เกี่ยวข้อง

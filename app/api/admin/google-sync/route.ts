@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { canAccessAdmin } from "@/lib/core-standards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,8 +28,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized — not authenticated" }, { status: 401 });
     }
 
-    const userRole = session.user.role?.toUpperCase();
-    if (userRole !== "ADMIN") {
+    if (!canAccessAdmin(session.user.role)) {
       console.warn(`[AUDIT] google-sync denied - user ${session.user.email} (role: ${session.user.role})`);
       return NextResponse.json({ error: "Forbidden — admin access required" }, { status: 403 });
     }

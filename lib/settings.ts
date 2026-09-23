@@ -19,6 +19,27 @@ export interface CompanySettings {
   updated_at?: string;
 }
 
+const SETTINGS_FIELDS = [
+  'company_name',
+  'tax_id',
+  'address',
+  'logo_url',
+  'phone',
+  'email',
+  'website'
+] as const;
+
+function sanitizeSettings(settings: Record<string, unknown>): Partial<CompanySettings> {
+  const out: Partial<CompanySettings> = {};
+  for (const key of SETTINGS_FIELDS) {
+    const value = settings[key];
+    if (typeof value === 'string') {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
 // Initialize company settings table
 export async function ensureCompanySettingsTable() {
   await query(`
@@ -50,45 +71,49 @@ export async function ensureCompanySettingsTable() {
 export async function getCompanySettings(): Promise<{ success: boolean; data?: CompanySettings; error?: string }> {
   try {
     await ensureCompanySettingsTable();
-    const { rows } = await query('SELECT * FROM company_settings ORDER BY id DESC LIMIT 1');
+    const { rows } = await query(
+      `SELECT company_name, tax_id, address, logo_url, phone, email, website, created_at, updated_at
+       FROM company_settings ORDER BY id DESC LIMIT 1`
+    );
     
     return {
       success: true,
       data: rows[0] as CompanySettings
     };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     };
   }
 }
 
-// Update company settings
-export async function updateCompanySettings(settings: Partial<CompanySettings>): Promise<{ success: boolean; error?: string }> {
+// Update company settings (whitelisted fields only — never build SQL from client keys)
+export async function updateCompanySettings(settings: Record<string, unknown>): Promise<{ success: boolean; data?: Partial<CompanySettings>; error?: string }> {
   try {
     await ensureCompanySettingsTable();
-    
-    const fields = Object.keys(settings).filter(key => key !== 'id');
-    const values = Object.values(settings);
-    
+
+    const sanitized = sanitizeSettings(settings);
+    const fields = Object.keys(sanitized);
+    const values = Object.values(sanitized);
+
     if (fields.length === 0) {
-      return { success: true };
+      return { success: true, data: {} };
     }
 
     const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
-    
+
     await query(`
       UPDATE company_settings 
       SET ${setClause}, updated_at = CURRENT_TIMESTAMP
       WHERE id = (SELECT id FROM company_settings ORDER BY id DESC LIMIT 1)
-    `, [...values, new Date().toISOString()]);
-    
-    return { success: true };
-  } catch (error: any) {
+    `, values);
+
+    return { success: true, data: sanitized };
+  } catch (error) {
     return {
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     };
   }
 }

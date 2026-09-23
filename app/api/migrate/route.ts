@@ -1,8 +1,28 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { auth } from '@/lib/auth';
+import { canAccessAdmin } from '@/lib/core-standards';
 
 export async function POST() {
   try {
+    if (process.env.MIGRATE_ENDPOINT_ENABLED !== 'true') {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized — not authenticated' },
+        { status: 401 }
+      );
+    }
+    if (!canAccessAdmin(session.user.role)) {
+      return NextResponse.json(
+        { error: 'Forbidden — admin access required' },
+        { status: 403 }
+      );
+    }
+
     console.log('Running migration to add recurring columns to quotations table...');
     
     // First check if table exists
@@ -21,16 +41,16 @@ export async function POST() {
     try {
       await query(`ALTER TABLE quotations ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE`);
       console.log('✅ Added is_recurring column');
-    } catch (err: any) {
-      console.log('⚠️  is_recurring column:', err.message);
+    } catch (err) {
+      console.log('⚠️  is_recurring column:', err instanceof Error ? err.message : String(err));
     }
     
     // Add recurring_interval column  
     try {
       await query(`ALTER TABLE quotations ADD COLUMN IF NOT EXISTS recurring_interval VARCHAR(20) DEFAULT 'none'`);
       console.log('✅ Added recurring_interval column');
-    } catch (err: any) {
-      console.log('⚠️  recurring_interval column:', err.message);
+    } catch (err) {
+      console.log('⚠️  recurring_interval column:', err instanceof Error ? err.message : String(err));
     }
     
     // Verify the columns were added
@@ -44,11 +64,11 @@ export async function POST() {
       columns: result.rows 
     });
     
-  } catch (error: any) {
-    console.error('❌ Migration failed:', error.message);
+  } catch (error) {
+    console.error('❌ Migration failed:', error);
     return NextResponse.json({ 
       error: 'Migration failed', 
-      details: error.message 
+      details: error instanceof Error ? error.message : String(error) 
     }, { status: 500 });
   }
 }
