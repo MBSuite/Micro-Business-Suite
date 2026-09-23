@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { auth } from "@/lib/auth";
+import { auth, getUserCompanyId } from "@/lib/auth";
 
 async function isAuthenticated(): Promise<boolean> {
   const session = await auth();
@@ -20,6 +20,8 @@ export async function GET(
     }
 
     const { id } = await params;
+    const session = await auth();
+    const companyId = await getUserCompanyId(session?.user?.id);
     
     const result = await query(
       `SELECT p.*, 
@@ -30,13 +32,12 @@ export async function GET(
               i.net_amount as invoice_net_amount,
               i.vat_amount as invoice_vat_amount,
               i.total_amount as invoice_total_amount,
-              i.wht_amount as invoice_wht_amount,
-              i.net_after_wht as invoice_net_after_wht
+              COALESCE(p.wht_amount, 0) as invoice_wht_amount
        FROM payments p
        LEFT JOIN invoices i ON p.invoice_id = i.id
        LEFT JOIN contacts c ON i.contact_id = c.id
-       WHERE p.id = $1`,
-      [id]
+       WHERE p.id = $1 AND p.company_id = $2`,
+      [id, companyId]
     );
     
     if (result.rows.length === 0) {
@@ -64,19 +65,28 @@ export async function PUT(
 
     const { id } = await params;
     const body = await req.json();
+    const session = await auth();
+    const companyId = await getUserCompanyId(session?.user?.id);
     
     const result = await query(
       `UPDATE payments 
        SET payment_method = $1, 
            notes = $2,
            updated_at = NOW()
-       WHERE id = $3 
+       WHERE id = $3 AND company_id = $4
        RETURNING *`,
-      [body.payment_method, body.notes, id]
+      [body.payment_method, body.notes, id, companyId]
     );
     
     if (result.rows.length === 0) {
-      return NextResponse.json({ error: "Payment not found" }, { status: 404 });
+      const exists = await query(`SELECT 1 FROM payments WHERE id = $1`, [id]);
+      if (exists.rows.length === 0) {
+        return NextResponse.json({ error: "Payment not found" }, { status: 404 });
+      }
+      return NextResponse.json(
+        { error: "Forbidden — payment belongs to another company" },
+        { status: 403 }
+      );
     }
     
     return NextResponse.json({ success: true, payment: result.rows[0] });
@@ -100,6 +110,20 @@ export async function DELETE(
 
     const { id } = await params;
     
+    const session = await auth();
+    const companyId = await getUserCompanyId(session?.user?.id);
+
+    const ownerCheck = await query(`SELECT company_id FROM payments WHERE id = $1`, [id]);
+    if (ownerCheck.rows.length === 0) {
+      return NextResponse.json({ error: "Payment not found" }, { status: 404 });
+    }
+    if (Number(ownerCheck.rows[0].company_id) !== companyId) {
+      return NextResponse.json(
+        { error: "Forbidden — payment belongs to another company" },
+        { status: 403 }
+      );
+    }
+
     // ลบ payment และ journal entries ที่เกี่ยวข้อง
     await query("BEGIN");
     

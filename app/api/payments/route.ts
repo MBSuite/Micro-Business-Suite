@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { auth } from "@/lib/auth";
+import { auth, getUserCompanyId } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,6 +11,8 @@ export async function GET(req: NextRequest) {
         { status: 401 }
       );
     }
+
+    const companyId = await getUserCompanyId(session.user.id);
 
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
@@ -31,6 +33,9 @@ export async function GET(req: NextRequest) {
       q += ` AND (p.payment_no ILIKE $${paramIndex} OR c.name ILIKE $${paramIndex + 1})`;
       paramIndex += 2;
     }
+
+    params.push(String(companyId));
+    q += ` AND p.company_id = $${paramIndex}`;
     
     q += ` ORDER BY p.payment_date DESC`;
     
