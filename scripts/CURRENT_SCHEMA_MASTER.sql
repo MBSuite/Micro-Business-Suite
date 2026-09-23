@@ -2,6 +2,10 @@
 -- MICRO BUSINESS SUITE LATEST SCHEMA MASTER (APRIL 2026)
 -- Target Platform: Neon Database (PostgreSQL)
 -- Architecture Era: Era 2 (Modern Entity Linking)
+--
+-- ⚠️ SNAPSHOT — ที่มาแห่งความจริงของ schema คือ `migrations/`
+-- (โฟลเดอร์เดียว, เรียงตาม version) — ไฟล์นี้คือภาพรวม end-state
+-- สำหรับประกอบความเข้าใจเท่านั้น ไม่ใช่ runtime source
 -- =======================================================
 
 -- 1. SETTINGS & PATTERNS
@@ -59,6 +63,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     vat_amount DECIMAL(15,2) DEFAULT 0,
     status VARCHAR(20) DEFAULT 'sent', -- sent, paid, overdue
     quotation_id INTEGER REFERENCES quotations(id),
+    company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -86,7 +91,9 @@ CREATE TABLE IF NOT EXISTS payments (
     invoice_id INTEGER REFERENCES invoices(id), -- Linked to Sales
     amount DECIMAL(15,2) NOT NULL,
     payment_method VARCHAR(100),
-    status VARCHAR(20) DEFAULT 'completed'
+    status VARCHAR(20) DEFAULT 'completed',
+    wht_amount DECIMAL(15,2) DEFAULT 0,
+    company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL
 );
 
 -- 7. VOUCHERS (Accounts Payable - Linking)
