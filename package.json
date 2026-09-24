@@ -12,7 +12,10 @@
     "tax:update": "tsx jobs/scheduleTaxUpdate.ts",
     "ai:audit": "tsx jobs/scheduleAiAudit.ts",
     "check:knowledge": "node scripts/verify-knowledge-sync.mjs",
-    "check:consistency": "node scripts/weekly-consistency-audit.mjs"
+    "check:consistency": "node scripts/weekly-consistency-audit.mjs",
+    "license:issue": "node scripts/issue-license.mjs",
+    "license:quick": "node scripts/issue-license-quick.mjs",
+    "test:integration": "node tests/integration/run.mjs"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.4",
