@@ -189,9 +189,27 @@ export async function isInGroup(userId: string | number, groupId: number): Promi
 }
 
 /**
+ * Get user role from the canonical users table (single source of truth).
+ * Returns null when the user does not exist so callers treat it as non-privileged.
+ */
+async function getUserRole(userId: string | number): Promise<string | null> {
+  try {
+    const result = await query(`SELECT role FROM users WHERE id = $1 LIMIT 1`, [userId]);
+    return result.rows[0]?.role ? String(result.rows[0].role) : null;
+  } catch (error) {
+    console.error("Get user role error:", error);
+    return null;
+  }
+}
+
+/**
  * Check if user is superadmin
+ *  - role = 'superadmin' on the users table (authoritative, seeded at bootstrap)
+ *  - OR member of the canonical superadmin group (id 1) — legacy/secondary source
  */
 export async function isSuperAdmin(userId: string | number): Promise<boolean> {
+  const role = await getUserRole(userId);
+  if (role === "superadmin") return true;
   return isInGroup(userId, 1); // canonical superadmin group ID
 }
 
@@ -199,7 +217,9 @@ export async function isSuperAdmin(userId: string | number): Promise<boolean> {
  * Check if user is admin (includes superadmin)
  */
 export async function isAdmin(userId: string | number): Promise<boolean> {
-  return isInGroup(userId, 1) || isInGroup(userId, 2); // superadmin or admin group
+  if (await isSuperAdmin(userId)) return true;
+  const role = await getUserRole(userId);
+  return role === "admin" || isInGroup(userId, 2); // superadmin or admin group
 }
 
 /**
