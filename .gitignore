@@ -67,6 +67,9 @@ next
 psql
 rmdir
 
+# Temporary admin credentials written by bootstrap scripts (never commit)
+.secure/
+
 .env*
 !.env.example
 next-env.d.ts
