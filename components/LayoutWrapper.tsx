@@ -3,6 +3,7 @@
 
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import TrialBanner from "@/components/TrialBanner";
 import { cn } from "@/lib/utils";
 
 interface LayoutWrapperProps {
@@ -38,6 +39,8 @@ export default function LayoutWrapper({
       
       {/* Main Content Area - Full height and flex to fill remaining space */}
       <div className="flex-1 flex flex-col overflow-x-hidden relative">
+        {/* Trial status banner (เฉพาะ template/ลูกค้า) */}
+        {showSidebar && <TrialBanner />}
         {/* Subtle Gradient Overlay */}
         <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-violet-50/50 to-transparent pointer-events-none -z-10"></div>
         

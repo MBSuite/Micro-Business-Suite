@@ -3,6 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { query } from "@/lib/db";
 import { createExpenseJournalEntry } from "@/lib/journaling";
+import { auth } from "@/lib/auth";
+import { assertCompanyQuota } from "@/lib/company-gate";
+
+async function quotaOrError(): Promise<{ ok: boolean; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
+  const q = await assertCompanyQuota(session.user.id);
+  return q.ok ? { ok: true } : { ok: false, error: q.error };
+}
 
 async function deleteExpenseJournalEntries(expenseId: number) {
   const journalReference = `EXP-${expenseId}`;
@@ -149,6 +158,9 @@ export async function createExpense(data: {
   original_amount?: number;
   exchange_rate?: number;
 }) {
+  const gate = await quotaOrError();
+  if (!gate.ok) return { success: false, error: gate.error };
+
   try {
     await ensureExpensesTable();
     

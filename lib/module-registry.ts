@@ -10,6 +10,7 @@ export type AppModule = {
     | "admin";
   route?: string;
   requiresAdmin?: boolean;
+  superadminOnly?: boolean;
   enabledByDefault?: boolean;
   description?: string;
 };
@@ -42,6 +43,7 @@ export const MODULE_REGISTRY: AppModule[] = [
   { id: "groups", label: "จัดการกลุ่ม/สิทธิ์", icon: "shieldCheck", category: "admin", route: "/admin/groups", requiresAdmin: true, enabledByDefault: true },
   { id: "modules_control", label: "โมดูล/ตั้งค่า", icon: "settings", category: "admin", route: "/admin/modules", requiresAdmin: true, enabledByDefault: true },
   { id: "backup", label: "Database Backup", icon: "database", category: "admin", route: "/admin/backup", requiresAdmin: true, enabledByDefault: true },
+  { id: "customer_console", label: "ลูกค้า & Subscription", icon: "building2", category: "admin", route: "/admin/customers", requiresAdmin: true, superadminOnly: true, enabledByDefault: true, description: "Customer & Subscription Console — เฉพาะ superadmin" },
 ];
 
 export const MODULE_CATEGORIES: Array<{ id: AppModule["category"]; label: string }> = [

@@ -2,6 +2,8 @@
 
 import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/lib/auth";
+import { assertCompanyQuota } from "@/lib/company-gate";
 
 export async function getQuotation(id: number | string) {
   try {
@@ -47,6 +49,11 @@ export async function getNextQuotationNumber() {
 }
 
 export async function createQuotation(data: any) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
+  const quota = await assertCompanyQuota(session.user.id);
+  if (!quota.ok) return { success: false, error: quota.error };
+
   const pool = (await import("@/lib/db")).default;
   const client = await pool.connect();
   try {
@@ -85,6 +92,9 @@ export async function createQuotation(data: any) {
 }
 
 export async function updateQuotation(id: number | string, data: any) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
+
   const pool = (await import("@/lib/db")).default;
   const client = await pool.connect();
   try {
@@ -114,6 +124,9 @@ export async function updateQuotation(id: number | string, data: any) {
 }
 
 export async function deleteQuotation(id: number | string) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
+
   try {
     await query(`DELETE FROM quotation_items WHERE quotation_id = $1`, [id]);
     await query(`DELETE FROM quotations WHERE id = $1`, [id]);
@@ -125,6 +138,9 @@ export async function deleteQuotation(id: number | string) {
 }
 
 export async function updateQuotationStatus(id: number | string, status: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
+
   try {
     await query(`UPDATE quotations SET status = $1 WHERE id = $2`, [status, id]);
     revalidatePath("/quotations");

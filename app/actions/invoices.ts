@@ -3,6 +3,8 @@
 import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { createSalesJournalEntry } from "@/lib/journaling";
+import { auth, getUserCompanyId } from "@/lib/auth";
+import { assertCompanyQuota } from "@/lib/company-gate";
 
 export async function getCompanySettings() {
   try {
@@ -97,13 +99,19 @@ async function assertStableInvoiceJournal(
 }
 
 export async function createInvoice(data: any) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
+  const companyId = await getUserCompanyId(session.user.id);
+  const quota = await assertCompanyQuota(session.user.id);
+  if (!quota.ok) return { success: false, error: quota.error };
+
   const pool = (await import("@/lib/db")).default;
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
     const invRes = await client.query(
-      `INSERT INTO invoices (invoice_number, contact_id, net_amount, vat_amount, status, due_date, created_at, issue_date, quotation_id) 
-       VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7, $8) RETURNING id`,
+      `INSERT INTO invoices (invoice_number, contact_id, net_amount, vat_amount, status, due_date, created_at, issue_date, quotation_id, company_id) 
+       VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7, $8, $9) RETURNING id`,
       [
         data.invoice_number,
         data.contact_id,
@@ -113,6 +121,7 @@ export async function createInvoice(data: any) {
         data.due_date,
         data.date || new Date().toISOString().split("T")[0],
         data.quotation_id || null,
+        companyId,
       ]
     );
     const invoiceId = invRes.rows[0].id;
@@ -177,10 +186,19 @@ export async function createInvoice(data: any) {
 export async function createInvoiceRecord(data: any) { return createInvoice(data); }
 
 export async function updateInvoice(id: string | number, data: any) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
+  const companyId = await getUserCompanyId(session.user.id);
+
   const pool = (await import("@/lib/db")).default;
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    const own = await client.query("SELECT company_id FROM invoices WHERE id = $1", [id]);
+    if (own.rows.length === 0 || Number(own.rows[0]?.company_id ?? 0) !== companyId) {
+      await client.query("ROLLBACK");
+      return { success: false, error: "ไม่พบเอกสาร" };
+    }
     await client.query(
       `UPDATE invoices SET status=$1, contact_id=$2, net_amount=$3, vat_amount=$4, due_date=$5, updated_at=NOW()
        WHERE id=$6`,
@@ -232,12 +250,17 @@ export async function updateInvoice(id: string | number, data: any) {
 }
 
 export async function deleteInvoice(id: string | number) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
+  const companyId = await getUserCompanyId(session.user.id);
+
   const pool = (await import("@/lib/db")).default;
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const r = await client.query("SELECT invoice_number FROM invoices WHERE id = $1", [id]);
+    const r = await client.query("SELECT invoice_number, company_id FROM invoices WHERE id = $1", [id]);
     if (r.rows.length === 0) return { success: false, error: "Not found" };
+    if (Number(r.rows[0]?.company_id ?? 0) !== companyId) return { success: false, error: "Not found" };
     await assertModernJournalSchema(client);
     const invNum = r.rows[0].invoice_number;
     await client.query("DELETE FROM invoice_items WHERE invoice_id = $1", [id]);

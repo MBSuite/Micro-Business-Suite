@@ -3,8 +3,20 @@
 import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { createExpenseJournalEntry, createReceiptJournalEntry } from "@/lib/journaling";
+import { auth, getUserCompanyId } from "@/lib/auth";
+import { assertCompanyQuota } from "@/lib/company-gate";
+
+async function quotaOrError(): Promise<{ ok: boolean; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
+  const q = await assertCompanyQuota(session.user.id);
+  return q.ok ? { ok: true } : { ok: false, error: q.error };
+}
 
 export async function createPaymentVoucher(data: any) {
+  const gate = await quotaOrError();
+  if (!gate.ok) return { success: false, error: gate.error };
+
   const pool = (await import("@/lib/db")).default;
   const client = await pool.connect();
   try {
@@ -67,6 +79,12 @@ export async function createPaymentVoucher(data: any) {
 }
 
 export async function createPayment(data: any) {
+  const gate = await quotaOrError();
+  if (!gate.ok) return { success: false, error: gate.error };
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
+  const companyId = await getUserCompanyId(session.user.id);
+
   const pool = (await import("@/lib/db")).default;
   const client = await pool.connect();
   try {
@@ -100,9 +118,9 @@ export async function createPayment(data: any) {
     const res = await client.query(
       `INSERT INTO payments (
         payment_no, invoice_id, amount, payment_date, 
-        payment_method, status, notes, vat_amount, wht_amount
+        payment_method, status, notes, vat_amount, wht_amount, company_id
       ) 
-       VALUES ($1, $2, $3, $4, $5, 'completed', $6, $7, $8) RETURNING id`,
+       VALUES ($1, $2, $3, $4, $5, 'completed', $6, $7, $8, $9) RETURNING id`,
       [
         data.reference, 
         data.invoiceId || null, 
@@ -111,7 +129,8 @@ export async function createPayment(data: any) {
         data.paymentMethod, 
         data.description || null,
         vatAmount,
-        Number(data.withholdingAmount || 0)
+        Number(data.withholdingAmount || 0),
+        companyId,
       ]
     );
     const paymentId = res.rows[0].id;
@@ -147,7 +166,17 @@ export async function createPayment(data: any) {
 }
 
 export async function markInvoiceAsPaid(id: number | string) {
+  const gate = await quotaOrError();
+  if (!gate.ok) return { success: false, error: gate.error };
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
+  const companyId = await getUserCompanyId(session.user.id);
+
   try {
+    const own = await query("SELECT company_id FROM invoices WHERE id = $1", [id]);
+    if (own.rows.length === 0 || Number(own.rows[0]?.company_id ?? 0) !== companyId) {
+      return { success: false, error: "ไม่พบเอกสาร" };
+    }
     await query("UPDATE invoices SET status = 'paid' WHERE id = $1", [id]);
     revalidatePath("/invoices");
     return { success: true };

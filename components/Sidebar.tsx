@@ -28,6 +28,7 @@ import {
   PieChart,
   Database,
   Briefcase,
+  Building2,
   Bell,
   AlertOctagon
 } from "lucide-react";
@@ -55,6 +56,7 @@ const iconMap = {
   shieldCheck: ShieldCheck,
   database: Database,
   briefcase: Briefcase,
+  building2: Building2,
 } as const;
 
 type SidebarProps = {
@@ -200,7 +202,12 @@ export default function Sidebar({
           
           {MODULE_CATEGORIES.map((section) => {
             const sectionModules = enabledModules.filter((mod) => mod.category === section.id);
-            const visibleModules = sectionModules.filter((mod) => !mod.requiresAdmin || canAccessAdminModule);
+            const visibleModules = sectionModules.filter((mod) => {
+              if (!mod.requiresAdmin) return true;
+              if (!canAccessAdminModule) return false;
+              if (mod.superadminOnly) return normalizedRole === "superadmin";
+              return true;
+            });
             if (visibleModules.length === 0) return null;
 
             return (

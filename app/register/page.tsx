@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { UserPlus, Lock, Mail, User, AlertCircle, ArrowLeft, CheckCircle, Database } from "lucide-react";
+import { UserPlus, Lock, Mail, User, AlertCircle, ArrowLeft, CheckCircle, Database, Building2 } from "lucide-react";
 import Link from "next/link";
 import { registerUser } from "./actions";
 import { checkAndInitUsersTable } from "./db-init";
@@ -70,6 +70,9 @@ export default function RegisterPage() {
               Micro<span className="text-blue-600">Account</span>
            </h1>
            <p className="text-gray-500 mt-2 font-medium">สร้างบัญชีผู้ใช้งานใหม่</p>
+           <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-xs font-bold text-amber-700">
+              ทดลองใช้ฟรี 14 วัน · ผู้ใช้ 1 คน · สร้างบริษัทของคุณเองทันที เมื่อสิ้นสุดทดลองติดต่อทีมงานเพื่อออก license
+           </div>
         </div>
 
         <div className="bg-white rounded shadow-md border-t-4 border-blue-600 p-8 overflow-hidden relative ring-1 ring-black/5">
@@ -101,9 +104,17 @@ export default function RegisterPage() {
              </div>
            )}
 
-           <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1">
-                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
+<form onSubmit={handleSubmit} className="space-y-4">
+               <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Company Name</label>
+                  <div className="relative group">
+                     <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-blue-600 transition-colors" size={16} />
+                     <input name="companyName" type="text" required placeholder="ชื่อบริษัทของคุณ (สร้าง company ใหม่)" className="w-full h-11 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium" />
+                  </div>
+               </div>
+
+               <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
                  <div className="relative group">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-blue-600 transition-colors" size={16} />
                     <input name="name" type="text" required placeholder="ชื่อ-นามสกุล" className="w-full h-11 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium" />
