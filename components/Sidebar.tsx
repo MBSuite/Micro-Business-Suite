@@ -122,10 +122,8 @@ export default function Sidebar({
       {/* Mobile Header Toolbar: ปรากฏเฉพาะบนมือถือ */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-xl border-b border-violet-50 flex items-center justify-between px-6 z-40 shadow-sm">
          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-violet-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-violet-200">
-               M
-            </div>
-            <span className="font-black text-slate-800 tracking-tighter text-sm uppercase">Micro Business Suite</span>
+            <img src="/logo.png" alt="Micro-Business-Suite" className="h-8 w-auto object-contain" />
+            <span className="font-black text-slate-800 tracking-tighter text-sm uppercase">Micro-Business-Suite</span>
          </div>
          <button 
            onClick={() => setIsMobileOpen(true)}
@@ -157,13 +155,14 @@ export default function Sidebar({
         {/* Brand Logo & Toggle */}
         <div className="h-24 flex items-center justify-between px-8 border-b border-white/5 relative bg-slate-950/20">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-violet-600 rounded-xl flex items-center justify-center text-white font-black shadow-2xl shadow-violet-600/40 group relative overflow-hidden shrink-0">
-               <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent"></div>
-               <span className="relative">M</span>
-            </div>
+            <img
+              src="/logo.png"
+              alt="Micro-Business-Suite"
+              className={`${isCollapsed && !isMobileOpen ? "w-10 h-10 object-cover rounded-lg" : "h-10 w-auto object-contain"} shrink-0 bg-white/10 rounded-md p-0.5`}
+            />
             {(!isCollapsed || isMobileOpen) && (
               <div className="flex flex-col">
-                 <span className="font-black text-white text-lg tracking-tight uppercase leading-none">MICRO BUSINESS SUITE</span>
+                 <span className="font-black text-white text-lg tracking-tight uppercase leading-none">MICRO-BUSINESS-SUITE</span>
                  <span className="text-[9px] font-black text-violet-400 uppercase tracking-[0.4em] mt-1">Autonomous</span>
               </div>
             )}

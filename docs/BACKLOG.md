@@ -34,7 +34,33 @@
 
 ---
 
-## P2 — IDOR หน้าอ่าน/แก้ invoices & expenses ตาม id
+## P2 — เปลี่ยนโลโก้ + ชื่อแอพอย่างเป็นทางการ "Micro-Business-Suite"
+
+**สถานะ:** ค้าง/เลื่อน (พี่สั่งปล่อยไปก่อน 2026-09-25 — ค่อยกลับมาแก้ภายหลัง)
+
+**Decision ที่พี่กำหนดไว้แล้ว:**
+- โลโก้ทางการ = `public/Gemini_Generated_Image_myw1u2myw1u2myw1 (1).png`
+- ขอบเขตชื่อ = ทุกจุดที่ user เห็น เท่านั้น (ไม่รวม code comment / docs/*)
+
+**ข้อเท็จจริง (ตรวจสอบแล้ว):**
+- ชื่อปัจจุบัน "Micro Business Suite" (มี space) ปรากฏ ~30 จุด user-visible:
+  - หลัก: `app/layout.tsx:11` title, `components/Sidebar.tsx:128` + `:166`, `app/login/page.tsx:134`
+  - Footer/copyright หน้า UI ~15 หน้า (vouchers, quotations, invoices, journals, inventory, contacts, receipts,
+    expenses, accounting/reconciliation, settings, admin/members, admin/backup, admin/permissions, dashboard)
+  - print: `app/invoices/preview/[id]/page.tsx` (brand + `/Untitled-10.png`), `app/page.tsx:413`
+  - Google Drive: `app/actions/google-drive.ts` (Documents/Reports folder + sheet title), `app/actions/tax-reports.ts:212`
+  - seed default: `lib/settings.ts:48` + `:65` (company_name "Micro Business Suite")
+- `/Untitled-10.png` ใช้เฉพาะ invoice print; `Gemini_Generated_Image... (1).png` ยังไม่ถูกใช้ที่ไหน; ไม่มี favicon/icon
+
+**แนวทางแนะนำ:**
+1. copy โลโก้ → `app/icon.png` (favicon) + `public/logo.png` (path สะอาด) นำเข้า Sidebar/login/invoice print
+2. แทนที่ทุกจุด user-visible ตามรายการด้านบนเป็น "Micro-Business-Suite"
+3. เปลี่ยน Google Drive folder name ให้ใช้งานชื่อใหม่ (หมายเหตุ: folder เดิมที่สร้างไปแล้วจะไม่ slice — สร้างใหม่/rename ตามนโยบาย)
+4. เปลี่ยน seed company_name เฉพาะค่า default ใหม่ (ข้อมูลบริษัทเดิมที่ insert ไปแล้วไม่ touch)
+
+---
+
+## P3 — IDOR หน้าอ่าน/แก้ invoices & expenses ตาม id
 
 **สถานะ:** เปิดอยู่ (quotations ปิดไปแล้วใน WS-3 #4, invoices/expenses ยังเหลือ)
 
@@ -53,7 +79,7 @@
 
 ---
 
-## P3 — หน้า vouchers list เชื่อม API ที่ไม่มีอยู่ (dead-end)
+## P4 — หน้า vouchers list เชื่อม API ที่ไม่มีอยู่ (dead-end)
 
 **สถานะ:** เปิดอยู่ (ไม่ใช่ security leak — fetch 404 ทำให้หน้าแสดงรายการไม่ได้)
 

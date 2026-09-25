@@ -42,7 +42,7 @@ export default function TrialBanner() {
   if (suspended) {
     return (
       <div className="bg-rose-600 text-white text-sm font-bold px-4 py-2.5 flex items-center justify-center gap-2">
-        <AlertTriangle size={16} /> บัญชีถูกระงับการใช้งานชั่วคราว — ติดต่อทีมงาน Micro Business Suite เพื่อปลดล็อก
+        <AlertTriangle size={16} /> บัญชีถูกระงับการใช้งานชั่วคราว — ติดต่อทีมงาน Micro-Business-Suite เพื่อปลดล็อก
       </div>
     );
   }
@@ -50,7 +50,7 @@ export default function TrialBanner() {
   if (expired) {
     return (
       <div className="bg-red-700 text-white text-sm font-bold px-4 py-2.5 flex items-center justify-center gap-2">
-        <KeyRound size={16} /> ใบอนุญาตสิ้นสุดแล้ว — กรุณาติดต่อทีมงาน Micro Business Suite เพื่อต่ออายุ
+        <KeyRound size={16} /> ใบอนุญาตสิ้นสุดแล้ว — กรุณาติดต่อทีมงาน Micro-Business-Suite เพื่อต่ออายุ
       </div>
     );
   }

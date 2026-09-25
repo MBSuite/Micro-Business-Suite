@@ -165,9 +165,9 @@ export async function getCompanyGate(
 
 // สถานะ subscription ที่ห้ามบันทึกธุรกรรม/เขียนข้อมูล -> map ไปข้อความ block
 const BLOCKED_SUBSCRIPTION_STATUSES: Record<string, string> = {
-  suspended: "บัญชีถูกระงับการใช้งานชั่วคราว — ติดต่อทีมงาน Micro Business Suite",
+  suspended: "บัญชีถูกระงับการใช้งานชั่วคราว — ติดต่อทีมงาน Micro-Business-Suite",
   expired: "ใบอนุญาตสิ้นสุดแล้ว กรุณาติดต่อทีมงานเพื่อต่ออายุ",
-  blocked: "บัญชีถูกบล็อก — ติดต่อทีมงาน Micro Business Suite",
+  blocked: "บัญชีถูกบล็อก — ติดต่อทีมงาน Micro-Business-Suite",
 };
 
 // บริษัทหลักของระบบ (บริษัทแรกสุดที่ผู้ใช้เดิมทั้งหมดอยู่ร่วมกัน) ใช้ trial ไม่มีกำหนดได้โดยตั้งใจ

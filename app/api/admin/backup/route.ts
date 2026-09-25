@@ -132,7 +132,7 @@ export async function GET(req: NextRequest) {
     if (format === "json") {
       const payloadObj = {
         meta: {
-          app: "Micro Business Suite",
+          app: "Micro-Business-Suite",
           version: "0.1.0",
           exported_at: timestamp,
           exported_by: session.user.email,
@@ -147,7 +147,7 @@ export async function GET(req: NextRequest) {
     } else {
       contentType = "text/sql";
       filename += ".sql";
-      let sqlContent = `-- Micro Business Suite Database Backup (Sanitized)\n-- Date: ${timestamp}\n-- Exported by: ${session.user.email}\n-- Notice: Password hashes are redacted\n\nBEGIN;\n\n`;
+      let sqlContent = `-- Micro-Business-Suite Database Backup (Sanitized)\n-- Date: ${timestamp}\n-- Exported by: ${session.user.email}\n-- Notice: Password hashes are redacted\n\nBEGIN;\n\n`;
 
       for (const table of tables) {
         if (!backupData[table] || backupData[table].length === 0) continue;

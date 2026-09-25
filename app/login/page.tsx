@@ -48,8 +48,13 @@ export default function LoginPage() {
         
         {/* Brand Header */}
         <div className="text-center mb-8">
-           <h1 className="text-3xl font-bold text-gray-800 tracking-tight uppercase">
-              Micro<span className="text-blue-600">Account</span>
+           <img
+             src="/logo.png"
+             alt="Micro-Business-Suite"
+             className="h-16 w-auto object-contain mx-auto mb-4"
+           />
+           <h1 className="text-2xl font-bold text-gray-800 tracking-tight uppercase">
+              Micro-Business-Suite
            </h1>
            <p className="text-gray-500 mt-2 font-medium">เข้าสู่ระบบจัดการบัญชีอัจฉริยะ</p>
         </div>
@@ -131,7 +136,7 @@ export default function LoginPage() {
         </div>
 
         <div className="mt-8 text-center text-gray-400 text-xs font-medium">
-           Copyright © 2026 Micro Business Suite.
+           Copyright © 2026 Micro-Business-Suite.
         </div>
       </div>
     </main>

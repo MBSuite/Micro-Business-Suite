@@ -45,7 +45,7 @@ export async function ensureCompanySettingsTable() {
   await query(`
     CREATE TABLE IF NOT EXISTS company_settings (
       id SERIAL PRIMARY KEY,
-      company_name VARCHAR(255) NOT NULL DEFAULT 'Micro Business Suite',
+      company_name VARCHAR(255) NOT NULL DEFAULT 'Micro-Business-Suite',
       tax_id VARCHAR(50) NOT NULL DEFAULT '',
       address TEXT,
       logo_url TEXT,
@@ -62,7 +62,7 @@ export async function ensureCompanySettingsTable() {
   if (existing.rows[0].count === 0) {
     await query(`
       INSERT INTO company_settings (company_name, tax_id, address)
-      VALUES ('Micro Business Suite', '', 'Company Address, Thailand')
+      VALUES ('Micro-Business-Suite', '', 'Company Address, Thailand')
     `);
   }
 }
