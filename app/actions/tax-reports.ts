@@ -1,6 +1,7 @@
 "use server";
 
 import { query } from "@/lib/db";
+import { auth, getUserCompanyId } from "@/lib/auth";
 import { getCompanySettings } from "@/lib/settings";
 import { revalidatePath } from "next/cache";
 import {
@@ -11,13 +12,22 @@ import {
   batchSubmitToRD,
 } from "@/lib/rd-api";
 
+async function requireCompanyId(): Promise<{ ok: true; companyId: number } | { ok: false; error: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
+  const companyId = await getUserCompanyId(session.user.id);
+  return { ok: true, companyId };
+}
+
 export async function getTaxSummary() {
+  const gate = await requireCompanyId();
+  if (!gate.ok) return { success: false, error: gate.error };
   try {
     const now = new Date();
     const start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
     const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-    const sRes = await query(`SELECT SUM(vat_amount) as v FROM invoices WHERE status != 'cancelled' AND issue_date BETWEEN $1 AND $2`, [start, end]);
-    const pRes = await query(`SELECT SUM(vat_amount) as v FROM payment_vouchers WHERE issue_date BETWEEN $1 AND $2`, [start, end]);
+    const sRes = await query(`SELECT SUM(vat_amount) as v FROM invoices WHERE company_id = $1 AND status != 'cancelled' AND issue_date BETWEEN $2 AND $3`, [gate.companyId, start, end]);
+    const pRes = await query(`SELECT SUM(vat_amount) as v FROM payment_vouchers WHERE company_id = $1 AND issue_date BETWEEN $2 AND $3`, [gate.companyId, start, end]);
     const vs = Number(sRes.rows[0]?.v || 0);
     const vp = Number(pRes.rows[0]?.v || 0);
     return { success: true, data: { vatSales: vs, vatPurchase: vp, netVat: vs - vp, wht: 0 } };
@@ -25,10 +35,12 @@ export async function getTaxSummary() {
 }
 
 export async function getPP30Draft(month: number, year: number) {
+  const gate = await requireCompanyId();
+  if (!gate.ok) return { success: false, error: gate.error };
   try {
     const start = `${year}-${String(month).padStart(2, "0")}-01`;
     const end = new Date(year, month, 0).toISOString().split("T")[0];
-    const sRes = await query(`SELECT COUNT(*)::int as c, COALESCE(SUM(net_amount),0) as s, COALESCE(SUM(vat_amount),0) as v FROM invoices WHERE status != 'cancelled' AND issue_date BETWEEN $1 AND $2`, [start, end]);
+    const sRes = await query(`SELECT COUNT(*)::int as c, COALESCE(SUM(net_amount),0) as s, COALESCE(SUM(vat_amount),0) as v FROM invoices WHERE company_id = $3 AND status != 'cancelled' AND issue_date BETWEEN $1 AND $2`, [start, end, gate.companyId]);
     // ภาษีซื้อ (Input VAT) มาจาก expenses ที่ tax_deductible และมี vat_amount จริง
     // (ไม่ใช้ payment_vouchers เพราะตารางนี้ไม่มี vat_amount และ amount บางรายการเป็นยอดรวม VAT)
     const pRes = await query(
@@ -36,10 +48,11 @@ export async function getPP30Draft(month: number, year: number) {
               COALESCE(SUM(net_amount),0) as s,
               COALESCE(SUM(vat_amount),0) as v
        FROM expenses
-       WHERE expense_date BETWEEN $1 AND $2
+       WHERE company_id = $3
+         AND expense_date BETWEEN $1 AND $2
          AND tax_deductible = true
          AND COALESCE(vat_amount,0) > 0`,
-      [start, end]
+      [start, end, gate.companyId]
     );
     return {
       success: true,
@@ -48,26 +61,29 @@ export async function getPP30Draft(month: number, year: number) {
         purchases: { documentCount: pRes.rows[0].c, taxableAmount: Number(pRes.rows[0].s), vatAmount: Number(pRes.rows[0].v), items: [] },
         netVatPayable: Number(sRes.rows[0].v) - Number(pRes.rows[0].v),
         // ข้อมูลบัญชีอาจต่างจากสรรพากร: แจ้งเตือนถ้ามีรายจ่าย VAT ที่ยังไม่ได้ flag tax_deductible
-        missingDeductibleTax: Number(pRes.rows[0].c) === 0 ? await countUndeductedVatExpenses(start, end) : 0,
+        missingDeductibleTax: Number(pRes.rows[0].c) === 0 ? await countUndeductedVatExpenses(gate.companyId, start, end) : 0,
       }
     };
   } catch (err: any) { return { success: false, error: err.message }; }
 }
 
-async function countUndeductedVatExpenses(start: string, end: string): Promise<number> {
+async function countUndeductedVatExpenses(companyId: number, start: string, end: string): Promise<number> {
   try {
     const r = await query(
       `SELECT COUNT(*)::int as c FROM expenses
-       WHERE expense_date BETWEEN $1 AND $2
+       WHERE company_id = $1
+         AND expense_date BETWEEN $2 AND $3
          AND COALESCE(vat_amount,0) > 0
          AND COALESCE(tax_deductible, false) = false`,
-      [start, end]
+      [companyId, start, end]
     );
     return r.rows[0]?.c || 0;
   } catch { return 0; }
 }
 
 export async function getPNDReportDraft(type: string, month: number, year: number) {
+  const gate = await requireCompanyId();
+  if (!gate.ok) return { success: false, error: gate.error };
   try {
     // คำนวณ WHT จาก expenses โดยตรง (wht_rate เล็กน้อย) — ไม่รอ withholding_tax_amount ที่คนมักไม่กรอก
     // และไม่ผ่าน payment_vouchers เพราะบางเดือนไม่มีใบจ่ายแต่มีรายจ่ายเกิดจริง
@@ -78,10 +94,11 @@ export async function getPNDReportDraft(type: string, month: number, year: numbe
          COALESCE(withholding_tax_amount::numeric, ROUND((wht_rate::numeric / 100) * net_amount::numeric, 2))
        ),0) AS t
        FROM expenses
-       WHERE expense_date BETWEEN $1 AND $2
+       WHERE company_id = $3
+         AND expense_date BETWEEN $1 AND $2
          AND COALESCE(wht_rate, 0)::numeric > 0
          AND COALESCE(wht_rate,0)::numeric IS NOT NULL`,
-      [start, end]
+      [start, end, gate.companyId]
     );
     return {
       success: true,
@@ -95,6 +112,8 @@ export async function getPNDReportDraft(type: string, month: number, year: numbe
 }
 
 export async function getPP36Draft(month: number, year: number) {
+  const gate = await requireCompanyId();
+  if (!gate.ok) return { success: false, error: gate.error };
   try {
     // ต่างประเทศ = มีสกุลเงิน/อัตราแลกเปลี่ยนระบุชัดเจน (ไม่ใช่ THB)
     const start = `${year}-${String(month).padStart(2, "0")}-01`;
@@ -104,12 +123,13 @@ export async function getPP36Draft(month: number, year: number) {
               COALESCE(SUM(net_amount),0) AS b,
               COALESCE(SUM(vat_amount),0) AS v
        FROM expenses
-       WHERE expense_date BETWEEN $1 AND $2
+       WHERE company_id = $3
+         AND expense_date BETWEEN $1 AND $2
          AND COALESCE(original_currency,'') <> 'THB'
          AND original_currency IS NOT NULL
          AND original_currency <> ''
          AND COALESCE(pp36_exempt, false) = false`,
-      [start, end]
+      [start, end, gate.companyId]
     );
     return {
       success: true,
@@ -176,7 +196,9 @@ export async function setupRDAPI(config: any) {
 }
 
 export async function submitInvoiceToRDPortal(id: string) {
-  const res = await submitInvoiceToRD(id);
+  const gate = await requireCompanyId();
+  if (!gate.ok) return { success: false, error: gate.error };
+  const res = await submitInvoiceToRD(id, gate.companyId);
   revalidatePath("/invoices");
   return res;
 }

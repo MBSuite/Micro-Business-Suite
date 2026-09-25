@@ -106,6 +106,16 @@ CREATE TABLE IF NOT EXISTS expenses (
     company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS payment_vouchers (
+    id SERIAL PRIMARY KEY,
+    voucher_no VARCHAR(50),
+    issue_date DATE,
+    amount DECIMAL(15,2) DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'pending',
+    company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 INSERT INTO company_settings (name)
 SELECT 'Integration Test Co' WHERE NOT EXISTS (SELECT 1 FROM company_settings);
 

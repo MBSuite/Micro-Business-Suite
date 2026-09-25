@@ -1,4 +1,5 @@
 import { query } from "@/lib/db";
+import { auth, getUserCompanyId } from "@/lib/auth";
 import Link from "next/link";
 import { ArrowLeft, TrendingUp, TrendingDown, Wallet, Package, Receipt, Calculator } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,15 +18,15 @@ interface ExpenseCategory {
   total: number;
 }
 
-async function getPLData() {
+async function getPLData(companyId: number) {
   try {
     const now = new Date();
     const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString();
     const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString();
 
     const incomeRes = await query(
-      `SELECT SUM(net_amount) as total FROM invoices WHERE status = 'paid' AND created_at >= $1`,
-      [startOfYear]
+      `SELECT SUM(net_amount) as total FROM invoices WHERE status = 'paid' AND created_at >= $1 AND company_id = $2`,
+      [startOfYear, companyId]
     );
     const totalIncome = Number(incomeRes.rows[0]?.total || 0);
 
@@ -37,9 +38,9 @@ async function getPLData() {
           FROM invoice_items ii
           LEFT JOIN products p ON ii.product_id = p.id
           LEFT JOIN invoices i ON ii.invoice_id = i.id
-          WHERE i.status = 'paid' AND i.created_at >= $1
+          WHERE i.status = 'paid' AND i.created_at >= $1 AND i.company_id = $2
         `,
-        [startOfYear]
+        [startOfYear, companyId]
       );
       totalCOGS = Number(cogsRes.rows[0]?.total_cogs || 0);
     } catch (error) {
@@ -51,16 +52,16 @@ async function getPLData() {
       const expenseRes = await query(
         `
           SELECT SUM(amount) as total FROM expenses
-          WHERE expense_date >= $1
+          WHERE expense_date >= $1 AND company_id = $2
         `,
-        [startOfYear.split("T")[0]]
+        [startOfYear.split("T")[0], companyId]
       );
       totalOperatingExpense = Number(expenseRes.rows[0]?.total || 0);
     } catch (error) {
       console.warn("Operating Expenses Warning:", error);
       const pvRes = await query(
-        `SELECT SUM(amount) as total FROM payment_vouchers WHERE issue_date >= $1`,
-        [startOfYear]
+        `SELECT SUM(amount) as total FROM payment_vouchers WHERE issue_date >= $1 AND company_id = $2`,
+        [startOfYear, companyId]
       );
       totalOperatingExpense = Number(pvRes.rows[0]?.total || 0);
     }
@@ -68,10 +69,10 @@ async function getPLData() {
     const monthlySales = await query(`
       SELECT TO_CHAR(created_at, 'Mon') as month, SUM(net_amount) as amount
       FROM invoices
-      WHERE created_at >= NOW() - INTERVAL '6 months'
+      WHERE created_at >= NOW() - INTERVAL '6 months' AND company_id = $1
       GROUP BY month, TO_CHAR(created_at, 'MM')
       ORDER BY TO_CHAR(created_at, 'MM') ASC
-    `);
+    `, [companyId]);
 
     const monthlyPLRes = await query(
       `
@@ -85,7 +86,7 @@ async function getPLData() {
         income AS (
           SELECT date_trunc('month', created_at) AS month_start, SUM(net_amount) AS amount
           FROM invoices
-          WHERE status = 'paid' AND created_at >= $1
+          WHERE status = 'paid' AND created_at >= $1 AND company_id = $3
           GROUP BY 1
         ),
         cogs AS (
@@ -93,13 +94,13 @@ async function getPLData() {
           FROM invoice_items ii
           LEFT JOIN products p ON ii.product_id = p.id
           LEFT JOIN invoices i ON ii.invoice_id = i.id
-          WHERE i.status = 'paid' AND i.created_at >= $1
+          WHERE i.status = 'paid' AND i.created_at >= $1 AND i.company_id = $3
           GROUP BY 1
         ),
         expense AS (
           SELECT date_trunc('month', expense_date) AS month_start, SUM(amount) AS amount
           FROM expenses
-          WHERE expense_date >= $2
+          WHERE expense_date >= $2 AND company_id = $3
           GROUP BY 1
         )
         SELECT
@@ -113,7 +114,7 @@ async function getPLData() {
         LEFT JOIN expense ON expense.month_start = months.month_start
         ORDER BY months.month_start ASC
       `,
-      [sixMonthsAgo, sixMonthsAgo.split("T")[0]]
+      [sixMonthsAgo, sixMonthsAgo.split("T")[0], companyId]
     ).catch(() => ({ rows: [] as MonthlyPLData[] }));
 
     let expensesByCategory: ExpenseCategory[] = [];
@@ -121,10 +122,10 @@ async function getPLData() {
       const catRes = await query(
         `
           SELECT category, SUM(amount) as total FROM expenses
-          WHERE expense_date >= $1
+          WHERE expense_date >= $1 AND company_id = $2
           GROUP BY category ORDER BY total DESC
         `,
-        [startOfYear.split("T")[0]]
+        [startOfYear.split("T")[0], companyId]
       );
       expensesByCategory = catRes.rows;
     } catch (error) {
@@ -189,7 +190,9 @@ async function getPLData() {
 }
 
 export default async function ProfitLossPage() {
-  const data = await getPLData();
+  const session = await auth();
+  const companyId = session?.user?.id ? await getUserCompanyId(session.user.id) : null;
+  const data = await getPLData(companyId || 0);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("th-TH", {

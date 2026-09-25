@@ -1,6 +1,7 @@
 "use server";
 
 import { query } from "@/lib/db";
+import { auth, getUserCompanyId } from "@/lib/auth";
 import { getGoogleDrive, getGoogleSheets } from "@/lib/google-server";
 import { Readable } from "stream";
 import { getOrCreateFolder } from "@/lib/actions-helpers";
@@ -98,8 +99,11 @@ export async function exportJournalsToSheets() {
 
 export async function exportVouchersToSheets() {
   try {
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    const companyId = await getUserCompanyId(session.user.id);
     const googleSheets = await getGoogleSheets();
-    const res = await query('SELECT * FROM payment_vouchers ORDER BY issue_date DESC, id ASC');
+    const res = await query('SELECT * FROM payment_vouchers WHERE company_id = $1 ORDER BY issue_date DESC, id ASC', [companyId]);
     const vouchers = res.rows;
     if (vouchers.length === 0) throw new Error("No data");
     const folderId = await getOrCreateFolder('Micro Business Suite Reports');

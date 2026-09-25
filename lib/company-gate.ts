@@ -180,9 +180,11 @@ async function isDefaultCompany(companyId: number): Promise<boolean> {
   return Boolean(res.rows[0]?.is_default);
 }
 
-// นับธุรกรรมที่บันทึกจริงในเดือนปัจจุบัน (invoice + payment + quotation + expense)
+// นับธุรกรรมที่บันทึกจริงในเดือนปัจจุบัน (invoice + payment + quotation + expense + payment voucher)
 // WS-3 #4: quotations/expenses มี company_id แล้ว (migration add_company_tenant_scope_quotations_expenses.sql)
-// หมายเหตุ: quotations ใช้ created_at, expenses ใช้ expense_date (ไม่มีคอลัมน์ created_at ใน prod)
+// WS-3 #5: payment_vouchers มี company_id แล้ว (migration add_company_tenant_scope_payment_vouchers.sql)
+// หมายเหตุ: quotations ใช้ created_at, expenses ใช้ expense_date (ไม่มีคอลัมน์ created_at ใน prod),
+// payment_vouchers ใช้ created_at
 export async function countCompanyTransactions(companyId: number): Promise<number> {
   const res = await query(
     `
@@ -190,7 +192,8 @@ export async function countCompanyTransactions(companyId: number): Promise<numbe
         (SELECT COUNT(*) FROM invoices WHERE company_id = $1 AND created_at >= date_trunc('month', now())) +
         (SELECT COUNT(*) FROM payments WHERE company_id = $1 AND created_at >= date_trunc('month', now())) +
         (SELECT COUNT(*) FROM quotations WHERE company_id = $1 AND created_at >= date_trunc('month', now())) +
-        (SELECT COUNT(*) FROM expenses WHERE company_id = $1 AND expense_date >= date_trunc('month', now())::date)
+        (SELECT COUNT(*) FROM expenses WHERE company_id = $1 AND expense_date >= date_trunc('month', now())::date) +
+        (SELECT COUNT(*) FROM payment_vouchers WHERE company_id = $1 AND created_at >= date_trunc('month', now()))
         AS total
     `,
     [companyId]

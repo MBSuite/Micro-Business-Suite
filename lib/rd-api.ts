@@ -239,7 +239,7 @@ export function initializeRDClient(config: RDAuthConfig): void {
 }
 
 // Submit e-Tax Invoice from invoice data
-export async function submitInvoiceToRD(invoiceId: string): Promise<RDSubmissionResult> {
+export async function submitInvoiceToRD(invoiceId: string, companyId?: number): Promise<RDSubmissionResult> {
   if (!rdClient) {
     return { success: false, error: "RD API client not initialized" };
   }
@@ -250,8 +250,8 @@ export async function submitInvoiceToRD(invoiceId: string): Promise<RDSubmission
       SELECT i.*, c.name as customer_name, c.tax_id as customer_tax_id
       FROM invoices i
       JOIN contacts c ON i.contact_id::text = c.id::text
-      WHERE i.id = $1
-    `, [invoiceId]);
+      WHERE i.id = $1${companyId ? ` AND i.company_id = $2` : ''}
+    `, companyId ? [invoiceId, companyId] : [invoiceId]);
 
     if (invoiceRes.rows.length === 0) {
       return { success: false, error: "Invoice not found" };
@@ -311,7 +311,7 @@ export async function submitInvoiceToRD(invoiceId: string): Promise<RDSubmission
 }
 
 // Submit Withholding Tax from payment voucher
-export async function submitWHTToRD(voucherId: string): Promise<RDSubmissionResult> {
+export async function submitWHTToRD(voucherId: string, companyId?: number): Promise<RDSubmissionResult> {
   if (!rdClient) {
     return { success: false, error: "RD API client not initialized" };
   }
@@ -322,8 +322,8 @@ export async function submitWHTToRD(voucherId: string): Promise<RDSubmissionResu
       SELECT v.*, c.tax_id as recipient_tax_id, c.name as recipient_name
       FROM payment_vouchers v
       LEFT JOIN contacts c ON v.payee_name = c.name
-      WHERE v.id = $1
-    `, [voucherId]);
+      WHERE v.id = $1${companyId ? ` AND v.company_id = $2` : ''}
+    `, companyId ? [voucherId, companyId] : [voucherId]);
 
     if (voucherRes.rows.length === 0) {
       return { success: false, error: "Payment voucher not found" };
@@ -392,7 +392,7 @@ export async function checkRDSubmissionStatus(submissionId: string): Promise<RDS
 }
 
 // Batch submit multiple documents
-export async function batchSubmitToRD(documentIds: string[], type: 'invoice' | 'wht'): Promise<{
+export async function batchSubmitToRD(documentIds: string[], type: 'invoice' | 'wht', companyId?: number): Promise<{
   success: boolean;
   results: Array<{ id: string; result: RDSubmissionResult }>;
   summary: { total: number; successful: number; failed: number };
@@ -405,9 +405,9 @@ export async function batchSubmitToRD(documentIds: string[], type: 'invoice' | '
     let result: RDSubmissionResult;
 
     if (type === 'invoice') {
-      result = await submitInvoiceToRD(id);
+      result = await submitInvoiceToRD(id, companyId);
     } else {
-      result = await submitWHTToRD(id);
+      result = await submitWHTToRD(id, companyId);
     }
 
     results.push({ id, result });

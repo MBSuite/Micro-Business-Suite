@@ -28,9 +28,9 @@ export async function createPaymentVoucher(data: any) {
     const res = await client.query(
       `INSERT INTO payment_vouchers (
         voucher_no, payee_name, issue_date, amount, payment_method, 
-        status, receipt_url, vat_amount, tax_id, expense_id, vendor_id, wht_amount
+        status, receipt_url, vat_amount, tax_id, expense_id, vendor_id, wht_amount, company_id
       ) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
       [
         data.voucher_no, 
         data.payee_name, 
@@ -43,7 +43,8 @@ export async function createPaymentVoucher(data: any) {
         data.tax_id || null,
         data.expense_id || null,
         data.vendor_id || null,
-        data.withholding_amount || 0
+        data.withholding_amount || 0,
+        companyId,
       ]
     );
     const voucherId = res.rows[0].id;
@@ -189,8 +190,11 @@ export async function markInvoiceAsPaid(id: number | string) {
 }
 
 export async function getPaymentVouchers() {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
   try {
-    const { rows } = await query(`SELECT * FROM payment_vouchers ORDER BY issue_date DESC`);
+    const companyId = await getUserCompanyId(session.user.id);
+    const { rows } = await query(`SELECT * FROM payment_vouchers WHERE company_id = $1 ORDER BY issue_date DESC`, [companyId]);
     return { success: true, data: rows };
   } catch (error: any) {
     return { success: false, error: error.message };

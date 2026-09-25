@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isSuperAdmin } from "@/lib/permissions";
 import {
   runAiAudit,
   getOpenAiAlerts,
@@ -12,6 +13,9 @@ export async function POST(request: Request) {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!(await isSuperAdmin(session.user.id))) {
+      return NextResponse.json({ error: "Forbidden — superadmin only" }, { status: 403 });
     }
 
     // Support both a full audit trigger and alert resolution
@@ -43,6 +47,9 @@ export async function GET() {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!(await isSuperAdmin(session.user.id))) {
+      return NextResponse.json({ error: "Forbidden — superadmin only" }, { status: 403 });
     }
     const alerts = await getOpenAiAlerts();
     const count = await getAlertCount();
