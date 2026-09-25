@@ -88,6 +88,24 @@ CREATE TABLE IF NOT EXISTS payments (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS quotations (
+    id SERIAL PRIMARY KEY,
+    quotation_number VARCHAR(50),
+    status VARCHAR(20) NOT NULL DEFAULT 'draft',
+    company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS expenses (
+    id SERIAL PRIMARY KEY,
+    expense_number VARCHAR(50),
+    title VARCHAR(255),
+    amount DECIMAL(15,2) NOT NULL DEFAULT 0,
+    expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    status VARCHAR(20) DEFAULT 'paid',
+    company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL
+);
+
 INSERT INTO company_settings (name)
 SELECT 'Integration Test Co' WHERE NOT EXISTS (SELECT 1 FROM company_settings);
 

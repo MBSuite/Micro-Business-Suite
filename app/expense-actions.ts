@@ -3,17 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { query } from "@/lib/db";
 import { createExpenseJournalEntry } from "@/lib/journaling";
-import { auth } from "@/lib/auth";
+import { auth, getUserCompanyId } from "@/lib/auth";
 import { assertCompanyQuota } from "@/lib/company-gate";
 
-async function quotaOrError(): Promise<{ ok: boolean; error?: string }> {
-  const session = await auth();
-  if (!session?.user?.id) return { ok: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
-  const q = await assertCompanyQuota(session.user.id);
-  return q.ok ? { ok: true } : { ok: false, error: q.error };
-}
-
-async function deleteExpenseJournalEntries(expenseId: number) {
+export async function deleteExpenseJournalEntries(expenseId: number) {
   const journalReference = `EXP-${expenseId}`;
   await query(
     `DELETE FROM journal_entries
@@ -62,8 +55,11 @@ async function ensureExpensesTable() {
 }
 
 export async function getExpenses(year?: string, month?: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
   try {
     await ensureExpensesTable();
+    const companyId = await getUserCompanyId(session.user.id);
     const now = new Date();
     const y = year ? parseInt(year, 10) : now.getFullYear();
     const m = month ? parseInt(month, 10) : now.getMonth() + 1;
@@ -75,19 +71,19 @@ export async function getExpenses(year?: string, month?: string) {
       `SELECT e.*, c.name AS vendor_name, c.tax_id AS vendor_tax_id
        FROM expenses e
        LEFT JOIN contacts c ON c.id = e.contact_id
-       WHERE e.expense_date >= $1 AND e.expense_date <= $2
+       WHERE e.company_id = $1 AND e.expense_date >= $2 AND e.expense_date <= $3
        ORDER BY e.expense_date DESC, e.id DESC`,
-      [startDate, endDate]
+      [companyId, startDate, endDate]
     );
     const summaryRes = await query(
       `SELECT category, SUM(amount) as total FROM expenses
-       WHERE expense_date >= $1 AND expense_date <= $2
+       WHERE company_id = $1 AND expense_date >= $2 AND expense_date <= $3
        GROUP BY category ORDER BY total DESC`,
-      [startDate, endDate]
+      [companyId, startDate, endDate]
     );
     const totalRes = await query(
-      `SELECT SUM(amount) as total FROM expenses WHERE expense_date >= $1 AND expense_date <= $2`,
-      [startDate, endDate]
+      `SELECT SUM(amount) as total FROM expenses WHERE company_id = $1 AND expense_date >= $2 AND expense_date <= $3`,
+      [companyId, startDate, endDate]
     );
 
     return {
@@ -104,24 +100,27 @@ export async function getExpenses(year?: string, month?: string) {
 }
 
 export async function getExpensesYearly(year?: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
   try {
     await ensureExpensesTable();
+    const companyId = await getUserCompanyId(session.user.id);
     const y = year ? parseInt(year, 10) : new Date().getFullYear();
     const monthly = await query(
       `SELECT EXTRACT(MONTH FROM expense_date)::int as month, SUM(amount) as total, COUNT(*) as count
-       FROM expenses WHERE EXTRACT(YEAR FROM expense_date) = $1
+       FROM expenses WHERE company_id = $1 AND EXTRACT(YEAR FROM expense_date) = $2
        GROUP BY month ORDER BY month ASC`,
-      [y]
+      [companyId, y]
     );
     const totalRes = await query(
-      `SELECT SUM(amount) as total FROM expenses WHERE EXTRACT(YEAR FROM expense_date) = $1`,
-      [y]
+      `SELECT SUM(amount) as total FROM expenses WHERE company_id = $1 AND EXTRACT(YEAR FROM expense_date) = $2`,
+      [companyId, y]
     );
     const categoryRes = await query(
       `SELECT category, SUM(amount) as total FROM expenses
-       WHERE EXTRACT(YEAR FROM expense_date) = $1
+       WHERE company_id = $1 AND EXTRACT(YEAR FROM expense_date) = $2
        GROUP BY category ORDER BY total DESC`,
-      [y]
+      [companyId, y]
     );
 
     return {
@@ -158,7 +157,10 @@ export async function createExpense(data: {
   original_amount?: number;
   exchange_rate?: number;
 }) {
-  const gate = await quotaOrError();
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
+  const companyId = await getUserCompanyId(session.user.id);
+  const gate = await assertCompanyQuota(session.user.id);
   if (!gate.ok) return { success: false, error: gate.error };
 
   try {
@@ -200,9 +202,10 @@ export async function createExpense(data: {
          original_currency,
          original_amount,
          exchange_rate,
-         status
+         status,
+         company_id
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, 'paid')
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, 'paid', $23)
        RETURNING id`,
       [
         data.title,
@@ -227,6 +230,7 @@ export async function createExpense(data: {
         isForeignCurrency ? data.original_currency : "THB",
         isForeignCurrency ? (data.original_amount ?? null) : null,
         isForeignCurrency ? (data.exchange_rate ?? null) : null,
+        companyId,
       ]
     );
 
@@ -279,10 +283,13 @@ export async function updateExpense(
     exchange_rate?: number;
   }
 ) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
   try {
     await ensureExpensesTable();
+    const companyId = await getUserCompanyId(session.user.id);
     const isForeignCurrency = data.original_currency && data.original_currency !== "THB";
-    await query(
+    const result = await query(
       `UPDATE expenses
        SET title=$1,
            category=$2,
@@ -302,7 +309,7 @@ export async function updateExpense(
            original_amount=$16,
            exchange_rate=$17,
            updated_at=CURRENT_TIMESTAMP
-       WHERE id=$18`,
+       WHERE id=$18 AND company_id=$19`,
       [
         data.title,
         data.category,
@@ -322,8 +329,13 @@ export async function updateExpense(
         isForeignCurrency ? (data.original_amount ?? null) : null,
         isForeignCurrency ? (data.exchange_rate ?? null) : null,
         id,
+        companyId,
       ]
     );
+
+    if (result.rowCount === 0) {
+      return { success: false, error: "ไม่พบรายการค่าใช้จ่าย" };
+    }
 
     await deleteExpenseJournalEntries(id);
     const journalResult = await createExpenseJournalEntry(
@@ -350,10 +362,13 @@ export async function updateExpense(
 }
 
 export async function deleteExpense(id: number) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
   try {
     await ensureExpensesTable();
+    const companyId = await getUserCompanyId(session.user.id);
     await deleteExpenseJournalEntries(id);
-    const result = await query(`DELETE FROM expenses WHERE id = $1 RETURNING id`, [id]);
+    const result = await query(`DELETE FROM expenses WHERE id = $1 AND company_id = $2 RETURNING id`, [id, companyId]);
 
     if (result.rows.length === 0) {
       return { success: false, error: "ไม่พบรายการค่าใช้จ่าย" };

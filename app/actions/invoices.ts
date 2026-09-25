@@ -127,7 +127,7 @@ export async function createInvoice(data: any) {
     const invoiceId = invRes.rows[0].id;
 
     if (data.quotation_id) {
-      await client.query("UPDATE quotations SET status = 'invoiced' WHERE id = $1", [data.quotation_id]);
+      await client.query("UPDATE quotations SET status = 'invoiced' WHERE id = $1 AND company_id = $2", [data.quotation_id, companyId]);
     }
 
     for (const item of data.items) {

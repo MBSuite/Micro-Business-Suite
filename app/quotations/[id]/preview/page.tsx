@@ -1,4 +1,5 @@
 import { query } from "@/lib/db";
+import { auth, getUserCompanyId } from "@/lib/auth";
 import { getCompanySettings } from "@/app/actions";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -11,14 +12,16 @@ export default async function QuotationPreviewPage({ params }: { params: Promise
   const { id } = await params;
   const settingsRes = await getCompanySettings();
   const company = settingsRes.success ? settingsRes.data : null;
+  const session = await auth();
+  const companyId = session?.user?.id ? await getUserCompanyId(session.user.id) : null;
 
   // Fetch Quotation with Customer
   const { rows: qRows } = await query(`
     SELECT q.*, c.name as customer_name, c.tax_id as customer_tax_id, c.address as customer_address, c.contact_person, c.phone as customer_phone
     FROM quotations q
     LEFT JOIN contacts c ON q.contact_id = c.id
-    WHERE q.id = $1
-  `, [id]);
+    WHERE q.id = $1 AND q.company_id = $2
+  `, [id, companyId]);
 
   if (qRows.length === 0) {
     return <div className="p-20 text-center font-bold text-red-500">❌ ไม่พบข้อมูลใบเสนอราคา หรือถูกลบไปแล้ว</div>;

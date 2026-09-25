@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { createExpenseJournalEntry } from '@/lib/journaling';
-import { auth } from '@/lib/auth';
+import { auth, getUserCompanyId } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+    const companyId = await getUserCompanyId(session.user.id);
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -85,9 +86,9 @@ export async function POST(request: NextRequest) {
       try {
         // Insert into expenses table
         await query(`
-          INSERT INTO expenses (title, category, amount, expense_date, reference_no, notes, status)
-          VALUES ($1, $2, $3, $4, $5, $6, 'paid')
-        `, [title, category, amount, expense_date, reference_no, notes]);
+          INSERT INTO expenses (title, category, amount, expense_date, reference_no, notes, status, company_id)
+          VALUES ($1, $2, $3, $4, $5, $6, 'paid', $7)
+        `, [title, category, amount, expense_date, reference_no, notes, companyId]);
 
         // Create journal entry
         await createExpenseJournalEntry(

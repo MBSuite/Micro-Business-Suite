@@ -1,4 +1,5 @@
 import { query } from "@/lib/db";
+import { auth, getUserCompanyId } from "@/lib/auth";
 import { FileText, Plus, Search, ArrowRight, Edit, ShieldCheck, FileCheck } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -8,6 +9,8 @@ import QuotationRowActions from "./QuotationRowActions";
 export const dynamic = 'force-dynamic';
 
 export default async function QuotationsPage({ searchParams }: { searchParams: { search?: string } }) {
+  const session = await auth();
+  const companyId = session?.user?.id ? await getUserCompanyId(session.user.id) : null;
   const search = (await searchParams)?.search || "";
   let quotations = [];
   try {
@@ -16,14 +19,15 @@ export default async function QuotationsPage({ searchParams }: { searchParams: {
         FROM quotations q 
         LEFT JOIN contacts c ON q.contact_id = c.id 
     `;
+    const params: any[] = [companyId];
 
     // Try the query with contact_id first, fallback if it fails
     try {
-      const params: any[] = [];
-
       if (search) {
-        q += ` WHERE q.quotation_number ILIKE $1 OR c.name ILIKE $1 `;
+        q += ` WHERE q.company_id = $1 AND (q.quotation_number ILIKE $2 OR c.name ILIKE $2) `;
         params.push(`%${search}%`);
+      } else {
+        q += ` WHERE q.company_id = $1 `;
       }
 
       q += ` ORDER BY q.created_at DESC `;
@@ -34,11 +38,13 @@ export default async function QuotationsPage({ searchParams }: { searchParams: {
       // If contact_id doesn't exist, try without the join
       console.log('contact_id column missing, trying fallback query...');
       let fallbackQ = `SELECT q.*, null as customer_name FROM quotations q`;
-      const params: any[] = [];
+      const params: any[] = [companyId];
 
       if (search) {
-        fallbackQ += ` WHERE q.quotation_number ILIKE $1 `;
+        fallbackQ += ` WHERE q.company_id = $1 AND q.quotation_number ILIKE $2 `;
         params.push(`%${search}%`);
+      } else {
+        fallbackQ += ` WHERE q.company_id = $1 `;
       }
 
       fallbackQ += ` ORDER BY q.created_at DESC `;

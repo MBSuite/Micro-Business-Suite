@@ -16,6 +16,9 @@ async function quotaOrError(): Promise<{ ok: boolean; error?: string }> {
 export async function createPaymentVoucher(data: any) {
   const gate = await quotaOrError();
   if (!gate.ok) return { success: false, error: gate.error };
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
+  const companyId = await getUserCompanyId(session.user.id);
 
   const pool = (await import("@/lib/db")).default;
   const client = await pool.connect();
@@ -46,7 +49,7 @@ export async function createPaymentVoucher(data: any) {
     const voucherId = res.rows[0].id;
 
     if (data.expense_id) {
-      await client.query("UPDATE expenses SET status = 'paid' WHERE id = $1", [data.expense_id]);
+      await client.query("UPDATE expenses SET status = 'paid' WHERE id = $1 AND company_id = $2", [data.expense_id, companyId]);
     }
 
     const journalResult = await createExpenseJournalEntry(

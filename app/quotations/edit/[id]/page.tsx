@@ -1,4 +1,5 @@
 import { query } from "@/lib/db";
+import { auth, getUserCompanyId } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import EditQuotationClient from "./EditQuotationClient";
 
@@ -6,13 +7,15 @@ export const dynamic = 'force-dynamic';
 
 async function getQuotation(id: string) {
   try {
+    const session = await auth();
+    const companyId = session?.user?.id ? await getUserCompanyId(session.user.id) : null;
     // Fetch quotation with customer
     const qRes = await query(`
       SELECT q.*, c.name as customer_name 
       FROM quotations q 
       LEFT JOIN contacts c ON q.contact_id = c.id 
-      WHERE q.id = $1
-    `, [id]);
+      WHERE q.id = $1 AND q.company_id = $2
+    `, [id, companyId]);
     
     if (qRes.rows.length === 0) return null;
     

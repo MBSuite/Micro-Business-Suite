@@ -180,15 +180,17 @@ async function isDefaultCompany(companyId: number): Promise<boolean> {
   return Boolean(res.rows[0]?.is_default);
 }
 
-// นับธุรกรรมที่บันทึกจริงในเดือนปัจจุบัน (invoice + payment)
-// หมายเหตุ WS-3 #4: expenses/quotations ยังไม่มี company_id ใน schema — จะรวมเมื่อ migration
-// เพิ่มคอลัมน์แล้ว (ตอนนี้ถ้าอ้างคอลัมน์ที่ไม่มีจะ error 500)
+// นับธุรกรรมที่บันทึกจริงในเดือนปัจจุบัน (invoice + payment + quotation + expense)
+// WS-3 #4: quotations/expenses มี company_id แล้ว (migration add_company_tenant_scope_quotations_expenses.sql)
+// หมายเหตุ: quotations ใช้ created_at, expenses ใช้ expense_date (ไม่มีคอลัมน์ created_at ใน prod)
 export async function countCompanyTransactions(companyId: number): Promise<number> {
   const res = await query(
     `
       SELECT
         (SELECT COUNT(*) FROM invoices WHERE company_id = $1 AND created_at >= date_trunc('month', now())) +
-        (SELECT COUNT(*) FROM payments WHERE company_id = $1 AND created_at >= date_trunc('month', now()))
+        (SELECT COUNT(*) FROM payments WHERE company_id = $1 AND created_at >= date_trunc('month', now())) +
+        (SELECT COUNT(*) FROM quotations WHERE company_id = $1 AND created_at >= date_trunc('month', now())) +
+        (SELECT COUNT(*) FROM expenses WHERE company_id = $1 AND expense_date >= date_trunc('month', now())::date)
         AS total
     `,
     [companyId]

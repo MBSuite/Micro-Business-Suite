@@ -79,7 +79,7 @@ async function waitForDb() {
 async function applySchema(client) {
   // รีเซ็ตทุก run: กัน schema เก่า/ข้อมูลเก่าจากรอบที่แล้วแอบค้าง
   await client.query(
-    `DROP TABLE IF EXISTS payments, invoice_items, invoices, contacts,
+    `DROP TABLE IF EXISTS expenses, quotations, payments, invoice_items, invoices, contacts,
        company_settings, users, companies CASCADE`
   );
   const sql = readFileSync(path.join(import.meta.dirname, "schema.sql"), "utf8");
