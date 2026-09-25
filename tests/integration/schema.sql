@@ -31,8 +31,17 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS company_settings (
     id SERIAL PRIMARY KEY,
+    company_name VARCHAR(255) NOT NULL DEFAULT 'Micro-Business-Suite',
+    tax_id VARCHAR(50) NOT NULL DEFAULT '',
+    address TEXT,
     name VARCHAR(255),
-    invoice_prefix VARCHAR(20) DEFAULT 'INV'
+    invoice_prefix VARCHAR(20) DEFAULT 'INV',
+    logo_url TEXT,
+    phone VARCHAR(50),
+    email VARCHAR(255),
+    website VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS contacts (

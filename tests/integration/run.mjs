@@ -100,7 +100,11 @@ async function waitForApp() {
 }
 
 function runTests() {
-  const script = path.join(ROOT, "tests/integration-security.test.mjs");
+  const isTaxMode = process.argv.includes("--tax");
+  const command = isTaxMode ? "tsx" : "node";
+  const args = isTaxMode
+    ? ["--test", path.join(ROOT, "tests/taxAutomator.test.ts")]
+    : ["--test", path.join(ROOT, "tests/integration-security.test.mjs")];
   const env = {
     ...process.env,
     MBS_TEST_BASE_URL: BASE_URL,
@@ -112,7 +116,7 @@ function runTests() {
   };
   delete env.POSTGRES_URL;
 
-  const r = spawnSync("node", ["--test", script], { stdio: "inherit", env });
+  const r = spawnSync("pnpm", ["exec", command, ...args], { stdio: "inherit", env });
   return r.status ?? 1;
 }
 
@@ -169,7 +173,8 @@ async function main() {
     try {
       await waitForApp();
       appReady = true;
-      console.log("== app ready; running integration-security tests ==");
+      const testLabel = process.argv.includes("--tax") ? "taxAutomator tests" : "integration-security tests";
+      console.log(`== app ready; running ${testLabel} ==`);
       const code = runTests();
       console.log(`== integration tests finished with exit code ${code} ==`);
       process.exitCode = code;

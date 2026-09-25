@@ -27,7 +27,8 @@
     "check:consistency": "node scripts/weekly-consistency-audit.mjs",
     "license:issue": "node scripts/issue-license.mjs",
     "license:quick": "node scripts/issue-license-quick.mjs",
-    "test:integration": "node tests/integration/run.mjs"
+    "test:integration": "node tests/integration/run.mjs",
+    "test:tax": "node tests/integration/run.mjs --tax"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.4",
