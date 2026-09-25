@@ -48,8 +48,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({
       success: false,
-      error: error.message,
-      stack: error.stack
+      error: error.message || 'Internal Server Error'
     }, { status: 500 });
   }
 }

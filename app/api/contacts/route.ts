@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { auth, getUserCompanyId } from "@/lib/auth";
 import { contactMatchesUsage, normalizeContactType } from "@/lib/contacts";
 
 async function ensureContactsSchema() {
@@ -21,15 +22,28 @@ async function ensureContactsSchema() {
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized — not authenticated" },
+        { status: 401 }
+      );
+    }
+
     const url = new URL(request.url);
     const type = url.searchParams.get("type");
+    const companyId = await getUserCompanyId(session.user.id);
     await ensureContactsSchema();
 
-    const result = await query(`
+    const result = await query(
+      `
       SELECT id, name, type, contact_type, address, phone, email, tax_id
       FROM contacts
+      WHERE company_id = $1
       ORDER BY name
-    `);
+    `,
+      [companyId]
+    );
     let contacts = result.rows.map((contact: any) => ({
       ...contact,
       contact_type: normalizeContactType(contact.contact_type || contact.type),

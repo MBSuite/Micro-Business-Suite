@@ -116,6 +116,82 @@ CREATE TABLE IF NOT EXISTS payment_vouchers (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Master tables ภายใต้ tenant scope (สอดคล้องกับ migrations/add_company_tenant_scope_master_tables.sql)
+CREATE TABLE IF NOT EXISTS products (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255),
+    category_name VARCHAR(100),
+    type VARCHAR(50),
+    sku_number VARCHAR(50),
+    source_info TEXT,
+    storage_location VARCHAR(255),
+    stock_quantity INTEGER DEFAULT 0,
+    price NUMERIC DEFAULT 0,
+    product_notes TEXT,
+    supplier_cost NUMERIC DEFAULT 0,
+    markup_rate NUMERIC DEFAULT 0,
+    company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS product_categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    description TEXT,
+    company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS services (
+    id SERIAL PRIMARY KEY,
+    service_code VARCHAR(50),
+    name VARCHAR(255),
+    description TEXT,
+    service_type VARCHAR(50) DEFAULT 'service',
+    unit_price NUMERIC DEFAULT 0,
+    is_wht_applicable BOOLEAN DEFAULT TRUE,
+    company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS reminders (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255),
+    description TEXT,
+    due_date DATE,
+    status VARCHAR(20) DEFAULT 'pending',
+    type VARCHAR(20) DEFAULT 'manual',
+    company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- chart_of_accounts: global master (ไม่ tenant scope) — ใช้ร่วมทุกบริษัท
+CREATE TABLE IF NOT EXISTS chart_of_accounts (
+    id SERIAL PRIMARY KEY,
+    account_code VARCHAR(20) UNIQUE NOT NULL,
+    account_name_th VARCHAR(255) NOT NULL,
+    account_name_en VARCHAR(255),
+    account_type VARCHAR(50),
+    account_category VARCHAR(50),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS journal_entries (
+    id SERIAL PRIMARY KEY,
+    entry_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    reference_no VARCHAR(50),
+    journal_type VARCHAR(20),
+    reference_type VARCHAR(50),
+    reference_id INTEGER,
+    debit_account_id INTEGER,
+    credit_account_id INTEGER,
+    description TEXT,
+    amount DECIMAL(15,2) DEFAULT 0,
+    vat_amount DECIMAL(15,2) DEFAULT 0,
+    document_number VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 INSERT INTO company_settings (name)
 SELECT 'Integration Test Co' WHERE NOT EXISTS (SELECT 1 FROM company_settings);
 

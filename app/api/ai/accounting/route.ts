@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
 import { askGemini } from '../../../../services/aiAssistant';
+import { auth } from '@/lib/auth';
 import fs from 'fs';
 import path from 'path';
 
 export async function POST(request: Request) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { prompt } = await request.json();
     if (typeof prompt !== 'string' || !prompt.trim()) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
@@ -77,6 +83,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ answer });
   } catch (error: any) {
     console.error('AI Accounting error:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

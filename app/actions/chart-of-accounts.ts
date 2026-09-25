@@ -2,18 +2,29 @@
 
 import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/lib/auth";
+
+async function requireAuth(): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { ok: false, error: "กรุณาเข้าสู่ระบบก่อนดำเนินการ" };
+  }
+  return { ok: true };
+}
 
 export async function getAccounts(search: string = "") {
+  const authCtx = await requireAuth();
+  if (!authCtx.ok) return { success: false, error: authCtx.error };
   try {
     const queryStr = search
-      ? `SELECT id, account_code as code, account_name_th as name, account_name_en, account_type, account_category 
-         FROM chart_of_accounts 
+      ? `SELECT id, account_code as code, account_name_th as name, account_name_en, account_type, account_category
+         FROM chart_of_accounts
          WHERE account_code ILIKE $1 OR account_name_th ILIKE $1 OR account_name_en ILIKE $1
          ORDER BY account_code ASC`
-      : `SELECT id, account_code as code, account_name_th as name, account_name_en, account_type, account_category 
-         FROM chart_of_accounts 
+      : `SELECT id, account_code as code, account_name_th as name, account_name_en, account_type, account_category
+         FROM chart_of_accounts
          ORDER BY account_code ASC`;
-    
+
     const params = search ? [`%${search}%`] : [];
     const { rows } = await query(queryStr, params);
     return { success: true, data: rows };
@@ -23,6 +34,8 @@ export async function getAccounts(search: string = "") {
 }
 
 export async function createAccount(data: any) {
+  const authCtx = await requireAuth();
+  if (!authCtx.ok) return { success: false, error: authCtx.error };
   try {
     const { rows } = await query(
       `INSERT INTO chart_of_accounts (account_code, account_name_th, account_name_en, account_type, account_category)
@@ -37,9 +50,11 @@ export async function createAccount(data: any) {
 }
 
 export async function updateAccount(id: number, data: any) {
+  const authCtx = await requireAuth();
+  if (!authCtx.ok) return { success: false, error: authCtx.error };
   try {
     await query(
-      `UPDATE chart_of_accounts 
+      `UPDATE chart_of_accounts
        SET account_code=$1, account_name_th=$2, account_name_en=$3, account_type=$4, account_category=$5
        WHERE id=$6`,
       [data.account_code, data.account_name_th, data.account_name_en || null, data.account_type, data.account_category, id]
@@ -52,6 +67,8 @@ export async function updateAccount(id: number, data: any) {
 }
 
 export async function deleteAccount(id: number) {
+  const authCtx = await requireAuth();
+  if (!authCtx.ok) return { success: false, error: authCtx.error };
   try {
     const usage = await query(
       `SELECT id FROM journal_entries WHERE debit_account_id = $1 OR credit_account_id = $1 LIMIT 1`,

@@ -21,7 +21,6 @@ const SECRET = getJWTSecret();
 export async function POST(req: Request) {
   try {
     const { email, password } = await req.json();
-    console.log("[LOGIN API] Email:", email);
 
     if (!email || !password) {
       return NextResponse.json({ error: "Missing credentials" }, { status: 400 });
@@ -34,12 +33,10 @@ export async function POST(req: Request) {
     );
 
     if (res.rows.length === 0) {
-      console.log("[LOGIN API] User not found");
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
     const user = res.rows[0];
-    console.log("[LOGIN API] User found:", user.email, "Status:", user.status);
 
     if (user.status === "Inactive") {
       return NextResponse.json({ error: "Account suspended" }, { status: 403 });
@@ -47,7 +44,6 @@ export async function POST(req: Request) {
 
     // Verify password
     const match = await bcrypt.compare(password, user.password);
-    console.log("[LOGIN API] Password match:", match);
 
     if (!match) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
@@ -75,7 +71,6 @@ export async function POST(req: Request) {
       path: "/",
     });
 
-    console.log("[LOGIN API] Success");
     return NextResponse.json({
       success: true,
       user: {
@@ -85,8 +80,8 @@ export async function POST(req: Request) {
         role: user.role,
       },
     });
-  } catch (err: any) {
-    console.error("[LOGIN API] Error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    console.error("[LOGIN API] Error:", err instanceof Error ? err.message : err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

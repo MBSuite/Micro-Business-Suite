@@ -127,10 +127,11 @@ export async function DELETE(
     // ลบ payment และ journal entries ที่เกี่ยวข้อง
     await query("BEGIN");
     
-    // ลบ journal entries ที่ลิงก์กับ payment นี้ (ค้นหาผ่าน reference_no ที่มีเลข payment)
+    // ลบ journal entries ที่ลิงก์กับ payment นี้ (เฉพาะ reference ของใบชำระนี้เท่านั้น
+    // — ไม่ลบโดยกวาด description เพราะเสี่ยงโดนของบริษัท/รายการอื่น)
     await query(
-      `DELETE FROM journal_entries WHERE reference_no LIKE $1 OR description LIKE $2`,
-      [`%RC-${id}%`, `%รับชำระ%`]
+      `DELETE FROM journal_entries WHERE reference_no LIKE $1`,
+      [`%RC-${id}%`]
     );
     
     // ลบ payment

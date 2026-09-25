@@ -4,16 +4,14 @@ import {
   InputTaxValidator,
   WithholdingTaxEngine,
   OverseasServiceTrigger,
-  TaxCalendarAlerts,
-  COMPANY_TAX_ID,
-  COMPANY_ADDRESS
+  TaxCalendarAlerts
 } from '../lib/taxAutomator';
 
+// หมายเหตุ: การตรวจ Tax ID / ที่อยู่ บริษัทอ่านจาก company_settings (DB)
+// จึงไม่เป็น unit-test — ครอบคลุมโดย integration security test แทน
 describe('Tax Automator - Input Tax Validator', () => {
-  test('should validate correct invoice and matching address', () => {
-    const result = InputTaxValidator.validate({
-      taxId: COMPANY_TAX_ID,
-      address: COMPANY_ADDRESS,
+  test('should validate correct invoice (net + 7% VAT)', async () => {
+    const result = await InputTaxValidator.validate({
       netAmount: 1000,
       vatAmount: 70,
       hasRequiredFields: true
@@ -24,37 +22,8 @@ describe('Tax Automator - Input Tax Validator', () => {
     assert.strictEqual(result.errors.length, 0);
   });
 
-  test('should flag forbidden tax if Tax ID is mismatched', () => {
-    const result = InputTaxValidator.validate({
-      taxId: '1234567890123',
-      address: COMPANY_ADDRESS,
-      netAmount: 1000,
-      vatAmount: 70,
-      hasRequiredFields: true
-    });
-    assert.strictEqual(result.isValid, false);
-    assert.strictEqual(result.isForbiddenTax, true);
-    assert.strictEqual(result.capitalizedExpense, 1070); // Capitalized expense should include VAT
-    assert.strictEqual(result.errors.some(e => e.includes('ข้อมูลระบุตัวตนผู้เสียภาษีไม่ตรงกับบริษัท')), true);
-  });
-
-  test('should flag forbidden tax if Address is mismatched', () => {
-    const result = InputTaxValidator.validate({
-      taxId: COMPANY_TAX_ID,
-      address: 'ผิดที่อยู่ 123',
-      netAmount: 1000,
-      vatAmount: 70,
-      hasRequiredFields: true
-    });
-    assert.strictEqual(result.isValid, false);
-    assert.strictEqual(result.isForbiddenTax, true);
-    assert.strictEqual(result.capitalizedExpense, 1070); 
-  });
-
-  test('should flag forbidden tax for specific categories and capitalize expense', () => {
-    const result = InputTaxValidator.validate({
-      taxId: COMPANY_TAX_ID,
-      address: COMPANY_ADDRESS,
+  test('should flag forbidden tax for specific categories and capitalize expense', async () => {
+    const result = await InputTaxValidator.validate({
       category: 'ค่ารับรอง',
       netAmount: 1000,
       vatAmount: 70,
@@ -63,6 +32,26 @@ describe('Tax Automator - Input Tax Validator', () => {
     assert.strictEqual(result.isValid, true); // Valid format, but forbidden
     assert.strictEqual(result.isForbiddenTax, true);
     assert.strictEqual(result.capitalizedExpense, 1070); // Net + VAT
+  });
+
+  test('should flag missing required fields', async () => {
+    const result = await InputTaxValidator.validate({
+      netAmount: 1000,
+      vatAmount: 70,
+      hasRequiredFields: false
+    });
+    assert.strictEqual(result.isValid, false);
+    assert.strictEqual(result.errors.some(e => e.includes('ข้อมูลบังคับไม่ครบถ้วน')), true);
+  });
+
+  test('should flag VAT mismatch', async () => {
+    const result = await InputTaxValidator.validate({
+      netAmount: 1000,
+      vatAmount: 140, // expected 7% = 70
+      hasRequiredFields: true
+    });
+    assert.strictEqual(result.isValid, false);
+    assert.strictEqual(result.errors.some(e => e.includes('ยอด VAT ไม่ถูกต้อง')), true);
   });
 });
 

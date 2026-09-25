@@ -19,6 +19,20 @@ const SECRET = getJWTSecret();
 const PUBLIC_PATHS = ["/login", "/register", "/api/login", "/api/logout"];
 const PUBLIC_PREFIXES = ["/api/auth"];
 
+// APIs intentionally callable without a session.
+// Everything else under /api/* now requires a valid session-token.
+const PUBLIC_API_EXACT = new Set(["/api/login", "/api/logout", "/api/fx-rate"]);
+const PUBLIC_API_PREFIXES = ["/api/auth"];
+
+function isPublicApi(pathname: string): boolean {
+  return (
+    PUBLIC_API_EXACT.has(pathname) ||
+    PUBLIC_API_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    )
+  );
+}
+
 async function verifyToken(token: string) {
   try {
     const { payload } = await jwtVerify(token, SECRET);
@@ -37,7 +51,7 @@ export async function proxy(req: NextRequest) {
   );
   const isApi = pathname.startsWith("/api/");
 
-  if (isPublicPath || isPublicPrefix || isApi) {
+  if (isPublicPath || isPublicPrefix) {
     return NextResponse.next();
   }
 
@@ -47,6 +61,14 @@ export async function proxy(req: NextRequest) {
 
   if (session) {
     return NextResponse.next();
+  }
+
+  if (isApi) {
+    if (isPublicApi(pathname)) {
+      return NextResponse.next();
+    }
+    // API endpoints return JSON 401 instead of redirecting to the login page.
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const loginUrl = new URL("/login", req.url);
