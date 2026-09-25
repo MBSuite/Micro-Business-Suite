@@ -77,7 +77,10 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
+  // Static assets (public/) และ common files ต้อง bypass middleware
+  // ไม่เช่นนั้นไฟล์เช่น /logo.png ที่ไม่มี session จะโดน redirect ไป login
+  // ทำให้ logo/รูปภาพไม่แสดงผล
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:png|jpe?g|gif|webp|svg|ico|css|js|mjs|woff2?|ttf|map|pdf)$).*)",
   ],
 };
