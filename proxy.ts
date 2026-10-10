@@ -16,7 +16,7 @@ function getJWTSecret(): Uint8Array {
 
 const SECRET = getJWTSecret();
 
-const PUBLIC_PATHS = ["/login", "/register", "/api/login", "/api/logout"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/api/login", "/api/logout"];
 const PUBLIC_PREFIXES = ["/api/auth"];
 
 // APIs intentionally callable without a session.

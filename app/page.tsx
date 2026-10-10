@@ -28,12 +28,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import AiAdvisorWidget from "@/components/AiAdvisorWidget";
 
 export const dynamic = 'force-dynamic';
 
 import { auth } from "@/lib/auth";
 import WaitingRoom from "@/components/WaitingRoom";
+import LandingPage from "@/components/LandingPage";
 
 async function getDashboardData() {
   try {
@@ -175,6 +175,10 @@ async function getDashboardData() {
 
 export default async function Dashboard() {
   const session = await auth();
+  if (!session) {
+    return <LandingPage />;
+  }
+
   const user = session?.user as any;
 
   const userStatusRes = await query("SELECT status, name, email FROM users WHERE id = $1", [user?.id]);
@@ -290,9 +294,6 @@ export default async function Dashboard() {
             </div>
           </div>
         </div>
-
-        {/* AI Accounting Auditor - proactive insights */}
-        <AiAdvisorWidget />
 
         {/* Calendar & Upcoming Alerts Phase 2 */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

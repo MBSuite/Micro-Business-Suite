@@ -5,11 +5,10 @@ import { query } from "@/lib/db";
 import { ToastProvider } from "@/components/ToastProvider";
 import LayoutWrapper from "@/components/LayoutWrapper";
 import { Providers } from "@/components/Providers";
-import GlobalAiChat from "@/components/GlobalAiChat";
 
 export const metadata: Metadata = {
   title: "Micro-Business-Suite | ระบบจัดการบัญชีอัจฉริยะ",
-  description: "ระบบจัดการบัญชีและภาษีออนไลน์ 100% สไตล์ Enterprise Premium",
+  description: "จัดการบัญชี รายรับ รายจ่าย เอกสาร และภาษีธุรกิจได้ในระบบเดียว",
 };
 
 export const viewport = {
@@ -50,7 +49,6 @@ export default async function RootLayout({
             </LayoutWrapper>
           </ToastProvider>
         </Providers>
-        <GlobalAiChat />
       </body>
     </html>
   );
