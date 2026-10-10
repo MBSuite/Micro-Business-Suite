@@ -14,8 +14,7 @@ export default function GlobalAiChat() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Hide AI chatbox on quotations pages
-  const isVisible = !pathname?.startsWith("/quotations");
+  const isVisible = pathname !== "/" && !pathname?.startsWith("/quotations");
   if (!isVisible) return null;
 
   const submit = async (e: React.FormEvent) => {

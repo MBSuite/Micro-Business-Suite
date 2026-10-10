@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "../../../../GridsDev/MBSuite"
+		},
+		{
+			"path": "../Micro-Business-Suite-full"
 		}
 	],
 	"settings": {
