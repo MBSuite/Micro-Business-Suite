@@ -167,8 +167,16 @@ export default function LandingPage() {
       <footer className="border-t border-slate-100 bg-slate-50/70">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 py-7 text-center sm:flex-row sm:text-left lg:px-10">
           <p className="text-xs font-medium text-slate-500">
-            © 2026 Micro-Business-Suite. สงวนลิขสิทธิ์
+            Powered by Microtronic © 2026 Microtronic Co., Ltd.
           </p>
+          <a
+            href="https://microtronic.biz/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-medium text-slate-500 hover:text-indigo-600"
+          >
+            https://microtronic.biz/
+          </a>
           <div className="flex items-center gap-5">
             <Link href="/login" className="text-xs font-bold text-indigo-600 hover:text-indigo-700">
               เข้าสู่ระบบ

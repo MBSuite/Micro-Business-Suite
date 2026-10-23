@@ -20,7 +20,10 @@ export async function getContacts(usage: "invoice" | "expense" | "all" = "all") 
   try {
     const ctx = await requireSession();
     if ("error" in ctx) return { success: false, error: ctx.error };
-    await ensureContactsSchema();
+    const contactsSchemaExists = await ensureContactsSchema();
+    if (!contactsSchemaExists) {
+      return { success: false, error: "Contacts schema is missing. Run database bootstrap first." };
+    }
     const { rows } = await query(
       `SELECT * FROM contacts WHERE company_id = $1 ORDER BY name ASC`,
       [ctx.companyId]

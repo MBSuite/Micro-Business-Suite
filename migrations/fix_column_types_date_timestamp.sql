@@ -2,6 +2,13 @@
 -- Purpose: Convert varchar columns to proper DATE/TIMESTAMP types
 -- Created: 2026-04-10
 -- Safety: Requires backup before running
+--
+-- ⚠ MANUAL ONLY — NOT part of scripts/bootstrap-init-db.mjs
+-- This migration changes the type of existing columns, which CORE_RULES.md forbids
+-- without review. Do not run it automatically or against production until:
+--   1. node scripts/check-column-types.mjs reports the target columns
+--   2. the impact (data conversion failures, locks, dependent views) is reviewed
+--   3. the change is explicitly approved
 
 -- =======================================================
 -- STEP 1: BACKUP DATA (Use pg_dump or database tool before running)

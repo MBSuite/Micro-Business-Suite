@@ -18,7 +18,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
 
-    await ensurePayrollSchema();
+    const payrollSchemaExists = await ensurePayrollSchema();
+    if (!payrollSchemaExists) {
+      return NextResponse.json({ error: "Payroll schema is missing. Run database bootstrap first." }, { status: 500 });
+    }
     const companyId = await getUserCompanyId(session.user.id);
     const month = normalizePayrollMonth(request.nextUrl.searchParams.get("month"));
 
@@ -79,7 +82,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validated.error }, { status: 400 });
     }
 
-    await ensurePayrollSchema();
+    const payrollSchemaExists = await ensurePayrollSchema();
+    if (!payrollSchemaExists) {
+      return NextResponse.json({ error: "Payroll schema is missing. Run database bootstrap first." }, { status: 500 });
+    }
     const companyId = await getUserCompanyId(session.user.id);
     const data = validated.data;
     if (!data) {

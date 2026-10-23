@@ -34,26 +34,24 @@ type LicenseCheckResult = {
 };
 
 async function ensureCompanyLicensingSchema() {
-  await query(`
-    CREATE TABLE IF NOT EXISTS companies (
-      id SERIAL PRIMARY KEY,
-      name VARCHAR(255) NOT NULL,
-      plan_type VARCHAR(50) NOT NULL DEFAULT 'FREE',
-      max_users INTEGER NOT NULL DEFAULT 1,
-      subscription_status VARCHAR(50) NOT NULL DEFAULT 'Active',
-      expiry_date TIMESTAMP WITH TIME ZONE,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    )
+  // Schema is created by migrations (scripts/bootstrap-init-db.mjs). Runtime only verifies it.
+  const { rows: schemaRows } = await query(`
+    SELECT 1 FROM information_schema.tables
+    WHERE table_name = 'companies' LIMIT 1
   `);
-
-  try {
-    await query(`
-      ALTER TABLE users
-      ADD COLUMN IF NOT EXISTS company_id INTEGER
-    `);
-  } catch (e) {
-    // users table may not exist yet, ignore
+  if (schemaRows.length === 0) {
+    throw new Error(
+      "Schema 'companies' is missing. Run database bootstrap (scripts/bootstrap-init-db.mjs) before using this feature."
+    );
+  }
+  const { rows: columnRows } = await query(`
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'users' AND column_name = 'company_id' LIMIT 1
+  `);
+  if (columnRows.length === 0) {
+    throw new Error(
+      "Column 'users.company_id' is missing. Run database bootstrap (scripts/bootstrap-init-db.mjs) before using this feature."
+    );
   }
 
   const companyCountRes = await query(`SELECT COUNT(*)::int AS count FROM companies`);

@@ -22,20 +22,14 @@ export async function getOrCreateFolder(folderName: string) {
   }
 }
 
-export async function ensureContactsSchema() {
+export async function ensureContactsSchema(): Promise<boolean> {
   try {
-    await query(`
-      ALTER TABLE contacts ADD COLUMN IF NOT EXISTS contact_type VARCHAR(20)
+    const { rows } = await query(`
+      SELECT COUNT(*)::int AS count FROM information_schema.columns
+      WHERE table_name = 'contacts' AND column_name IN ('contact_type', 'company_id')
     `);
-    await query(`
-      UPDATE contacts
-      SET contact_type = CASE
-        WHEN LOWER(COALESCE(type, '')) IN ('vendor', 'supplier') THEN 'SUPPLIER'
-        WHEN LOWER(COALESCE(type, '')) = 'both' THEN 'BOTH'
-        WHEN LOWER(COALESCE(type, '')) = 'customer' THEN 'CUSTOMER'
-        ELSE 'CUSTOMER'
-      END
-      WHERE contact_type IS NULL OR contact_type = ''
-    `);
-  } catch (e) {}
+    return Number(rows[0]?.count || 0) === 2;
+  } catch (e) {
+    return false;
+  }
 }

@@ -8,6 +8,9 @@ import { query } from '@/lib/db';
 
 export interface CompanySettings {
   id?: number;
+  // Canonical DB column is `name`; `company_name` kept as a public alias for
+  // backward compatibility with consumers (tax-reports, page.tsx, etc.).
+  name?: string;
   company_name: string;
   tax_id: string;
   address: string;
@@ -19,8 +22,9 @@ export interface CompanySettings {
   updated_at?: string;
 }
 
+// Canonical DB column names (the live schema uses `name`, not `company_name`).
 const SETTINGS_FIELDS = [
-  'company_name',
+  'name',
   'tax_id',
   'address',
   'logo_url',
@@ -28,6 +32,11 @@ const SETTINGS_FIELDS = [
   'email',
   'website'
 ] as const;
+
+// Allow clients that still send `company_name` to update the `name` column.
+const FIELD_ALIASES: Record<string, string> = {
+  company_name: 'name',
+};
 
 function sanitizeSettings(settings: Record<string, unknown>): Partial<CompanySettings> {
   const out: Partial<CompanySettings> = {};
@@ -37,48 +46,51 @@ function sanitizeSettings(settings: Record<string, unknown>): Partial<CompanySet
       out[key] = value;
     }
   }
+  // Backward-compat alias: clients may still send `company_name`.
+  if (typeof settings.company_name === 'string' && !('name' in settings)) {
+    out.name = settings.company_name;
+  }
+  for (const [alias, canonical] of Object.entries(FIELD_ALIASES)) {
+    if (typeof settings[alias] === 'string' && typeof settings[canonical] !== 'string') {
+      (out as Record<string, unknown>)[canonical] = settings[alias];
+    }
+  }
   return out;
 }
 
 // Initialize company settings table
-export async function ensureCompanySettingsTable() {
-  await query(`
-    CREATE TABLE IF NOT EXISTS company_settings (
-      id SERIAL PRIMARY KEY,
-      company_name VARCHAR(255) NOT NULL DEFAULT 'Micro-Business-Suite',
-      tax_id VARCHAR(50) NOT NULL DEFAULT '',
-      address TEXT,
-      logo_url TEXT,
-      phone VARCHAR(50),
-      email VARCHAR(255),
-      website VARCHAR(255),
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  // Insert default settings if table is empty
-  const existing = await query('SELECT COUNT(*) as count FROM company_settings');
-  if (existing.rows[0].count === 0) {
-    await query(`
-      INSERT INTO company_settings (company_name, tax_id, address)
-      VALUES ('Micro-Business-Suite', '', 'Company Address, Thailand')
+export async function ensureCompanySettingsTable(): Promise<boolean> {
+  try {
+    const { rows } = await query(`
+      SELECT 1 FROM information_schema.tables 
+      WHERE table_name = 'company_settings' LIMIT 1
     `);
+    return rows.length > 0;
+  } catch (e) {
+    return false;
   }
 }
 
 // Get company settings
 export async function getCompanySettings(): Promise<{ success: boolean; data?: CompanySettings; error?: string }> {
   try {
-    await ensureCompanySettingsTable();
+    const settingsSchemaExists = await ensureCompanySettingsTable();
+    if (!settingsSchemaExists) {
+      return { success: false, error: "Company settings schema is missing. Run database bootstrap first." };
+    }
     const { rows } = await query(
-      `SELECT company_name, tax_id, address, logo_url, phone, email, website, created_at, updated_at
+      `SELECT name, tax_id, address, logo_url, phone, email, website, created_at, updated_at
        FROM company_settings ORDER BY id DESC LIMIT 1`
     );
-    
+
+    const row = rows[0] as Record<string, unknown> | undefined;
+    if (row) {
+      row.company_name = row.name;
+    }
+
     return {
       success: true,
-      data: rows[0] as CompanySettings
+      data: row as unknown as CompanySettings
     };
   } catch (error) {
     return {
@@ -91,7 +103,10 @@ export async function getCompanySettings(): Promise<{ success: boolean; data?: C
 // Update company settings (whitelisted fields only — never build SQL from client keys)
 export async function updateCompanySettings(settings: Record<string, unknown>): Promise<{ success: boolean; data?: Partial<CompanySettings>; error?: string }> {
   try {
-    await ensureCompanySettingsTable();
+    const settingsSchemaExists = await ensureCompanySettingsTable();
+    if (!settingsSchemaExists) {
+      return { success: false, error: "Company settings schema is missing. Run database bootstrap first." };
+    }
 
     const sanitized = sanitizeSettings(settings);
     const fields = Object.keys(sanitized);
@@ -109,7 +124,11 @@ export async function updateCompanySettings(settings: Record<string, unknown>): 
       WHERE id = (SELECT id FROM company_settings ORDER BY id DESC LIMIT 1)
     `, values);
 
-    return { success: true, data: sanitized };
+    const outData: Record<string, unknown> = { ...sanitized };
+    if (typeof outData.name === 'string') {
+      outData.company_name = outData.name;
+    }
+    return { success: true, data: outData as Partial<CompanySettings> };
   } catch (error) {
     return {
       success: false,

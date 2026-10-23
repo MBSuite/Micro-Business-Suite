@@ -3,42 +3,17 @@ import { query } from "@/lib/db";
 import { createInvoiceRecord, createReminder, getCompanySettings, getNextInvoiceNumber } from "@/app/actions";
 import { roundThaiTaxAmount } from "@/lib/tax";
 import { canAccessAdmin } from "@/lib/core-standards";
+import { ensureRecurringBillingSchema } from "@/lib/recurring-schema";
 
-async function ensureRecurringBillingSchema() {
-  await query(`
-    ALTER TABLE recurring_invoices
-    ADD COLUMN IF NOT EXISTS billing_day INTEGER,
-    ADD COLUMN IF NOT EXISTS due_day INTEGER DEFAULT 17,
-    ADD COLUMN IF NOT EXISTS wht_rate DECIMAL(5, 2) DEFAULT 3.00,
-    ADD COLUMN IF NOT EXISTS last_billed_at TIMESTAMP NULL
-  `).catch(() => null);
-
-  await query(`
-    UPDATE recurring_invoices
-    SET billing_day = EXTRACT(
-      DAY FROM COALESCE(
-        NULLIF(next_billing_date, '')::date,
-        NULLIF(start_date, '')::date,
-        CURRENT_DATE
-      )
-    )::int
-    WHERE billing_day IS NULL
-  `).catch(() => null);
-
-  await query(`
-    CREATE TABLE IF NOT EXISTS subscription_invoices (
-      id SERIAL PRIMARY KEY,
-      subscription_id INTEGER NOT NULL REFERENCES recurring_invoices(id) ON DELETE CASCADE,
-      invoice_id INTEGER REFERENCES invoices(id) ON DELETE SET NULL,
-      billing_period DATE NOT NULL,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    )
-  `).catch(() => null);
-
-  await query(`
-    CREATE UNIQUE INDEX IF NOT EXISTS ux_subscription_billing_period
-    ON subscription_invoices (subscription_id, billing_period)
-  `).catch(() => null);
+async function verifyRecurringBillingSchema() {
+  const schemaExists = await ensureRecurringBillingSchema();
+  if (!schemaExists) {
+    return NextResponse.json(
+      { error: "Recurring billing schema is missing. Run database bootstrap first." },
+      { status: 500 }
+    );
+  }
+  return null;
 }
 
 export async function POST(req: Request) {
@@ -69,7 +44,8 @@ export async function POST(req: Request) {
   }
 
   try {
-    await ensureRecurringBillingSchema();
+    const schemaError = await verifyRecurringBillingSchema();
+    if (schemaError) return schemaError;
     await query("SELECT pg_advisory_lock($1)", [123456789]);
 
     const targetDateIso = targetDate.toISOString().slice(0, 10);

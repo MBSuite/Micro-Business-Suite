@@ -92,19 +92,20 @@ export async function createPayment(data: any) {
   const pool = (await import("@/lib/db")).default;
   const client = await pool.connect();
   try {
-    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_no VARCHAR(50)`);
-    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS invoice_id INTEGER`);
-    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS amount DECIMAL(15,2)`);
-    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_date DATE`);
-    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_method VARCHAR(100)`);
-    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'completed'`);
-    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS notes TEXT`);
-    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS wht_amount DECIMAL(15,2) DEFAULT 0`);
-    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS vat_amount DECIMAL(15,2) DEFAULT 0`);
-    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`);
-    
-    await client.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS is_service BOOLEAN DEFAULT FALSE`);
-    
+    // Schema is created by migrations (scripts/bootstrap-init-db.mjs). Runtime only verifies it.
+    const schemaRes = await client.query(`
+      SELECT COUNT(*)::int AS count
+      FROM information_schema.columns
+      WHERE (table_name = 'payments' AND column_name IN (
+        'payment_no', 'invoice_id', 'amount', 'payment_date', 'payment_method',
+        'status', 'notes', 'wht_amount', 'vat_amount', 'updated_at'
+      ))
+         OR (table_name = 'invoices' AND column_name = 'is_service')
+    `);
+    if (Number(schemaRes.rows[0]?.count || 0) !== 11) {
+      return { success: false, error: "Payments schema is missing. Run database bootstrap first." };
+    }
+
     await client.query("BEGIN");
     
     let vatAmount = 0;

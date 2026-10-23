@@ -27,47 +27,44 @@ export async function POST() {
       );
     }
 
-    console.log('Running migration to add recurring columns to quotations table...');
-    
+    console.log('Checking recurring columns on quotations table (read-only)...');
+
     // First check if table exists
     const tableCheck = await query(`
       SELECT table_name FROM information_schema.tables 
       WHERE table_schema = 'public' AND table_name = 'quotations'
     `);
-    
+
     if (tableCheck.rows.length === 0) {
       return NextResponse.json({ error: 'Quotations table does not exist' }, { status: 404 });
     }
-    
-    console.log('✅ Found quotations table');
-    
-    // Add is_recurring column
-    try {
-      await query(`ALTER TABLE quotations ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE`);
-      console.log('✅ Added is_recurring column');
-    } catch (err) {
-      console.log('⚠️  is_recurring column:', err instanceof Error ? err.message : String(err));
-    }
-    
-    // Add recurring_interval column  
-    try {
-      await query(`ALTER TABLE quotations ADD COLUMN IF NOT EXISTS recurring_interval VARCHAR(20) DEFAULT 'none'`);
-      console.log('✅ Added recurring_interval column');
-    } catch (err) {
-      console.log('⚠️  recurring_interval column:', err instanceof Error ? err.message : String(err));
-    }
-    
-    // Verify the columns were added
+
+    // This endpoint is intentionally read-only: schema changes belong in
+    // migrations/ and are applied by scripts/bootstrap-init-db.mjs.
     const result = await query(
       `SELECT column_name, data_type, column_default FROM information_schema.columns WHERE table_name = 'quotations' AND column_name IN ('is_recurring', 'recurring_interval') ORDER BY column_name`
     );
-    
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Migration completed successfully',
-      columns: result.rows 
+
+    const present = new Set(result.rows.map((row: { column_name: string }) => row.column_name));
+    const missing = ['is_recurring', 'recurring_interval'].filter((c) => !present.has(c));
+
+    if (missing.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Missing columns: ${missing.join(', ')}. Run database bootstrap (scripts/bootstrap-init-db.mjs).`,
+          columns: result.rows,
+        },
+        { status: 409 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Schema is up to date (no changes made by this endpoint)',
+      columns: result.rows,
     });
-    
+
   } catch (error) {
     console.error('❌ Migration failed:', error);
     return NextResponse.json({ 

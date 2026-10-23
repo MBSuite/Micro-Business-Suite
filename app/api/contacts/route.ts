@@ -3,21 +3,16 @@ import { query } from "@/lib/db";
 import { auth, getUserCompanyId } from "@/lib/auth";
 import { contactMatchesUsage, normalizeContactType } from "@/lib/contacts";
 
-async function ensureContactsSchema() {
-  await query(`
-    ALTER TABLE contacts
-    ADD COLUMN IF NOT EXISTS contact_type VARCHAR(20)
-  `);
-
-  await query(`
-    UPDATE contacts
-    SET contact_type = CASE
-      WHEN LOWER(COALESCE(type, '')) IN ('vendor', 'supplier') THEN 'SUPPLIER'
-      WHEN LOWER(COALESCE(type, '')) = 'both' THEN 'BOTH'
-      ELSE 'CUSTOMER'
-    END
-    WHERE contact_type IS NULL OR contact_type = ''
-  `);
+async function ensureContactsSchema(): Promise<boolean> {
+  try {
+    const { rows } = await query(`
+      SELECT COUNT(*)::int AS count FROM information_schema.columns
+      WHERE table_name = 'contacts' AND column_name IN ('contact_type', 'company_id')
+    `);
+    return Number(rows[0]?.count || 0) === 2;
+  } catch (e) {
+    return false;
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -33,7 +28,10 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const type = url.searchParams.get("type");
     const companyId = await getUserCompanyId(session.user.id);
-    await ensureContactsSchema();
+    const contactsSchemaExists = await ensureContactsSchema();
+    if (!contactsSchemaExists) {
+      return NextResponse.json({ error: "Contacts schema is missing. Run database bootstrap first." }, { status: 500 });
+    }
 
     const result = await query(
       `

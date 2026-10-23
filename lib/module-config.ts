@@ -1,20 +1,22 @@
 import { query } from "@/lib/db";
 
-export async function ensureModuleConfigSchema() {
-  await query(`
-    CREATE TABLE IF NOT EXISTS company_module_settings (
-      company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-      module_id VARCHAR(100) NOT NULL,
-      is_enabled BOOLEAN NOT NULL DEFAULT true,
-      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-      updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
-      PRIMARY KEY (company_id, module_id)
-    )
-  `);
+export async function ensureModuleConfigSchema(): Promise<boolean> {
+  try {
+    const { rows } = await query(`
+      SELECT 1 FROM information_schema.tables 
+      WHERE table_name = 'company_module_settings' LIMIT 1
+    `);
+    return rows.length > 0;
+  } catch (e) {
+    return false;
+  }
 }
 
 export async function getCompanyModuleOverrides(companyId: number): Promise<Record<string, boolean>> {
-  await ensureModuleConfigSchema();
+  const schemaExists = await ensureModuleConfigSchema();
+  if (!schemaExists) {
+    throw new Error("Schema 'company_module_settings' is missing. Run database bootstrap (scripts/bootstrap-init-db.mjs) before using this feature.");
+  }
   const result = await query(
     `SELECT module_id, is_enabled FROM company_module_settings WHERE company_id = $1`,
     [companyId]
@@ -32,7 +34,10 @@ export async function saveCompanyModuleOverrides(
   overrides: Record<string, boolean>,
   updatedBy: number
 ) {
-  await ensureModuleConfigSchema();
+  const schemaExists = await ensureModuleConfigSchema();
+  if (!schemaExists) {
+    throw new Error("Schema 'company_module_settings' is missing. Run database bootstrap (scripts/bootstrap-init-db.mjs) before using this feature.");
+  }
   const entries = Object.entries(overrides);
 
   for (const [moduleId, isEnabled] of entries) {

@@ -5,6 +5,7 @@ import { CalendarClock, Mail, Plus, Repeat, Search, StopCircle } from "lucide-re
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import RecurringRunButton from "./RecurringRunButton";
+import { ensureRecurringBillingSchema } from "@/lib/recurring-schema";
 
 export const dynamic = "force-dynamic";
 
@@ -19,25 +20,11 @@ export default async function RecurringInvoicesPage({
   let records: any[] = [];
 
   try {
-    await query(`
-      ALTER TABLE recurring_invoices
-      ADD COLUMN IF NOT EXISTS billing_day INTEGER,
-      ADD COLUMN IF NOT EXISTS due_day INTEGER DEFAULT 17,
-      ADD COLUMN IF NOT EXISTS wht_rate DECIMAL(5, 2) DEFAULT 3.00,
-      ADD COLUMN IF NOT EXISTS last_billed_at TIMESTAMP NULL
-    `).catch(() => null);
-
-    await query(`
-      UPDATE recurring_invoices
-      SET billing_day = EXTRACT(
-        DAY FROM COALESCE(
-          NULLIF(next_billing_date, '')::date,
-          NULLIF(start_date, '')::date,
-          CURRENT_DATE
-        )
-      )::int
-      WHERE billing_day IS NULL
-    `).catch(() => null);
+    if (!(await ensureRecurringBillingSchema())) {
+      console.warn(
+        "Recurring billing schema is incomplete. Run database bootstrap (scripts/bootstrap-init-db.mjs)."
+      );
+    }
 
     let q = `
       SELECT

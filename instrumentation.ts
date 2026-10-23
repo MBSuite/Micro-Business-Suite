@@ -7,12 +7,19 @@ export async function register() {
   // License lock: both delivery models (perpetual & subscription) require a
   // valid offline-signed MBS_LICENSE_KEY. Fail fast on invalid/expired keys.
   // Skipped during `next build` (phase-production-build) — only enforced at runtime.
-  if (process.env.NODE_ENV === "production" && !process.env.NEXT_PHASE) {
+  // License verification uses node:crypto and must run only in the Node runtime.
+  if (
+    process.env.NODE_ENV === "production" &&
+    !process.env.NEXT_PHASE &&
+    process.env.NEXT_RUNTIME === "nodejs"
+  ) {
     const { requireActiveLicense } = await import("@/lib/license");
     requireActiveLicense();
   }
 
-  if (process.env.CRON_ENABLED === "true") {
+  // Cron maintenance uses node:child_process and must only run in the Node runtime.
+  // Guarding here keeps it out of the Edge instrumentation bundle.
+  if (process.env.CRON_ENABLED === "true" && process.env.NEXT_RUNTIME === "nodejs") {
     const { registerMaintenance } = await import("@/jobs/scheduleMaintenance");
     registerMaintenance();
   }

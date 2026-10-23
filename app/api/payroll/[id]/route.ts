@@ -16,7 +16,10 @@ async function getRequestContext() {
     return { error: NextResponse.json({ error: "Permission denied" }, { status: 403 }) };
   }
 
-  await ensurePayrollSchema();
+  const payrollSchemaExists = await ensurePayrollSchema();
+  if (!payrollSchemaExists) {
+    return { error: NextResponse.json({ error: "Payroll schema is missing. Run database bootstrap first." }, { status: 500 }) };
+  }
   const companyId = await getUserCompanyId(session.user.id);
   return {
     session,

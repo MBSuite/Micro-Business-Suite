@@ -16,12 +16,12 @@ export default function RegisterPage() {
 
   async function handleDBFix() {
     setIsFixing(true);
-    setError("กำลังซ่อมแซมตารางใน Neon...");
+    setError("กำลังตรวจสอบโครงสร้างตาราง...");
     const result = await checkAndInitUsersTable();
     if (result.success) {
       setError(`✅ ${result.message} กรุณาลองสมัครใหม่อีกครั้ง`);
     } else {
-      setError(`❌ แก้ไขไม่สำเร็จ: ${result.error}`);
+      setError(`❌ ตรวจสอบไม่ผ่าน: ${result.error}`);
     }
     setIsFixing(false);
   }
@@ -98,7 +98,7 @@ export default function RegisterPage() {
                   disabled={isFixing}
                   className="mt-2 w-full p-2 bg-white border border-red-200 text-red-600 text-[10px] font-black uppercase rounded hover:bg-red-50 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
                  >
-                   <Database size={12} /> {isFixing ? "กำลังซ่อมแซม..." : "🛠️ คลิกเพื่อแก้ตารางใน Neon (Rename & Recreate)"}
+                   <Database size={12} /> {isFixing ? "กำลังตรวจสอบ..." : "🔍 ตรวจสอบโครงสร้างตาราง users"}
                  </button>
                )}
              </div>

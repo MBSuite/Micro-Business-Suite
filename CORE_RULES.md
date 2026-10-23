@@ -87,7 +87,7 @@ CREATE TABLE chart_of_accounts (
 ```
 
 ### users Table
-**Purpose:** System users with role-based access control. Only superadmin and admin roles allowed.
+**Purpose:** System users with role-based access control. Allowed roles: superadmin, admin, and user.
 ```sql
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,                    -- Primary key for users

@@ -17,48 +17,28 @@ export async function deleteExpenseJournalEntries(expenseId: number) {
   );
 }
 
-async function ensureExpensesTable() {
-  await query(`
-    CREATE TABLE IF NOT EXISTS expenses (
-      id SERIAL PRIMARY KEY,
-      title VARCHAR(255) NOT NULL,
-      category VARCHAR(100) NOT NULL DEFAULT 'อื่นๆ',
-      amount DECIMAL(15, 2) NOT NULL DEFAULT 0,
-      expense_date DATE NOT NULL,
-      reference_no VARCHAR(100),
-      notes TEXT,
-      status VARCHAR(50) DEFAULT 'paid',
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  await query(`
-    ALTER TABLE expenses
-    ADD COLUMN IF NOT EXISTS reference_no VARCHAR(100),
-    ADD COLUMN IF NOT EXISTS tax_invoice_no VARCHAR(100),
-    ADD COLUMN IF NOT EXISTS tax_invoice_date DATE,
-    ADD COLUMN IF NOT EXISTS vat_amount DECIMAL(15, 2) DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS contact_id INTEGER,
-    ADD COLUMN IF NOT EXISTS classification VARCHAR(20) NOT NULL DEFAULT 'OPEX',
-    ADD COLUMN IF NOT EXISTS receipt_url TEXT,
-    ADD COLUMN IF NOT EXISTS receipt_file_name VARCHAR(255),
-    ADD COLUMN IF NOT EXISTS receipt_mime_type VARCHAR(100),
-    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    ADD COLUMN IF NOT EXISTS wht_rate DECIMAL(5, 2) DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS wht_amount DECIMAL(15, 2) DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS net_amount DECIMAL(15, 2) DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS is_service BOOLEAN DEFAULT FALSE,
-    ADD COLUMN IF NOT EXISTS original_currency VARCHAR(10) DEFAULT 'THB',
-    ADD COLUMN IF NOT EXISTS original_amount DECIMAL(15, 4) DEFAULT NULL,
-    ADD COLUMN IF NOT EXISTS exchange_rate DECIMAL(15, 6) DEFAULT NULL
-  `);
+async function ensureExpensesSchema(): Promise<boolean> {
+  // Schema is created by migrations (scripts/bootstrap-init-db.mjs). Runtime only verifies it.
+  try {
+    const { rows } = await query(`
+      SELECT COUNT(*)::int AS count
+      FROM information_schema.columns
+      WHERE table_name = 'expenses'
+        AND column_name IN ('company_id', 'classification', 'tax_invoice_no', 'wht_rate', 'exchange_rate')
+    `);
+    return Number(rows[0]?.count || 0) === 5;
+  } catch (e) {
+    return false;
+  }
 }
 
 export async function getExpenses(year?: string, month?: string) {
   const session = await auth();
   if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
   try {
-    await ensureExpensesTable();
+    if (!(await ensureExpensesSchema())) {
+      return { success: false, error: "Expenses schema is missing. Run database bootstrap first." };
+    }
     const companyId = await getUserCompanyId(session.user.id);
     const now = new Date();
     const y = year ? parseInt(year, 10) : now.getFullYear();
@@ -103,7 +83,9 @@ export async function getExpensesYearly(year?: string) {
   const session = await auth();
   if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
   try {
-    await ensureExpensesTable();
+    if (!(await ensureExpensesSchema())) {
+      return { success: false, error: "Expenses schema is missing. Run database bootstrap first." };
+    }
     const companyId = await getUserCompanyId(session.user.id);
     const y = year ? parseInt(year, 10) : new Date().getFullYear();
     const monthly = await query(
@@ -164,7 +146,9 @@ export async function createExpense(data: {
   if (!gate.ok) return { success: false, error: gate.error };
 
   try {
-    await ensureExpensesTable();
+    if (!(await ensureExpensesSchema())) {
+      return { success: false, error: "Expenses schema is missing. Run database bootstrap first." };
+    }
     
     // Fetch vendor name from contacts if contact_id provided
     let vendorName = null;
@@ -286,7 +270,9 @@ export async function updateExpense(
   const session = await auth();
   if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
   try {
-    await ensureExpensesTable();
+    if (!(await ensureExpensesSchema())) {
+      return { success: false, error: "Expenses schema is missing. Run database bootstrap first." };
+    }
     const companyId = await getUserCompanyId(session.user.id);
     const isForeignCurrency = data.original_currency && data.original_currency !== "THB";
     const result = await query(
@@ -365,7 +351,9 @@ export async function deleteExpense(id: number) {
   const session = await auth();
   if (!session?.user?.id) return { success: false, error: "กรุณาเข้าสู่ระบบก่อนบันทึก" };
   try {
-    await ensureExpensesTable();
+    if (!(await ensureExpensesSchema())) {
+      return { success: false, error: "Expenses schema is missing. Run database bootstrap first." };
+    }
     const companyId = await getUserCompanyId(session.user.id);
     await deleteExpenseJournalEntries(id);
     const result = await query(`DELETE FROM expenses WHERE id = $1 AND company_id = $2 RETURNING id`, [id, companyId]);
