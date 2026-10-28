@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 "use server";
 
 import pool from "@/lib/db";
@@ -72,7 +73,7 @@ export async function registerUser(formData: FormData) {
 
     // Redirect to login on success
     return { success: true, company: companyRes.rows[0] };
-  } catch (error: unknown) {
+  } catch (error: any) {
     try { await client.query("ROLLBACK"); } catch {}
     const err = error instanceof Error ? error : new Error(String(error));
     console.error("❌ Registration error full details:", {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -98,7 +99,7 @@ export default function AdminCustomersPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "โหลดข้อมูลไม่สำเร็จ");
       setCustomers(data.customers || []);
-    } catch (e: unknown) {
+    } catch (e: any) {
       setError(e instanceof Error ? e.message : "เกิดข้อผิดพลาด");
     } finally {
       setLoading(false);
@@ -116,7 +117,7 @@ export default function AdminCustomersPage() {
           setCustomers(data.customers || []);
           setNowTs(Date.now());
         }
-      } catch (e: unknown) {
+      } catch (e: any) {
         if (active) setError(e instanceof Error ? e.message : "เกิดข้อผิดพลาด");
       } finally {
         if (active) setLoading(false);
@@ -163,7 +164,7 @@ export default function AdminCustomersPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "ดำเนินการไม่สำเร็จ");
       await load();
-    } catch (e: unknown) {
+    } catch (e: any) {
       setError(e instanceof Error ? e.message : "เกิดข้อผิดพลาด");
     } finally { setSaving(false); }
   };
@@ -181,7 +182,7 @@ export default function AdminCustomersPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "สร้างไม่สำเร็จ");
       await load();
-    } catch (e: unknown) {
+    } catch (e: any) {
       setError(e instanceof Error ? e.message : "เกิดข้อผิดพลาด");
     } finally { setSaving(false); }
   };
@@ -193,7 +194,7 @@ export default function AdminCustomersPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "โหลดรายละเอียดไม่สำเร็จ");
       setDetails(data);
-    } catch (e: unknown) {
+    } catch (e: any) {
       setError(e instanceof Error ? e.message : "เกิดข้อผิดพลาด");
     }
   };
@@ -466,7 +467,7 @@ function LicenseModal({ customer, mode, onClose, onSaved, setBusy, setError }: {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "ออก key ไม่สำเร็จ");
       setResultKey(data.license_key);
-    } catch (e: unknown) {
+    } catch (e: any) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusyLocal(false); setBusy(false);

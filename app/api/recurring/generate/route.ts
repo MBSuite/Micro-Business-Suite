@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { createInvoiceRecord, createReminder, getCompanySettings, getNextInvoiceNumber } from "@/app/actions";

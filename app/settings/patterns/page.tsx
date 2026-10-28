@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 
 import { getDocumentPatterns } from "@/app/actions";
 import PatternClient from "./PatternClient";

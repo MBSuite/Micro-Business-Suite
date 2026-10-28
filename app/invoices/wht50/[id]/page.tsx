@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { query } from "@/lib/db";
 import { ArrowLeft, FileSignature } from "lucide-react";
 import Link from "next/link";

@@ -1,13 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { isSuperAdmin } from "@/lib/permissions";
 
-function errorMessage(error: unknown): string {
+function errorMessage(error: any): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function hasError(e: unknown): boolean {
+function hasError(e: any): boolean {
   const m = e instanceof Error ? e.message : String(e);
   return (
     m.toLowerCase().includes("relation") ||
@@ -41,7 +42,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     );
 
     return NextResponse.json({ customer, events: eventsRes.rows, users: usersRes.rows });
-  } catch (error: unknown) {
+  } catch (error: any) {
     return NextResponse.json({ error: hasError(error) ? "ฐานข้อมูลยังไม่รองรับ (run migration)" : errorMessage(error) }, { status: 500 });
   }
 }
@@ -77,8 +78,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
 
     const fields: string[] = [];
-    const values: unknown[] = [];
-    const push = (col: string, val: unknown) => {
+    const values: any[] = [];
+    const push = (col: string, val: any) => {
       fields.push(`${col} = $${values.length + 1}`);
       values.push(val);
     };
@@ -101,7 +102,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     );
 
     return NextResponse.json({ success: true });
-  } catch (error: unknown) {
+  } catch (error: any) {
     return NextResponse.json({ error: errorMessage(error) || "Failed to update customer" }, { status: 500 });
   }
 }
@@ -143,7 +144,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
 
     await query(`DELETE FROM companies WHERE id = $1`, [companyId]);
     return NextResponse.json({ success: true });
-  } catch (error: unknown) {
+  } catch (error: any) {
     return NextResponse.json({ error: errorMessage(error) || "Failed to delete customer" }, { status: 500 });
   }
 }

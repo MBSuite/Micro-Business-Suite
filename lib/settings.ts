@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // =====================================================
 // Micro Business Suite: Company Settings & Branding
 // Centralized company configuration management

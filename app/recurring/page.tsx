@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { query } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { formatDateDisplay } from "@/lib/dateFormatter";

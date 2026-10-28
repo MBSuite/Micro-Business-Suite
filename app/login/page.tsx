@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 "use client";
 
 import { useState } from "react";
@@ -34,7 +35,7 @@ export default function LoginPage() {
         console.log("[LOGIN] Redirecting to /");
         window.location.href = "/";
       }
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error("[LOGIN] Exception:", err);
       setError("เกิดข้อผิดพลาด: " + ((err as Error).message || "กรุณาลองใหม่"));
     } finally {

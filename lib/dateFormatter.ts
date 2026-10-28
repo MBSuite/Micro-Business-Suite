@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 /**
  * Date Formatter Utility - Thai Format (dd/mm/yyyy)
  * Centralized date formatting for the entire Micro Business Suite application

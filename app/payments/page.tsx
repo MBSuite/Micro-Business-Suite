@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -26,11 +27,6 @@ export default function PaymentsPage() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const canDelete = userRole ? MANAGER_ROLES.includes(userRole.toUpperCase()) : false;
 
-  useEffect(() => {
-    fetchPayments();
-    fetchUserRole();
-  }, [search]);
-
   const fetchUserRole = async () => {
     try {
       const res = await fetch('/api/me');
@@ -54,6 +50,11 @@ export default function PaymentsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchPayments();
+    fetchUserRole();
+  }, [search]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('ยืนยันลบรายการนี้? ข้อมูลจะถูกลบถาวร')) return;

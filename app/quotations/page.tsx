@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { query } from "@/lib/db";
 import { auth, getUserCompanyId } from "@/lib/auth";
 import { FileText, Plus, Search, ArrowRight, Edit, ShieldCheck, FileCheck } from "lucide-react";

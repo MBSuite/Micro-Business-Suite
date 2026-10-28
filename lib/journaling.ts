@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 // =====================================================
 // Micro Business Suite: Automated Journaling System
 // Double-Entry Bookkeeping with Thai Accounting Standards

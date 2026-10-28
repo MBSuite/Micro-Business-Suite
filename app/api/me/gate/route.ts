@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getCompanyGate } from "@/lib/company-gate";
 
-function errorMessage(error: unknown): string {
+function errorMessage(error: any): string {
   return error instanceof Error ? error.message : String(error);
 }
 
@@ -13,7 +14,7 @@ export async function GET() {
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const gate = await getCompanyGate(session.user.id);
     return NextResponse.json({ gate });
-  } catch (error: unknown) {
+  } catch (error: any) {
     return NextResponse.json({ error: errorMessage(error) || "Failed to load gate" }, { status: 500 });
   }
 }

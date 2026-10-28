@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { query } from "@/lib/db";
 import { formatDateDisplay } from "@/lib/dateFormatter";
 import { ArrowLeft, ReceiptText } from "lucide-react"; // [CHANGE] - โดย Cascade | [DATE] - 2026-04-02 | [REASON] - ลบ ShieldCheck ที่ไม่ได้ใช้

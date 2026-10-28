@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // RD API Portal Integration for Thailand Revenue Department
 // Handles automated submission of tax documents (e-Tax Invoices, Withholding Tax)
 

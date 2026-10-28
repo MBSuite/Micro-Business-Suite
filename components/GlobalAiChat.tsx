@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 "use client";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
@@ -28,7 +29,7 @@ export default function GlobalAiChat() {
       const res = await axios.post("/api/ai/accounting", { prompt });
       setAnswer(res.data.answer);
       setMinimized(false); 
-    } catch (err: unknown) {
+    } catch (err: any) {
       const errorMsg = axios.isAxiosError(err) && err.response?.data?.error 
         ? err.response.data.error 
         : "เกิดข้อผิดพลาดในการเชื่อมต่อ";

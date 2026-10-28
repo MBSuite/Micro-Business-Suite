@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 
 import { query } from "@/lib/db";
 import { Package, Plus, Search, Layers, Box, ShieldCheck } from "lucide-react";

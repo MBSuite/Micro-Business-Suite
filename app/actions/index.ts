@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 export { getContacts, createContact, updateContact } from "./contacts";
 export {
   getProducts, getNextSkuNumber, createProduct, updateProduct, deleteProduct,

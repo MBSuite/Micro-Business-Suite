@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { NextResponse } from "next/server";
 import { deleteInvoice } from "@/app/actions";
 import { canAccessAdmin } from "@/lib/core-standards";

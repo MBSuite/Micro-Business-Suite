@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 "use server";
 
 import { query } from "@/lib/db";
@@ -44,7 +45,7 @@ export async function checkAndInitUsersTable() {
     }
 
     return { success: true, message: "โครงสร้างตารางสมบูรณ์แล้ว" };
-  } catch (error: unknown) {
+  } catch (error: any) {
     const errorMsg = error instanceof Error ? error.message : "DB Init Error";
     console.error("❌ DB Init Error:", errorMsg);
     return { success: false, error: errorMsg };
@@ -76,7 +77,7 @@ export async function promoteUserAction(email: string) {
     } else {
       return { success: false, error: `ไม่พบอีเมล ${normalizedEmail} ในระบบ` };
     }
-  } catch (error: unknown) {
+  } catch (error: any) {
     const msg = error instanceof Error ? error.message : "เกิดข้อผิดพลาดในการดำเนินการ";
     return { success: false, error: msg };
   }

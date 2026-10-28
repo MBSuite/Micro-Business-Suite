@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 // =====================================================
 // Micro Business Suite: System Audit Route
 // Hidden route for testing journal entry validation

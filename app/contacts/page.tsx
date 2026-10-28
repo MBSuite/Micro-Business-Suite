@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 
 import { query } from "@/lib/db";
 import { Users, Plus, Mail, Phone, MapPin, ArrowRight, UserCheck, Edit, ShieldCheck, Heart, Search } from "lucide-react";

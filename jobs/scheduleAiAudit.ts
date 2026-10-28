@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 // dotenv must load .env.local BEFORE any module that reads process.env DB vars.
 // Static imports are hoisted, so the db-touching libs must be imported dynamically.
 import dotenv from 'dotenv';

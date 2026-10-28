@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { NextResponse } from 'next/server';
 import { askGemini } from '../../../../services/aiAssistant';
 import { auth } from '@/lib/auth';

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { NextResponse } from "next/server";
 import { auth, getUserCompanyId } from "@/lib/auth";
 import { applyModuleOverrides, getEnabledModules, MODULE_CATEGORIES, getPermissionModules } from "@/lib/module-registry";

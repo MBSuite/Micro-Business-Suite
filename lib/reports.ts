@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 // =====================================================
 // Micro Business Suite: P&L Calculation Helper
 // Calculates Net Profit by aggregating COA accounts

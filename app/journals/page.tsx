@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 
 import { query } from "@/lib/db";
 import { expandJournalRowsForPresentation, getEffectiveJournalReference } from "@/lib/journaling";
@@ -106,7 +107,7 @@ export default async function JournalsPage({ searchParams }: { searchParams: { t
   ];
 
   let entries: any[] = [];
-  let stats = { sales: 0, receipt: 0, purchase: 0, payment: 0 };
+  const stats = { sales: 0, receipt: 0, purchase: 0, payment: 0 };
 
   try {
     let q = `

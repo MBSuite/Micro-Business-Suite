@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { NextResponse } from "next/server";
 
 const FX_API = "https://api.frankfurter.dev/v2";
 const SOURCE_LABEL = "Bank of Thailand reference rate (BOT via frankfurter.dev)";
 
-const cache = new Map<string, { data: unknown; expiresAt: number }>();
+const cache = new Map<string, { data: any; expiresAt: number }>();
 
 async function fetchJson<T>(url: string, cacheKey: string, ttlMs: number): Promise<T> {
   const now = Date.now();

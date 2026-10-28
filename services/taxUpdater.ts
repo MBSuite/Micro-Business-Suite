@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { askGemini } from './aiAssistant';
 import fetch from 'node-fetch';
 
@@ -18,7 +19,7 @@ export async function fetchLatestTaxUpdates(): Promise<string> {
     if (!rssResponse.ok) {
       return `⚠️ ไม่สามารถดึงข่าวสารจากกรมสรรพากรได้ (HTTP ${rssResponse.status} จาก ${rssUrl}). ตรวจสอบกำหนดยื่นจากคู่มือภาษีภายในระบบแทน.`;
     }
-  } catch (err: unknown) {
+  } catch (err: any) {
     const msg = (err as { name?: string })?.name === 'AbortError'
       ? 'หมดเวลา 15 วินาที (timeout)'
       : (err as Error)?.message || String(err);

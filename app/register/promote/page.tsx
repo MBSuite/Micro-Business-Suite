@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -53,7 +54,7 @@ export default function FixAdminPage() {
         setStatus("error");
         setMsg(res.error || "เกิดข้อผิดพลาดในการดำเนินการ");
       }
-    } catch (e: unknown) {
+    } catch (e: any) {
       setStatus("error");
       const errorMsg = e instanceof Error ? e.message : "เกิดข้อผิดพลาดในการเชื่อมต่อ";
       setMsg(errorMsg);

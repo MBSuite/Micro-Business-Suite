@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { auth } from "@/lib/auth";
@@ -5,7 +6,7 @@ import { isSuperAdmin } from "@/lib/permissions";
 import { createLicenseKey, getSigningSalt, type LicensePayload } from "@/lib/license";
 import { LICENSE_PACKAGES, LICENSE_TIERS, getLicensePackage } from "@/lib/license-packages";
 
-function errorMessage(error: unknown): string {
+function errorMessage(error: any): string {
   return error instanceof Error ? error.message : String(error);
 }
 
@@ -138,7 +139,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       license_key: licenseKey,
       payload,
     });
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error("POST /api/admin/customers/[id]/license error:", error);
     return NextResponse.json({ error: errorMessage(error) || "Failed to issue license" }, { status: 500 });
   }

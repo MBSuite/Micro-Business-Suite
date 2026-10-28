@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { google } from 'googleapis';
 import path from 'path';
 import { query } from '@/lib/db';

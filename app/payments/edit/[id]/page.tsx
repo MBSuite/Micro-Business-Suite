@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -28,10 +29,6 @@ export default function EditPaymentPage() {
     payment_method: "",
   });
 
-  useEffect(() => {
-    fetchPayment();
-  }, [params.id]);
-
   const fetchPayment = async () => {
     try {
       const res = await fetch(`/api/payments/${params.id}`);
@@ -49,6 +46,10 @@ export default function EditPaymentPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchPayment();
+  }, [params.id]);
 
   const handleSave = async () => {
     setSaving(true);

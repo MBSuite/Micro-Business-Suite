@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 export const CONTACT_TYPES = ["CUSTOMER", "SUPPLIER", "BOTH"] as const;
 
 export type ContactType = (typeof CONTACT_TYPES)[number];

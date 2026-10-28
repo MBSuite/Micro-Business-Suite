@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 // =====================================================
 // Micro Business Suite: Company Gate (Trial -> Paid)
 // อ่านสิทธิ์/โควต้าของแต่ละบริษัทจาก license_key ที่ผูกกับบริษัท

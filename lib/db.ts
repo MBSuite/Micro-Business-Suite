@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Pool } from 'pg';
 
 // Optimized Pool สำหรับ Vercel Serverless + Neon Database

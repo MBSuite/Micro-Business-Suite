@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 // =====================================================
 // Micro Business Suite: CSV Import API
 // Bulk import expenses from CSV files

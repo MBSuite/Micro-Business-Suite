@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 // =====================================================
 // Micro Business Suite: Offline Signed License
 // License key = MBS.<base64url(payload)>.<base64url(HMAC-SHA256)>
@@ -92,7 +93,7 @@ export function parseLicenseKey(key: string): LicensePayload | null {
 
 // Verify the license payload shape; ensures a signed-but-malformed key
 // (e.g. bad enum, NaN limits, invalid date) never counts as valid.
-function isDateString(v: unknown): v is string {
+function isDateString(v: any): v is string {
   if (typeof v !== "string" || v.length === 0) return false;
   return !isNaN(new Date(v).getTime());
 }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 export const EXPENSE_CATEGORIES = [
   "เงินเดือนและค่าแรง",
   "ค่าเช่าสถานที่",

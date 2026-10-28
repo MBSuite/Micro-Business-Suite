@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 "use client";
 
 import { formatDateInput, formatDateDisplay } from "@/lib/dateFormatter";

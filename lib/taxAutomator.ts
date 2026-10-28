@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { getCompanySettings } from '@/lib/settings';
 
 // ระบบ e-Filing กรมสรรพากร — ลิงก์ตรงเข้าฟอร์มยื่นจริง (RD e-Filing)

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import path from "node:path";

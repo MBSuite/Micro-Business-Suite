@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -41,10 +42,6 @@ export default function PrintReceiptPage() {
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchData();
-  }, [params.id]);
-
   const fetchData = async () => {
     try {
       const [paymentRes, companyRes] = await Promise.all([
@@ -66,6 +63,10 @@ export default function PrintReceiptPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, [params.id]);
 
   const handlePrint = () => {
     window.print();

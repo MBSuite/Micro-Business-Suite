@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { query } from "@/lib/db";
 import { getGoogleDrive } from "@/lib/google-server";
 

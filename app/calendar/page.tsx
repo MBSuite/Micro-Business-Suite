@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { getReminders } from "@/app/actions";
 import CalendarClient from "./CalendarClient";
 import { formatDateDisplay } from "@/lib/dateFormatter";

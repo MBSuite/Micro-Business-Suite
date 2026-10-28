@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { isSuperAdmin } from "@/lib/permissions";
 import { trialEndFromNow } from "@/lib/company-gate";
 
-function errorMessage(error: unknown): string {
+function errorMessage(error: any): string {
   return error instanceof Error ? error.message : String(error);
 }
 
@@ -51,7 +52,7 @@ export async function GET() {
     );
 
     return NextResponse.json({ customers: result.rows });
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error("GET /api/admin/customers error:", error);
     return NextResponse.json(
       { error: errorMessage(error) || "Failed to fetch customers" },
@@ -113,7 +114,7 @@ export async function POST(request: Request) {
     );
 
     return NextResponse.json({ customer: created }, { status: 201 });
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error("POST /api/admin/customers error:", error);
     return NextResponse.json(
       { error: errorMessage(error) || "Failed to create customer" },

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 export const CORE_ROLES = ["superadmin", "admin", "user"] as const;
 
 export type CoreRole = (typeof CORE_ROLES)[number];

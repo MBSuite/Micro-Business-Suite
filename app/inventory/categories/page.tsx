@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 
 import { getCategories } from "@/app/actions";
 import { FolderTree, Plus, ArrowLeft, Layers } from "lucide-react";

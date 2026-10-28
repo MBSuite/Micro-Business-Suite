@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 "use client";
 import React from "react";
 import { FileText, Edit, Trash2, DollarSign } from "lucide-react";

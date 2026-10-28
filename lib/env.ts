@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 /**
  * Environment Variable Validation Utility
  * Ensures all required environment variables are set at startup

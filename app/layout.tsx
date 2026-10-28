@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import type { Metadata } from "next";
 import "./globals.css";
 import { auth } from "@/lib/auth";

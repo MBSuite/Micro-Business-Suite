@@ -113,4 +113,5 @@ docker compose up -d --build
 - คู่มือใช้งาน: `docs/USER_MANUAL.md`, `docs/COMPLETE_MANUAL.md`
 - ความรู้ทางภาษี: `docs/THAI_TAX_GUIDE.md`, `docs/KNOWLEDGE_PACK.md`
 - สถาปัตยกรรม: `docs/ARCHITECTURE.md`
-- บันทึกการตัดสินใจ: `docs/DECISIONS.md`
+- บันทึกการตัดสินใจ: `docs/DECISIONS.md` (มีจริง — ตรวจสอบแล้ว 28 ต.ค. 2569)
+- **ข้อควรระวัง:** `DESK/NOW.md`, `MEMORY/DECISIONS.md`, `KNOWLEDGE/MBSUITE/` อ้างในเอกสารบางฉบับแต่ **ไม่มีจริง**ใน repo นี้ — ใช้ `docs/DECISIONS.md` แทน

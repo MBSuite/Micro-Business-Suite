@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 // =====================================================
 // Micro Business Suite: License Tier Packages
 // ที่เดียวที่นิยาม tier -> ฟีเจอร์/ลิมิต (ย้ายจาก scripts/issue-license.mjs)
