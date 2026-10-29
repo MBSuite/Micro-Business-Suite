@@ -116,7 +116,36 @@ export default function BackupPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           
-          {/* Main Action Card */}
+          {/* Info Card (คำเตือน + สถานะ) — ย้ายมาไว้ก่อน */}
+          <div className="space-y-6">             <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
+                <ShieldAlert className="text-amber-500 mb-6" size={32} />
+                <h3 className="text-lg font-black mb-3">คำเตือนการจัดการระบบ</h3>
+                <p className="text-xs text-slate-400 font-medium leading-relaxed mb-6">
+                   ไฟล์ Backup จะประกอบด้วยข้อมูลที่ละเอียดอ่อน เช่น รายชื่อลูกค้า, รายได้ส่วนบุคคล และการตั้งค่าระบบ 
+                   กรุณาเก็บรักษาไฟล์ไว้อย่างระมัดระวัง พี่ยอดเยี่ยมมากที่รอบคอบครับ!
+                </p>
+                <div className="flex items-center gap-3 py-3 border-t border-white/10">
+                   <Clock size={16} className="text-slate-500" />
+                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Last Backup: Never</span>
+                </div>
+             </div>
+
+             <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+                <h3 className="font-black text-slate-800 text-sm uppercase tracking-widest mb-4">สถานะเซิร์ฟเวอร์</h3>
+                <div className="space-y-4">
+                   <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-400 font-bold">PostgreSQL Engine</span>
+                      <span className="text-emerald-500 font-black tracking-tighter uppercase flex items-center gap-1.5">
+                         <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" /> ONLINE
+                      </span>
+                   </div>
+                   <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-400 font-bold">Storage Cluster</span>
+                      <span className="text-emerald-500 font-black tracking-tighter uppercase">Neon (Asia-SE)</span>
+                   </div>
+                </div>
+             </div>
+          </div>
           <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200 border border-slate-100 space-y-8 relative overflow-hidden">
              <div className="absolute top-0 right-0 p-8 opacity-5">
                 <Database size={120} />
@@ -232,37 +261,7 @@ export default function BackupPage() {
             </form>
           </div>
 
-          {/* Info Card */}
-          <div className="space-y-6">
-             <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
-                <ShieldAlert className="text-amber-500 mb-6" size={32} />
-                <h3 className="text-lg font-black mb-3">คำเตือนการจัดการระบบ</h3>
-                <p className="text-xs text-slate-400 font-medium leading-relaxed mb-6">
-                   ไฟล์ Backup จะประกอบด้วยข้อมูลที่ละเอียดอ่อน เช่น รายชื่อลูกค้า, รายได้ส่วนบุคคล และการตั้งค่าระบบ 
-                   กรุณาเก็บรักษาไฟล์ไว้อย่างระมัดระวัง พี่ยอดเยี่ยมมากที่รอบคอบครับ!
-                </p>
-                <div className="flex items-center gap-3 py-3 border-t border-white/10">
-                   <Clock size={16} className="text-slate-500" />
-                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Last Backup: Never</span>
-                </div>
-             </div>
 
-             <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
-                <h3 className="font-black text-slate-800 text-sm uppercase tracking-widest mb-4">สถานะเซิร์ฟเวอร์</h3>
-                <div className="space-y-4">
-                   <div className="flex justify-between items-center text-xs">
-                      <span className="text-slate-400 font-bold">PostgreSQL Engine</span>
-                      <span className="text-emerald-500 font-black tracking-tighter uppercase flex items-center gap-1.5">
-                         <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" /> ONLINE
-                      </span>
-                   </div>
-                   <div className="flex justify-between items-center text-xs">
-                      <span className="text-slate-400 font-bold">Storage Cluster</span>
-                      <span className="text-emerald-500 font-black tracking-tighter uppercase">Neon (Asia-SE)</span>
-                   </div>
-                </div>
-             </div>
-          </div>
 
         </div>
 
