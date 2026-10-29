@@ -28,16 +28,20 @@ export const MODULE_REGISTRY: AppModule[] = [
   { id: "payroll", label: "ค่าแรงพนง", icon: "banknote", category: "operations", route: "/payroll", enabledByDefault: true },
   { id: "vouchers", label: "ใบสำคัญจ่าย", icon: "banknote", category: "operations", route: "/vouchers", enabledByDefault: true },
   { id: "journals", label: "สมุดรายวัน (Journals)", icon: "library", category: "operations", route: "/journals", enabledByDefault: true },
+  { id: "bank_reconcile", label: "กระทบยอดธนาคาร (AI)", icon: "checkCircle", category: "operations", route: "/bank-reconcile", enabledByDefault: true },
+  { id: "mrp", label: "การผลิต (MRP)", icon: "factory", category: "operations", route: "/mrp", enabledByDefault: true },
 
   // ==================== MASTER DATA ====================
   { id: "inventory", label: "คลังสินค้า (Stock)", icon: "package", category: "master_data", route: "/inventory", enabledByDefault: true },
   { id: "services", label: "ราคากลางบริการ (Services)", icon: "briefcase", category: "master_data", route: "/services", enabledByDefault: true },
   { id: "coa", label: "ผังบัญชี (COA)", icon: "pieChart", category: "master_data", route: "/admin/coa", enabledByDefault: true },
   { id: "contacts", label: "ผู้ติดต่อ / คู่ค้า (Contacts)", icon: "users", category: "master_data", route: "/contacts", enabledByDefault: true },
+  { id: "custom_forms", label: "ปรับแต่งฟอร์ม/รายงาน", icon: "fileEdit", category: "master_data", route: "/custom-forms", enabledByDefault: true },
 
   // ==================== REPORTS ====================
   { id: "tax_reports", label: "รายงานภาษี", icon: "fileText", category: "reports", route: "/tax-reports", enabledByDefault: true },
   { id: "reports", label: "งบกำไรขาดทุน (P&L)", icon: "barChart", category: "reports", route: "/reports/profit-loss", enabledByDefault: true },
+  { id: "cash_flow", label: "กระแสเงินสด (Cash Flow)", icon: "trendingUp", category: "reports", route: "/cash-flow", enabledByDefault: true },
 
   // ==================== ADMIN ====================
   { id: "member_management", label: "จัดการสมาชิก", icon: "userCog", category: "admin", route: "/admin/members", requiresAdmin: true, enabledByDefault: true },

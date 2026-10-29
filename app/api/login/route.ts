@@ -21,16 +21,20 @@ const SECRET = getJWTSecret();
 
 export async function POST(req: Request) {
   try {
-    const { email, password } = await req.json();
+    const body = await req.json();
+    const email = typeof body?.email === "string" ? body.email.trim() : "";
+    const password = typeof body?.password === "string" ? body.password : "";
 
     if (!email || !password) {
       return NextResponse.json({ error: "Missing credentials" }, { status: 400 });
     }
 
-    // Query user
+    const normalizedEmail = email.toLowerCase();
+
+    // Query user with email normalization to handle case differences and accidental whitespace.
     const res = await query(
-      "SELECT id, email, password, name, role, status FROM users WHERE email = $1",
-      [email]
+      "SELECT id, email, password, name, role, status FROM users WHERE LOWER(email) = LOWER($1)",
+      [normalizedEmail]
     );
 
     if (res.rows.length === 0) {

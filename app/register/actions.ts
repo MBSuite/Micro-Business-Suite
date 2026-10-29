@@ -6,12 +6,13 @@ import bcrypt from "bcryptjs";
 
 export async function registerUser(formData: FormData) {
   const name = formData.get("name") as string;
-  const email = formData.get("email") as string;
+  const email = (formData.get("email") as string)?.trim() ?? "";
+  const normalizedEmail = email.toLowerCase();
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirmPassword") as string;
   const companyName = (formData.get("companyName") as string)?.trim() || null;
 
-  if (!name || !email || !password) {
+  if (!name || !normalizedEmail || !password) {
     return { error: "กรุณากรอกข้อมูลให้ครบทุกช่อง" };
   }
 
@@ -32,7 +33,7 @@ export async function registerUser(formData: FormData) {
     //   ที่ users.email — วางเป็น note สำหรับ WS-3
     await client.query("BEGIN");
 
-    const checkRes = await client.query("SELECT id FROM users WHERE email = $1", [email]);
+    const checkRes = await client.query("SELECT id FROM users WHERE LOWER(email) = LOWER($1)", [normalizedEmail]);
     if (checkRes.rows.length > 0) {
       await client.query("ROLLBACK");
       return { error: "อีเมลนี้ถูกใช้งานไปแล้ว" };
@@ -66,7 +67,7 @@ export async function registerUser(formData: FormData) {
     // สถานะ Active เพื่อให้ลูกค้าเข้าใช้งาน Trial ได้ทันทีแบบ self-service
     await client.query(
       "INSERT INTO users (name, email, password, role, status, company_id) VALUES ($1, $2, $3, $4, $5, $6)",
-      [name, email, hashedPassword, "user", "Active", companyId]
+      [name, normalizedEmail, hashedPassword, "user", "Active", companyId]
     );
 
     await client.query("COMMIT");

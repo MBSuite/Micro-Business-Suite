@@ -19,11 +19,12 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
+      const cleanEmail = email.trim();
       console.log("[LOGIN] Calling custom API...");
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: cleanEmail, password }),
       });
       
       const data = await res.json();

@@ -62,6 +62,8 @@ export interface JournalEntry {
   debit_account_id: number;
   credit_account_id: number;
   amount: number;
+  project?: string; // multi-dimensional skeleton
+  department?: string; // multi-dimensional skeleton
   vat_rate?: number;
   vat_amount?: number;
   withholding_rate?: number;
