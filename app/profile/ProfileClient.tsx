@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { User, Mail, Phone, Building2, Lock, Save, Camera, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { normalizeRole } from "@/lib/core-standards";
@@ -24,6 +24,24 @@ export default function ProfileClient({ member }: { member: Member | null }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const hiddenFileRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarClick = () => {
+    const el = hiddenFileRef.current;
+    if (el) el.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
+      const url = URL.createObjectURL(file);
+      setProfileImage(url);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,15 +79,28 @@ export default function ProfileClient({ member }: { member: Member | null }) {
           <div className="bg-white rounded-lg shadow-sm border border-slate-100 p-8">
             <div className="flex items-center gap-10">
               <div className="relative">
-                <div className="w-24 h-24 rounded-xl bg-violet-600 flex items-center justify-center text-white text-4xl font-black border-4 border-violet-100 shadow-xl overflow-hidden">
-                  {name.charAt(0).toUpperCase()}
+                <div className="w-24 h-24 rounded-xl bg-violet-600 flex items-center justify-center text-white text-4xl font-black border-4 border-violet-100 shadow-xl overflow-hidden relative">
+                  {profileImage ? (
+                    <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{name.charAt(0).toUpperCase()}</span>
+                  )}
                 </div>
                 <button
                   type="button"
+                  onClick={handleAvatarClick}
                   className="absolute -bottom-1 -right-1 w-7 h-7 bg-gray-700 hover:bg-blue-600 rounded-full flex items-center justify-center text-white transition-colors border-2 border-white"
+                  aria-label="เปลี่ยนรูปโปรไฟล์"
                 >
                   <Camera size={13} />
                 </button>
+                <input
+                  ref={hiddenFileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
               </div>
               <div>
                 <p className="font-black text-slate-900 text-2xl tracking-tighter">{name}</p>
