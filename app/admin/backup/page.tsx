@@ -46,6 +46,31 @@ export default function BackupPage() {
     }
   };
 
+  const handleRestore = async (fileInput: HTMLInputElement) => {
+    const file = fileInput.files?.[0];
+    if (!file) {
+      alert("กรุณาเลือกไฟล์ Backup ก่อน");
+      return;
+    }
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/admin/restore", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Restore failed");
+      setSyncMessage("ตรวจสอบไฟล์ Restore สำเร็จ — สามารถนำเข้าข้อมูลได้ (ตรวจสอบความถูกต้องก่อน)");
+    } catch (e) {
+      setSyncMessage(`เกิดข้อผิดพลาด: ${e instanceof Error ? e.message : "Restore failed"}`);
+    } finally {
+      setLoading(false);
+      setTimeout(() => setSyncMessage(null), 6000);
+    }
+  };
+
   const handleBackup = async (format: 'sql' | 'json') => {
     setLoading(true);
     try {
@@ -189,6 +214,22 @@ export default function BackupPage() {
                   <span className="text-sm font-bold uppercase tracking-tight">Backup Downloaded Successfully!</span>
                </div>
              )}
+          </div>
+
+          <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200 border border-slate-100 space-y-6">
+            <div className="flex items-center gap-3 mb-2">
+              <RefreshCw size={20} className="text-amber-500" />
+              <h3 className="text-lg font-black text-slate-800">กู้คืนข้อมูล (Restore)</h3>
+            </div>
+            <p className="text-xs text-slate-500 font-medium leading-relaxed">
+              อัปโหลดไฟล์ Backup (.json) เพื่อกู้คืนข้อมูล — ระบบจะตรวจสอบความถูกต้องก่อนนำเข้า
+            </p>
+            <form onSubmit={(e) => { e.preventDefault(); handleRestore((e.target as HTMLFormElement).file as HTMLInputElement); }} className="space-y-4">
+              <input type="file" name="file" accept=".json" className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100 transition-all" />
+              <button type="submit" className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl shadow-lg shadow-amber-200 transition-all text-sm">
+                ตรวจสอบและกู้คืนข้อมูล
+              </button>
+            </form>
           </div>
 
           {/* Info Card */}
