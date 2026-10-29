@@ -49,6 +49,7 @@ export const MODULE_REGISTRY: AppModule[] = [
   { id: "modules_control", label: "โมดูล/ตั้งค่า", icon: "settings", category: "admin", route: "/admin/modules", requiresAdmin: true, enabledByDefault: true },
   { id: "backup", label: "Database Backup", icon: "database", category: "admin", route: "/admin/backup", requiresAdmin: true, enabledByDefault: true },
   { id: "customer_console", label: "ลูกค้า & Subscription", icon: "building2", category: "admin", route: "/admin/customers", requiresAdmin: true, superadminOnly: true, enabledByDefault: true, description: "Customer & Subscription Console — เฉพาะ superadmin" },
+  { id: "company_profile", label: "ข้อมูลบริษัท (หัวเอกสาร)", icon: "building", category: "admin", route: "/admin/company", requiresAdmin: true, enabledByDefault: true, description: "เลขที่ภาษี, ชื่อบริษัท, ที่อยู่, โทรศัพท์, อีเมล, โลโก้ — ใช้ทำหัวเอกสาร" },
 ];
 
 export const MODULE_CATEGORIES: Array<{ id: AppModule["category"]; label: string }> = [
