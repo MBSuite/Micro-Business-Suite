@@ -1,6 +1,6 @@
 # Subscription / Trial / License Gating (P2)
 
-> ระบบ "1 ลูกค้า 1 บริษัท": trial 14 วัน 1 user → ต้อง license จริง (paid) ถึงใช้ได้เต็ม
+> ระบบ "1 ลูกค้า 1 บริษัท": trial 30 วัน 1 user → ต้อง license จริง (paid) ถึงใช้ได้เต็ม
 > โค้ดหลัก: `lib/company-gate.ts`, `lib/license.ts`, `lib/license-packages.ts`, `app/register/*`
 
 ## รูปแบบ license key

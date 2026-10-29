@@ -21,7 +21,7 @@ export const LICENSE_PACKAGES: Record<LicenseTier, LicensePackage> = {
   TRIAL: {
     tier: "TRIAL",
     label: "ทดลองใช้",
-    description: "ทดลองตลอด 14 วัน — ฟีเจอร์หลัก + จำกัดจำนวนธุรกรรม",
+    description: "ทดลองตลอด 30 วัน — ฟีเจอร์หลัก + จำกัดจำนวนธุรกรรม",
     defaultFeatures: ["basic_access", "journal_engine", "tax_reporting"],
     defaultMaxUsers: 1,
     defaultMaxTransactionsPerMonth: 30,

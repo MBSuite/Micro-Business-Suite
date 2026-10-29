@@ -99,7 +99,7 @@ export async function POST(request: Request) {
         body?.customer_phone ? String(body.customer_phone) : null,
         parseFloat(body?.price_amount || "0") || 0,
         String(body?.price_currency || "THB"),
-        trialEndFromNow(14),
+        trialEndFromNow(),
         body?.notes ? String(body.notes) : null,
       ]
     );

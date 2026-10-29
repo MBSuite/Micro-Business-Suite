@@ -170,7 +170,7 @@ export default function AdminCustomersPage() {
   };
 
   const onCreateCustomer = async () => {
-    const name = prompt("ชื่อบริษัทลูกค้า (create พร้อม trial 14 วัน):");
+    const name = prompt("ชื่อบริษัทลูกค้า (create พร้อม trial 30 วัน):");
     if (!name) return;
     setSaving(true); setError("");
     try {

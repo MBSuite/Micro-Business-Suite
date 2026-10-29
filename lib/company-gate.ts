@@ -35,7 +35,7 @@ export interface CompanyGate {
   planTypeLabel: string;
 }
 
-const TRIAL_DAYS = 14;
+const TRIAL_DAYS = 30;
 
 export function trialEndFromNow(days: number = TRIAL_DAYS): string {
   const d = new Date();

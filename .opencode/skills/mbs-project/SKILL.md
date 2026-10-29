@@ -20,7 +20,7 @@ Project context ของ Micro-Business-Suite (MBS)—ชุดระบบบ�
 
 - เริ่มงานใหม่/แก้บั๊ก/เพิ่มฟีเจอร์ในโปรเจกต์นี้ ที่ต้องเข้าใจ architecture
 - ถามเรื่อง schema ตาราง, ความสัมพันธ์ company_id / multi-tenant
-- เรื่อง subscription, trial 14 วัน, license key (MBS.<payload>.<hmac>), gating
+- เรื่อง subscription, trial 30 วัน, license key (MBS.<payload>.<hmac>), gating
 - เรื่อง test harness integration security (MBS_TEST_*) ที่ 6/6 เขียวแล้ว
 - เรื่อง dev environment, port, env, script bootstrap
 
@@ -43,7 +43,7 @@ Project context ของ Micro-Business-Suite (MBS)—ชุดระบบบ�
 - **Multi-tenant:** คอลัมน์ `company_id` บนเอกสาร (invoices/payments **ตั้งตอนสร้างแล้ว**);
   **RED/ยังไม่ครบ:** quotations/expenses/contacts/products/services/journals ยังไม่มี/ไม่ครบ `company_id`
   (งาน WS-3 #4) และ `users.email` **ยังไม่มี UNIQUE constraint**
-- **stale license → ล็อก "Expired"** ไม่ fallback trial; trial 14 วัน/1 user; register สร้าง company trial
+- **stale license → ล็อก "Expired"** ไม่ fallback trial; trial 30 วัน/1 user; register สร้าง company trial
 - **Test coverage:** 8 หน่วย + 6 integration (harness แยก DB, เขียวหมด)
 
 ## References (โหลดตามงาน)
