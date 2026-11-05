@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { query } from "@/lib/db";
+import { auth, getUserCompanyId } from "@/lib/auth";
 import { formatDateDisplay } from "@/lib/dateFormatter";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -10,19 +11,25 @@ export const dynamic = "force-dynamic";
 
 async function getExpenseData(id: string) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) return null;
+    const companyId = await getUserCompanyId(session.user.id);
     const expRes = await query(
       `
         SELECT e.*, c.name as vendor_name, c.address as vendor_address, c.tax_id as vendor_tax_id, c.phone as vendor_phone
         FROM expenses e
-        LEFT JOIN contacts c ON c.id = e.contact_id
-        WHERE e.id = $1
+        LEFT JOIN contacts c ON c.id = e.contact_id AND c.company_id = e.company_id
+        WHERE e.id = $1 AND e.company_id = $2
       `,
-      [id]
+      [id, companyId]
     );
     if (expRes.rows.length === 0) return null;
     const expense = expRes.rows[0];
 
-    const companyRes = await query(`SELECT * FROM company_settings LIMIT 1`).catch(() => ({ rows: [] as any[] }));
+    const companyRes = await query(
+      `SELECT name, tax_id, address FROM company_settings WHERE company_id = $1 LIMIT 1`,
+      [companyId]
+    ).catch(() => ({ rows: [] as any[] }));
     const company = companyRes.rows[0] || {};
 
     return { expense, company };

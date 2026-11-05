@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { auth } from "@/lib/auth";
+import { auth, getUserCompanyId } from "@/lib/auth";
 
 // Whitelist of non-sensitive company fields. Credentials such as
 // OAuth client secrets, refresh tokens and RD portal keys must never
@@ -28,7 +28,6 @@ const SAFE_COMPANY_COLUMNS = [
   "receipt_footer",
   "bank_name",
   "bank_account_name",
-  "bank_account_number",
   "bank_branch",
   "rd_base_url",
   "rd_enabled",
@@ -48,27 +47,12 @@ export async function GET() {
       );
     }
 
-    // Scope ตามบริษัทของ session user (ป้องกัน cross-tenant เมื่อ deployment มีหลายบริษัท)
-    const userRes = await query("SELECT company_id FROM users WHERE id = $1", [
-      session.user.id,
-    ]);
-    const companyId = userRes.rows[0]?.company_id ?? null;
-
-    // company_settings เดิมเป็น singleton — ถ้ายังไม่มีคอลัมน์ company_id ให้ใช้ single-row เดิม
-    const colRes = await query(
-      `SELECT 1 FROM information_schema.columns
-       WHERE table_name = 'company_settings' AND column_name = 'company_id'`
+    const companyId = await getUserCompanyId(session.user.id);
+    const result = await query(
+      `SELECT ${SAFE_COMPANY_COLUMNS} FROM company_settings
+       WHERE company_id = $1 LIMIT 1`,
+      [companyId]
     );
-    const hasCompanyColumn = colRes.rows.length > 0;
-
-    const result = hasCompanyColumn
-      ? await query(
-          `SELECT ${SAFE_COMPANY_COLUMNS} FROM company_settings
-           WHERE company_id = $1 OR company_id IS NULL
-           ORDER BY (company_id = $1) DESC, id ASC LIMIT 1`,
-          [companyId]
-        )
-      : await query(`SELECT ${SAFE_COMPANY_COLUMNS} FROM company_settings LIMIT 1`);
 
     if (result.rows.length === 0) {
       return NextResponse.json({ error: "Company not found" }, { status: 404 });

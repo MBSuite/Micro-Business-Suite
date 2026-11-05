@@ -1,10 +1,14 @@
 import { updateCompanySettings } from "@/lib/settings";
 import { auth } from "@/lib/auth";
+import { isAdmin } from "@/lib/permissions";
 
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return Response.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+  if (!(await isAdmin(session.user.id))) {
+    return Response.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
   try {
     const formData = await req.formData();

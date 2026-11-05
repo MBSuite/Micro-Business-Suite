@@ -6,6 +6,8 @@
 // =====================================================
 
 import { query } from '@/lib/db';
+import { auth, getUserCompanyId } from '@/lib/auth';
+import { isAdmin } from '@/lib/permissions';
 
 export interface CompanySettings {
   id?: number;
@@ -75,19 +77,28 @@ export async function ensureCompanySettingsTable(): Promise<boolean> {
 // Get company settings
 export async function getCompanySettings(): Promise<{ success: boolean; data?: CompanySettings; error?: string }> {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, error: "Unauthorized" };
+    }
     const settingsSchemaExists = await ensureCompanySettingsTable();
     if (!settingsSchemaExists) {
       return { success: false, error: "Company settings schema is missing. Run database bootstrap first." };
     }
+    const companyId = await getUserCompanyId(session.user.id);
     const { rows } = await query(
-      `SELECT name, tax_id, address, logo_url, phone, email, website, created_at, updated_at
-       FROM company_settings ORDER BY id DESC LIMIT 1`
+      `SELECT name, tax_id, address, logo_url, phone, email, website,
+              vat_rate, withholding_tax_rate, is_vat_registered, currency,
+              invoice_prefix, quotation_prefix, created_at, updated_at
+       FROM company_settings WHERE company_id = $1 LIMIT 1`,
+      [companyId]
     );
 
     const row = rows[0] as Record<string, unknown> | undefined;
-    if (row) {
-      row.company_name = row.name;
+    if (!row) {
+      return { success: false, error: "Company settings not found for this company." };
     }
+    row.company_name = row.name;
 
     return {
       success: true,
@@ -104,10 +115,18 @@ export async function getCompanySettings(): Promise<{ success: boolean; data?: C
 // Update company settings (whitelisted fields only — never build SQL from client keys)
 export async function updateCompanySettings(settings: Record<string, unknown>): Promise<{ success: boolean; data?: Partial<CompanySettings>; error?: string }> {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, error: "Unauthorized" };
+    }
+    if (!(await isAdmin(session.user.id))) {
+      return { success: false, error: "Forbidden" };
+    }
     const settingsSchemaExists = await ensureCompanySettingsTable();
     if (!settingsSchemaExists) {
       return { success: false, error: "Company settings schema is missing. Run database bootstrap first." };
     }
+    const companyId = await getUserCompanyId(session.user.id);
 
     const sanitized = sanitizeSettings(settings);
     const fields = Object.keys(sanitized);
@@ -119,11 +138,15 @@ export async function updateCompanySettings(settings: Record<string, unknown>): 
 
     const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
 
-    await query(`
+    const result = await query(`
       UPDATE company_settings 
       SET ${setClause}, updated_at = CURRENT_TIMESTAMP
-      WHERE id = (SELECT id FROM company_settings ORDER BY id DESC LIMIT 1)
-    `, values);
+      WHERE company_id = $${values.length + 1}
+      RETURNING id
+    `, [...values, companyId]);
+    if (result.rows.length === 0) {
+      return { success: false, error: "Company settings not found for this company." };
+    }
 
     const outData: Record<string, unknown> = { ...sanitized };
     if (typeof outData.name === 'string') {

@@ -3,17 +3,30 @@
 
 import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { auth, getUserCompanyId } from "@/lib/auth";
+import { isAdmin } from "@/lib/permissions";
 
 export async function updateCompanySettings(data: any) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+    if (!(await isAdmin(session.user.id))) return { success: false, error: "Forbidden" };
+    const companyId = await getUserCompanyId(session.user.id);
+
     // SECURITY (P1-03): never overwrite stored secrets with empty/whitespace.
     // Client sends "" for secrets it must not re-expose; a blank value means
     // "keep the existing value", not "clear it".
     const keep = (next: any, prev: any) =>
       next === undefined || next === null || String(next).trim() === "" ? prev : String(next);
 
-    const current = await query("SELECT google_client_secret, google_refresh_token FROM company_settings LIMIT 1");
+    const current = await query(
+      "SELECT google_client_secret, google_refresh_token FROM company_settings WHERE company_id = $1 LIMIT 1",
+      [companyId]
+    );
     const prev = current.rows[0] || {};
+    if (!current.rows.length) {
+      return { success: false, error: "Company settings not found for this company." };
+    }
 
     const googleClientSecret = keep(data.google_client_secret, prev.google_client_secret);
     const googleRefreshToken = keep(data.google_refresh_token, prev.google_refresh_token);
@@ -23,9 +36,9 @@ export async function updateCompanySettings(data: any) {
        bank_account_name=$7, bank_account_number=$8, bank_branch=$9, vat_rate=$10, withholding_tax_rate=$11, 
        is_vat_registered=$12, currency=$13, invoice_prefix=$14, quotation_prefix=$15,
        google_client_id=$16, google_client_secret=$17, google_refresh_token=$18, google_redirect_uri=$19, google_drive_enabled=$20
-       WHERE id=(SELECT id FROM company_settings LIMIT 1)`,
+       WHERE company_id=$21`,
       [data.name, data.tax_id, data.phone, data.email, data.address, data.bank_name, data.bank_account_name, data.bank_account_number, data.bank_branch, data.vat_rate, data.withholding_tax_rate, data.is_vat_registered, data.currency, data.invoice_prefix, data.quotation_prefix,
-       data.google_client_id, googleClientSecret, googleRefreshToken, data.google_redirect_uri, data.google_drive_enabled]
+       data.google_client_id, googleClientSecret, googleRefreshToken, data.google_redirect_uri, data.google_drive_enabled, companyId]
     );
     revalidatePath("/settings");
     return { success: true };

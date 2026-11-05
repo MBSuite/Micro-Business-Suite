@@ -60,12 +60,17 @@ async function ensureCompanyLicensingSchema() {
     const settingsRes = await query(`SELECT name FROM company_settings LIMIT 1`).catch(() => ({ rows: [] }));
     const defaultCompanyName = settingsRes.rows[0]?.name || "Your Company";
 
-    await query(
+    const companyRes = await query(
       `
         INSERT INTO companies (name, plan_type, max_users, subscription_status, expiry_date)
         VALUES ($1, 'FREE', 1, 'Active', NULL)
+        RETURNING id, name
       `,
       [defaultCompanyName]
+    );
+    await query(
+      "INSERT INTO company_settings (company_id, name) VALUES ($1, $2) ON CONFLICT (company_id) WHERE company_id IS NOT NULL DO NOTHING",
+      [companyRes.rows[0].id, companyRes.rows[0].name]
     );
   }
 

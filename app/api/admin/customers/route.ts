@@ -106,6 +106,10 @@ export async function POST(request: Request) {
 
     const created = result.rows[0];
     await query(
+      "INSERT INTO company_settings (company_id, name) VALUES ($1, $2) ON CONFLICT (company_id) WHERE company_id IS NOT NULL DO NOTHING",
+      [created.id, created.name]
+    );
+    await query(
       `
         INSERT INTO subscription_events (company_id, action, license_type, notes, payload, created_by)
         VALUES ($1, 'NOTE', $2, 'สร้างลูกค้าใหม่โดยผู้ดูแลระบบ', $3, $4)

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { query } from "@/lib/db";
+import { auth, getUserCompanyId } from "@/lib/auth";
 import EditContactClient from "./EditContactClient";
 import Link from "next/link";
 import { ArrowLeft, UserX, AlertTriangle } from "lucide-react";
@@ -7,7 +8,13 @@ import { ArrowLeft, UserX, AlertTriangle } from "lucide-react";
 export const dynamic = 'force-dynamic';
 
 async function getContact(id: string) {
-  const res = await query('SELECT * FROM contacts WHERE id = $1', [id]);
+  const session = await auth();
+  if (!session?.user?.id) return null;
+  const companyId = await getUserCompanyId(session.user.id);
+  const res = await query(
+    "SELECT * FROM contacts WHERE id = $1 AND company_id = $2",
+    [id, companyId]
+  );
   return res.rows[0];
 }
 

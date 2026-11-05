@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { isAdmin, logActivity, clearPermissionCache } from "@/lib/permissions";
+import { isAdmin, isSuperAdmin, logActivity, clearPermissionCache } from "@/lib/permissions";
 
 // GET /api/users/[id]/groups - Get groups for a user
 export async function GET(
@@ -85,10 +85,18 @@ export async function POST(
         { status: 400 }
       );
     }
+    if (groupIds.some((groupId: unknown) => !Number.isInteger(Number(groupId)) || Number(groupId) < 1)) {
+      return NextResponse.json({ error: "groupIds must contain valid positive integers" }, { status: 400 });
+    }
+    if (typeof replaceExisting !== "boolean") {
+      return NextResponse.json({ error: "replaceExisting must be a boolean" }, { status: 400 });
+    }
 
     // Check if user exists
     const userCheck = await query(
-      "SELECT id, name FROM users WHERE id = $1",
+      `SELECT u.id, u.name, u.role,
+              EXISTS (SELECT 1 FROM user_groups ug WHERE ug.user_id = u.id AND ug.group_id = 1) AS in_superadmin_group
+       FROM users u WHERE u.id = $1`,
       [userId]
     );
 
@@ -97,17 +105,50 @@ export async function POST(
     }
 
     const targetUser = userCheck.rows[0];
+    const actorIsSuperAdmin = await isSuperAdmin(session.user.id);
+    const targetIsSuperAdmin =
+      String(targetUser.role || "").toLowerCase() === "superadmin" ||
+      Boolean(targetUser.in_superadmin_group);
+    if (!actorIsSuperAdmin && targetIsSuperAdmin) {
+      return NextResponse.json(
+        { error: "Only a superadmin can manage a superadmin's groups" },
+        { status: 403 }
+      );
+    }
+
+    const requestedGroupIds = [...new Set(groupIds.map(Number))];
+    const requestedSystemGroups = requestedGroupIds.length
+      ? await query(
+          "SELECT id FROM groups WHERE id = ANY($1::int[]) AND (is_system = TRUE OR id = 1)",
+          [requestedGroupIds]
+        )
+      : { rows: [] };
+    if (!actorIsSuperAdmin && requestedSystemGroups.rows.length > 0) {
+      return NextResponse.json(
+        { error: "Only a superadmin can assign system groups" },
+        { status: 403 }
+      );
+    }
 
     // If replaceExisting, delete all current group assignments
     if (replaceExisting) {
-      await query("DELETE FROM user_groups WHERE user_id = $1", [userId]);
+      if (actorIsSuperAdmin) {
+        await query("DELETE FROM user_groups WHERE user_id = $1", [userId]);
+      } else {
+        await query(
+          `DELETE FROM user_groups
+           WHERE user_id = $1
+             AND group_id NOT IN (SELECT id FROM groups WHERE is_system = TRUE OR id = 1)`,
+          [userId]
+        );
+      }
     }
 
     // Add user to new groups
     const addedGroups = [];
     const skippedGroups = [];
 
-    for (const groupId of groupIds) {
+    for (const groupId of requestedGroupIds) {
       // Check if group exists
       const groupCheck = await query(
         "SELECT id, name FROM groups WHERE id = $1",
@@ -207,6 +248,33 @@ export async function DELETE(
     const groupIdNum = parseInt(groupId);
     if (isNaN(groupIdNum)) {
       return NextResponse.json({ error: "Invalid group ID" }, { status: 400 });
+    }
+
+    const actorIsSuperAdmin = await isSuperAdmin(session.user.id);
+    const targetCheck = await query(
+      `SELECT u.role,
+              EXISTS (SELECT 1 FROM user_groups ug WHERE ug.user_id = u.id AND ug.group_id = 1) AS in_superadmin_group
+       FROM users u WHERE u.id = $1`,
+      [userId]
+    );
+    if (targetCheck.rows.length === 0) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    const targetIsSuperAdmin =
+      String(targetCheck.rows[0].role || "").toLowerCase() === "superadmin" ||
+      Boolean(targetCheck.rows[0].in_superadmin_group);
+    const groupCheck = await query(
+      "SELECT is_system FROM groups WHERE id = $1",
+      [groupIdNum]
+    );
+    if (
+      !actorIsSuperAdmin &&
+      (targetIsSuperAdmin || groupIdNum === 1 || groupCheck.rows[0]?.is_system)
+    ) {
+      return NextResponse.json(
+        { error: "Only a superadmin can manage system groups or superadmin users" },
+        { status: 403 }
+      );
     }
 
     // Check if assignment exists

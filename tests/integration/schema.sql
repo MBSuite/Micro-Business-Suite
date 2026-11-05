@@ -29,8 +29,42 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS groups (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    is_system BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS user_groups (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    assigned_by INTEGER,
+    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, group_id)
+);
+
+INSERT INTO groups (id, name, is_system)
+VALUES (1, 'Superadmin', TRUE), (2, 'Admin', TRUE), (3, 'User', FALSE)
+ON CONFLICT (id) DO NOTHING;
+SELECT setval(pg_get_serial_sequence('groups', 'id'), GREATEST((SELECT MAX(id) FROM groups), 1));
+
+CREATE TABLE IF NOT EXISTS activity_log (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER,
+    action VARCHAR(255),
+    entity_type VARCHAR(255),
+    entity_id INTEGER,
+    old_values JSONB,
+    new_values JSONB,
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS company_settings (
     id SERIAL PRIMARY KEY,
+    company_id INTEGER REFERENCES companies(id) ON DELETE CASCADE,
     company_name VARCHAR(255) NOT NULL DEFAULT 'Micro-Business-Suite',
     tax_id VARCHAR(50) NOT NULL DEFAULT '',
     address TEXT,
@@ -40,9 +74,37 @@ CREATE TABLE IF NOT EXISTS company_settings (
     phone VARCHAR(50),
     email VARCHAR(255),
     website VARCHAR(255),
+    vat_rate NUMERIC(5,2) DEFAULT 7.00,
+    withholding_tax_rate NUMERIC(5,2) DEFAULT 3.00,
+    is_vat_registered BOOLEAN DEFAULT TRUE,
+    currency VARCHAR(10) DEFAULT 'THB',
+    quotation_prefix VARCHAR(20) DEFAULT 'QT',
+    receipt_prefix VARCHAR(20) DEFAULT 'REC',
+    journal_prefix VARCHAR(20) DEFAULT 'GJ',
+    bank_name VARCHAR(255),
+    bank_account_name VARCHAR(255),
+    bank_account_number VARCHAR(50),
+    bank_branch VARCHAR(255),
+    invoice_footer TEXT,
+    quotation_footer TEXT,
+    receipt_footer TEXT,
+    rd_client_id VARCHAR(255),
+    rd_client_secret VARCHAR(255),
+    rd_api_key VARCHAR(255),
+    rd_base_url VARCHAR(255),
+    rd_enabled BOOLEAN DEFAULT FALSE,
+    google_client_id VARCHAR(255),
+    google_client_secret VARCHAR(255),
+    google_refresh_token TEXT,
+    google_redirect_uri VARCHAR(255),
+    google_drive_enabled BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS company_settings_company_id_key
+    ON company_settings(company_id)
+    WHERE company_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS contacts (
     id SERIAL PRIMARY KEY,
@@ -109,6 +171,7 @@ CREATE TABLE IF NOT EXISTS expenses (
     id SERIAL PRIMARY KEY,
     expense_number VARCHAR(50),
     title VARCHAR(255),
+    contact_id INTEGER,
     amount DECIMAL(15,2) NOT NULL DEFAULT 0,
     expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
     status VARCHAR(20) DEFAULT 'paid',

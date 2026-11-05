@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { query } from "@/lib/db";
+import { auth, getUserCompanyId } from "@/lib/auth";
 import { ArrowLeft, FileSignature } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -10,19 +11,25 @@ export const dynamic = "force-dynamic";
 
 async function getInvoiceData(id: string) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) return null;
+    const companyId = await getUserCompanyId(session.user.id);
     const invRes = await query(
       `
         SELECT i.*, c.name as customer_name, c.address as customer_address, c.tax_id as customer_tax_id, c.phone as customer_phone
         FROM invoices i
-        LEFT JOIN contacts c ON i.contact_id = c.id
-        WHERE i.id = $1
+        LEFT JOIN contacts c ON i.contact_id = c.id AND c.company_id = i.company_id
+        WHERE i.id = $1 AND i.company_id = $2
       `,
-      [id]
+      [id, companyId]
     );
     if (invRes.rows.length === 0) return null;
     const invoice = invRes.rows[0];
 
-    const companyRes = await query(`SELECT * FROM company_settings LIMIT 1`).catch(() => ({ rows: [] as any[] }));
+    const companyRes = await query(
+      `SELECT name, tax_id, address FROM company_settings WHERE company_id = $1 LIMIT 1`,
+      [companyId]
+    ).catch(() => ({ rows: [] as any[] }));
     const company = companyRes.rows[0] || {};
 
     return { invoice, company };

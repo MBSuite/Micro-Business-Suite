@@ -9,7 +9,18 @@ import { assertCompanyQuota } from "@/lib/company-gate";
 
 export async function getCompanySettings() {
   try {
-    const { rows } = await query(`SELECT * FROM company_settings LIMIT 1`);
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, error: "Unauthorized" };
+    }
+    const companyId = await getUserCompanyId(session.user.id);
+    const { rows } = await query(
+      `SELECT name, tax_id, address, logo_url, phone, email, website,
+              vat_rate, withholding_tax_rate, is_vat_registered,
+              currency, invoice_prefix, quotation_prefix
+       FROM company_settings WHERE company_id = $1 LIMIT 1`,
+      [companyId]
+    );
     return { success: true, data: rows[0] };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -19,12 +30,20 @@ export async function getCompanySettings() {
 export async function getNextInvoiceNumber() {
   let prefix = "INV";
   try {
-    const sRes = await query(`SELECT invoice_prefix FROM company_settings LIMIT 1`);
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+    const companyId = await getUserCompanyId(session.user.id);
+    const sRes = await query(
+      `SELECT invoice_prefix FROM company_settings WHERE company_id = $1 LIMIT 1`,
+      [companyId]
+    );
     if (sRes.rows.length > 0) prefix = sRes.rows[0].invoice_prefix;
     
     const { rows } = await query(
-      `SELECT invoice_number FROM invoices WHERE invoice_number LIKE $1 ORDER BY id DESC LIMIT 1`,
-      [`${prefix}%`]
+      `SELECT invoice_number FROM invoices
+       WHERE company_id = $2 AND invoice_number LIKE $1
+       ORDER BY id DESC LIMIT 1`,
+      [`${prefix}%`, companyId]
     );
     if (rows.length === 0) return { success: true, data: `${prefix}001` };
     const lastNum = parseInt(rows[0].invoice_number.replace(prefix, ""), 10);

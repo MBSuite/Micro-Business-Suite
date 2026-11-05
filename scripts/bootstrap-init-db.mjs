@@ -26,6 +26,7 @@ const FILES = [
   "migrations/add_companies_table.sql",
   "migrations/add_users_company_id_column.sql",
   "migrations/add_company_settings_table.sql",
+  "migrations/add_company_settings_tenant_scope.sql",
   "migrations/add_company_module_settings_table.sql",
   "migrations/add_contacts_contact_type_column.sql",
   "migrations/add_expenses_columns.sql",

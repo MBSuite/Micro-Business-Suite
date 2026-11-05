@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { query } from "@/lib/db";
+import { auth, getUserCompanyId } from "@/lib/auth";
 import { formatDateDisplay } from "@/lib/dateFormatter";
 import { ArrowLeft, ReceiptText } from "lucide-react"; // [CHANGE] - โดย Cascade | [DATE] - 2026-04-02 | [REASON] - ลบ ShieldCheck ที่ไม่ได้ใช้
 import Link from "next/link";
@@ -10,14 +11,17 @@ export const dynamic = "force-dynamic";
 
 async function getInvoiceData(id: string) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) return null;
+    const companyId = await getUserCompanyId(session.user.id);
     const invRes = await query(
       `
         SELECT i.*, c.name as customer_name, c.address as customer_address, c.tax_id as customer_tax_id, c.phone as customer_phone
         FROM invoices i
-        LEFT JOIN contacts c ON i.contact_id = c.id
-        WHERE i.id = $1
+        LEFT JOIN contacts c ON i.contact_id = c.id AND c.company_id = i.company_id
+        WHERE i.id = $1 AND i.company_id = $2
       `,
-      [id]
+      [id, companyId]
     );
 
     if (invRes.rows.length === 0) return null;
@@ -26,7 +30,11 @@ async function getInvoiceData(id: string) {
     const itemsRes = await query(`SELECT * FROM invoice_items WHERE invoice_id = $1 ORDER BY id ASC`, [id]).catch(
       () => ({ rows: [] as any[] })
     );
-    const companyRes = await query(`SELECT * FROM company_settings LIMIT 1`).catch(() => ({ rows: [] as any[] }));
+    const companyRes = await query(
+      `SELECT name, tax_id, address, phone, email, website, logo_url, invoice_footer
+       FROM company_settings WHERE company_id = $1 LIMIT 1`,
+      [companyId]
+    ).catch(() => ({ rows: [] as any[] }));
     const company = companyRes.rows[0] || {};
 
     return { invoice, items: itemsRes.rows, company };

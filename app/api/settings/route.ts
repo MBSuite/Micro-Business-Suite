@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCompanySettings, updateCompanySettings } from '@/lib/settings';
 import { auth } from '@/lib/auth';
-import { canAccessAdmin } from '@/lib/core-standards';
+import { isAdmin } from '@/lib/permissions';
 
 // GET company settings
 export async function GET() {
@@ -52,7 +52,7 @@ export async function PUT(request: NextRequest) {
         { status: 401 }
       );
     }
-    if (!canAccessAdmin(session.user.role)) {
+    if (!(await isAdmin(session.user.id))) {
       return NextResponse.json(
         { error: 'Forbidden — admin access required' },
         { status: 403 }

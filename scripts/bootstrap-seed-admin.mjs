@@ -72,6 +72,11 @@ if (companyRes.rows.length === 0) {
   console.log(`[BOOTSTRAP] Using existing organization (id: ${companyId})`);
 }
 
+await query(
+  "INSERT INTO company_settings (company_id, name) VALUES ($1, $2) ON CONFLICT (company_id) WHERE company_id IS NOT NULL DO NOTHING",
+  [companyId, companyName]
+);
+
 // Insert initial superadmin user
 const ins = await query(
   `INSERT INTO users (name, email, password, role, status, company_id)

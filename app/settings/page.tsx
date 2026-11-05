@@ -1,16 +1,32 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { query } from "@/lib/db";
 import SettingsClient from "@/components/SettingsClient";
+import { auth, getUserCompanyId } from "@/lib/auth";
+import { isAdmin } from "@/lib/permissions";
+import { redirect } from "next/navigation";
 
 export const dynamic = 'force-dynamic';
 
 async function getCompanyData() {
-  try {
-    const res = await query('SELECT * FROM company_settings LIMIT 1');
-    return res.rows[0];
-  } catch (e) {
-    return null;
-  }
+  const session = await auth();
+  if (!session?.user?.id || !(await isAdmin(session.user.id))) redirect("/");
+  const companyId = await getUserCompanyId(session.user.id);
+  const res = await query(
+    `SELECT id, name, tax_id, phone, email, address, bank_name,
+            bank_account_name, bank_account_number, bank_branch,
+            vat_rate, withholding_tax_rate, is_vat_registered, currency,
+            invoice_prefix, quotation_prefix, receipt_prefix, journal_prefix,
+            invoice_footer, quotation_footer, receipt_footer,
+            rd_client_id, rd_base_url, rd_enabled, google_client_id,
+            google_redirect_uri, google_drive_enabled,
+            (rd_client_secret IS NOT NULL AND rd_client_secret <> '') AS has_rd_client_secret,
+            (rd_api_key IS NOT NULL AND rd_api_key <> '') AS has_rd_api_key,
+            (google_client_secret IS NOT NULL AND google_client_secret <> '') AS has_google_client_secret,
+            (google_refresh_token IS NOT NULL AND google_refresh_token <> '') AS has_google_refresh_token
+     FROM company_settings WHERE company_id = $1 LIMIT 1`,
+    [companyId]
+  );
+  return res.rows[0] ?? null;
 }
 
 export default async function SettingsPage() {

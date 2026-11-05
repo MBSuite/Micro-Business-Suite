@@ -39,11 +39,14 @@ export async function POST(req: Request) {
 
     // invoice number
     let prefix = "INV";
-    const sRes = await client.query(`SELECT invoice_prefix FROM company_settings LIMIT 1`);
+    const sRes = await client.query(
+      `SELECT invoice_prefix FROM company_settings WHERE company_id = $1 LIMIT 1`,
+      [companyId]
+    );
     if (sRes.rows.length > 0) prefix = sRes.rows[0].invoice_prefix || "INV";
     const lastRes = await client.query(
-      `SELECT invoice_number FROM invoices WHERE invoice_number LIKE $1 ORDER BY id DESC LIMIT 1`,
-      [`${prefix}%`]
+      `SELECT invoice_number FROM invoices WHERE company_id = $2 AND invoice_number LIKE $1 ORDER BY id DESC LIMIT 1`,
+      [`${prefix}%`, companyId]
     );
     let nextNum = 1;
     if (lastRes.rows.length > 0) {

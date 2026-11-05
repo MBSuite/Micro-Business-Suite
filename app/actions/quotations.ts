@@ -2,8 +2,8 @@
 "use server";
 
 import { query } from "@/lib/db";
-import { revalidatePath } from "next/cache";
 import { auth, getUserCompanyId } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
 import { assertCompanyQuota } from "@/lib/company-gate";
 
 export async function getQuotation(id: number | string) {
@@ -21,11 +21,15 @@ export async function getQuotation(id: number | string) {
 }
 
 export async function getNextQuotationNumber() {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+  const companyId = await getUserCompanyId(session.user.id);
   const yearShort = new Date().getFullYear().toString().slice(-2);
   const prefix = `QT${yearShort}-`;
   try {
     const { rows } = await query(
-      `SELECT quotation_number FROM quotations ORDER BY quotation_number DESC LIMIT 1`
+      `SELECT quotation_number FROM quotations WHERE company_id = $1 ORDER BY quotation_number DESC LIMIT 1`,
+      [companyId]
     );
     if (rows.length === 0) return { success: true, data: `${prefix}001` };
     

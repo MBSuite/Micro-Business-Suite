@@ -250,7 +250,7 @@ export async function submitInvoiceToRD(invoiceId: string, companyId?: number): 
     const invoiceRes = await query(`
       SELECT i.*, c.name as customer_name, c.tax_id as customer_tax_id
       FROM invoices i
-      JOIN contacts c ON i.contact_id::text = c.id::text
+      JOIN contacts c ON i.contact_id::text = c.id::text AND c.company_id = i.company_id
       WHERE i.id = $1${companyId ? ` AND i.company_id = $2` : ''}
     `, companyId ? [invoiceId, companyId] : [invoiceId]);
 
@@ -261,7 +261,10 @@ export async function submitInvoiceToRD(invoiceId: string, companyId?: number): 
     const invoice = invoiceRes.rows[0];
 
     // Get company settings for taxpayer info
-    const companyRes = await query("SELECT * FROM company_settings LIMIT 1");
+    const companyRes = await query(
+      "SELECT * FROM company_settings WHERE company_id = $1 LIMIT 1",
+      [invoice.company_id]
+    );
     const company = companyRes.rows[0];
 
     if (!company?.tax_id) {
@@ -322,7 +325,7 @@ export async function submitWHTToRD(voucherId: string, companyId?: number): Prom
     const voucherRes = await query(`
       SELECT v.*, c.tax_id as recipient_tax_id, c.name as recipient_name
       FROM payment_vouchers v
-      LEFT JOIN contacts c ON v.payee_name = c.name
+      LEFT JOIN contacts c ON v.payee_name = c.name AND c.company_id = v.company_id
       WHERE v.id = $1${companyId ? ` AND v.company_id = $2` : ''}
     `, companyId ? [voucherId, companyId] : [voucherId]);
 
@@ -333,7 +336,10 @@ export async function submitWHTToRD(voucherId: string, companyId?: number): Prom
     const voucher = voucherRes.rows[0];
 
     // Get company settings
-    const companyRes = await query("SELECT * FROM company_settings LIMIT 1");
+    const companyRes = await query(
+      "SELECT * FROM company_settings WHERE company_id = $1 LIMIT 1",
+      [voucher.company_id]
+    );
     const company = companyRes.rows[0];
 
     if (!company?.tax_id) {

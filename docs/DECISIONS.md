@@ -12,6 +12,14 @@
 - Impacted files/modules:
 - Rollback plan:
 
+### [2026-11-05] Company settings tenant isolation and credential-safe reads
+- Context: Company settings were stored as a singleton and several pages/actions returned or modified settings without tenant ownership checks; server-rendered settings also included credential columns.
+- Decision: Add `company_settings.company_id`, seed isolated non-secret defaults per company, preserve ambiguous legacy rows unassigned for manual ownership verification, and require tenant-scoped reads/writes. Only superadmins may manage system groups; non-superadmin admins cannot assign or remove protected groups.
+- Alternatives considered: Copy the legacy singleton to every company (would disclose bank/OAuth credentials), or guess which tenant owns it.
+- Why this was chosen: Keeps old data available without exposing it across tenants and makes ownership explicit.
+- Impacted files/modules: company settings migration/bootstrap, registration and auth bootstrap, settings actions/APIs, invoice/expense/contact pages, group management API, integration test schema.
+- Rollback plan: Revert application changes only after restoring the prior access controls; retain the additive migration and unassigned legacy row until ownership has been reviewed.
+
 ---
 
 ### [2026-11-05] Modular installable plugin packs + capability audit

@@ -24,9 +24,15 @@ export async function POST(req: Request) {
     const items = b.order.items;
     // invoice number
     let prefix = "INV";
-    const { rows: s } = await query(`SELECT invoice_prefix FROM company_settings LIMIT 1`);
+    const { rows: s } = await query(
+      `SELECT invoice_prefix FROM company_settings WHERE company_id = $1 LIMIT 1`,
+      [companyId]
+    );
     if (s.length > 0) prefix = s[0].invoice_prefix || "INV";
-    const { rows: last } = await query(`SELECT invoice_number FROM invoices WHERE invoice_number LIKE $1 ORDER BY id DESC LIMIT 1`, [`${prefix}%`]);
+    const { rows: last } = await query(
+      `SELECT invoice_number FROM invoices WHERE company_id = $2 AND invoice_number LIKE $1 ORDER BY id DESC LIMIT 1`,
+      [`${prefix}%`, companyId]
+    );
     let n = 1;
     if (last.length > 0) { const x = parseInt(String(last[0].invoice_number).replace(prefix, ""), 10); if (!isNaN(x)) n = x + 1; }
     const invoiceNumber = `${prefix}${String(n).padStart(3, "0")}`;

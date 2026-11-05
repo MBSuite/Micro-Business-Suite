@@ -53,6 +53,11 @@ export async function registerUser(formData: FormData) {
     );
     const companyId = companyRes.rows[0].id;
 
+    await client.query(
+      "INSERT INTO company_settings (company_id, name) VALUES ($1, $2) ON CONFLICT (company_id) WHERE company_id IS NOT NULL DO NOTHING",
+      [companyId, companyRes.rows[0].name]
+    );
+
     const usersRes = await client.query(
       `SELECT COUNT(*)::int AS count FROM users WHERE company_id = $1`,
       [companyId]
