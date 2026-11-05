@@ -1,12 +1,32 @@
 # Backlog (Micro Business Suite)
 
 รายการงานค้างที่ตรวจสอบแล้วจริง (probe/grep จากโค้ดจริง ไม่ใช่การเดา) —
-เรียงตามลำดับความสำคัญคร่าวๆ อัปเดตล่าสุด: 2026-09-25
+เรียงตามลำดับความสำคัญคร่าวๆ อัปเดตล่าสุด: 2026-11-05
 
 > หมายเหตุ: เนื้อหานี้เป็นรายงานข้อเท็จจริง + แนวทางแนะนำ — ยังไม่ได้รับอนุมัติให้ลงมือทำ
 > เริ่มงานแต่ละรายการเมื่อพี่ (เจ้าของ) สั่งเท่านั้น
 
 ---
+
+## ✅ Implemented (rounds 1-3, 2026-11-05)
+
+- POS คิดเงินด่วน (`/pos`) + barcode scan + multi-payment + stock deduction
+- วิเคราะห์ยอดขาย (`/reports/sales-analytics`)
+- โปรโมชัน/ส่วนลด (`/promotions`) rules engine + apply ที่ POS
+- CRM/สะสมคะแนน (`/crm`) + auto-accrual ที่ POS
+- หลายสาขา (`/branches`) + branch selector ที่ POS
+- F&B (`/fb`) ผังโต๊ะ/KOT/บิล
+- เชื่อมต่อ E-commerce/Delivery (`/integrations/*`) + webhook import
+- จัดการปลักอิน/Add-on (`/admin/plugins`) — installable packs
+- Migrations: branches, product_variants, loyalty, promotions, branch_stock, fb_*, integration_connections
+- MBSuite = Core (core:true) vs plugin modules (core:false) ใน module-registry
+
+## ยังค้าง (Pending)
+
+- inventory_variants: UI จัดการสี/ไซส์/ประเภท (มี migration แล้ว, scaffold page)
+- employee_sales: ยอดขายรายพนักงาน (scaffold)
+- offline_mode: sync offline (scaffold)
+- P1-P4 ด้านล่าง (cross-company leak, rebrand, IDOR, vouchers API)
 
 ## P1 — Dashboard อ่านข้อมูลข้ามบริษัท (cross-company leak)
 

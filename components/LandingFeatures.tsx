@@ -4,8 +4,16 @@
 import { useEffect, useRef, useState } from "react";
 import {
   BarChart3,
-  CalendarDays,
+  Building2,
+  ChefHat,
+  CreditCard,
+  Package,
+  Puzzle,
   ReceiptText,
+  ScanLine,
+  ShieldCheck,
+  Truck,
+  Users,
   X,
 } from "lucide-react";
 
@@ -13,31 +21,121 @@ const features = [
   {
     icon: ReceiptText,
     title: "บัญชีและเอกสาร",
-    description: "จัดการรายรับ รายจ่าย ใบแจ้งหนี้ และเอกสารธุรกิจได้ในที่เดียว",
+    description: "จัดการรายรับ รายจ่าย ใบแจ้งหนี้ ใบเสนอราคา ใบเสร็จ และเอกสารธุรกิจในที่เดียว",
     details: [
-      "บันทึกรายรับและรายจ่ายไว้ในระบบเดียว",
-      "จัดทำและติดตามใบแจ้งหนี้กับเอกสารธุรกิจ",
-      "ค้นดูข้อมูลที่เกี่ยวข้องได้สะดวกขึ้น",
+      "บันทึกรายรับ/รายจ่ายและสมุดรายวันอัตโนมัติ",
+      "ใบแจ้งหนี้ ใบเสนอราคา ใบเสร็จ/ใบกำกับภาษี",
+      "รอบบิลอัตโนมัติ (Recurring)",
     ],
   },
   {
     icon: BarChart3,
-    title: "เห็นภาพรวมธุรกิจ",
-    description: "ติดตามตัวเลขสำคัญและกระแสเงินสด เพื่อวางแผนได้อย่างมั่นใจ",
+    title: "ภาษีและรายงาน",
+    description: "รายงานภาษี VAT/WHT แบบเรียลไทม์ และงบกำไรขาดทุน",
     details: [
-      "ดูสรุปรายรับและรายจ่ายของธุรกิจ",
-      "ติดตามยอดค้างชำระและความเคลื่อนไหวทางการเงิน",
-      "ใช้ข้อมูลประกอบการวางแผนธุรกิจ",
+      "รายงานภาษีสรุป VAT ซื้อ-ขาย",
+      "ภาษีหัก ณ ที่จ่าย (ภ.ง.ด.53)",
+      "งบกำไรขาดทุน (P&L) และกระแสเงินสด",
     ],
   },
   {
-    icon: CalendarDays,
-    title: "ภาษีและกำหนดการ",
-    description: "รวบรวมรายงานภาษีและรายการที่ต้องติดตามไว้ให้เป็นระเบียบ",
+    icon: ScanLine,
+    title: "POS คิดเงินด่วน (Add-on)",
+    description: "เครื่องคิดเงินด่วน: สแกนบาร์โค้ด, ตะกร้า, ชำระหลายรูปแบบ, ตัดสต็อกอัตโนมัติ",
     details: [
-      "ดูรายงานภาษีที่เกี่ยวข้องจากระบบ",
-      "ติดตามกำหนดการและรายการเตือนความจำ",
-      "รวมงานที่ต้องจัดการไว้ในที่เดียว",
+      "สแกนบาร์โค้ด/SKU/ชื่อสินค้า",
+      "ชำระเงิน: เงินสด, QR Code, บัตรเครดิต/เดบิต",
+      "ประเมินโปรโมชันอัตโนมัติและตัดสต็อกทันที",
+    ],
+  },
+  {
+    icon: BarChart3,
+    title: "วิเคราะห์ยอดขาย (Add-on)",
+    description: "สรุปรายวัน/รายเดือน, สินค้าขายดี, ช่วงเวลาขายดี, ช่องทางชำระ",
+    details: [
+      "สรุปยอดขายรายวัน/รายเดือน",
+      "สินค้าขายดี (Top 10)",
+      "ช่วงเวลาขายดี (Peak Hours)",
+    ],
+  },
+  {
+    icon: Users,
+    title: "CRM / สมาชิก / สะสมคะแนน (Add-on)",
+    description: "บันทึกประวัติการซื้อ, สะสมคะแนน, สิทธิ์สมาชิก (bronze/silver/gold/platinum)",
+    details: [
+      "สะสมแต้มอัตโนมัติ (1 แต้ม/100 บาท)",
+      "ประวัติการซื้อและประวัติคะแนน",
+      "ระดับสมาชิก bronze/silver/gold/platinum",
+    ],
+  },
+  {
+    icon: Building2,
+    title: "หลายสาขา (Add-on)",
+    description: "จัดการสาขาและสต็อกแยกสาขา ตัดสต็อกได้หลายสาขา",
+    details: [
+      "สร้าง/จัดการสาขา",
+      "สต็อกแยกสาขา (branch_stock)",
+      "เลือกสาขาที่ POS",
+    ],
+  },
+  {
+    icon: ChefHat,
+    title: "ร้านอาหาร/คาเฟ่ F&B (Add-on)",
+    description: "ผังโต๊ะ, เปิด/รวมบิล, ส่งออเดอร์เข้าครัว (KOT), ออกบิล",
+    details: [
+      "ผังโต๊ะและสถานะโต๊ะ",
+      "ส่งออเดอร์เข้าครัว (KOT)",
+      "ออกบิลและชำระเงิน",
+    ],
+  },
+  {
+    icon: Truck,
+    title: "เชื่อมต่อ E-commerce / Delivery (Add-on)",
+    description: "เชื่อมต่อ Shopee, Lazada, เว็บไซต์ร้าน และ GrabFood, LINE MAN, Foodpanda",
+    details: [
+      "จัดการการเชื่อมต่อ (connections)",
+      "Inbound webhook import ออเดอร์ → invoice",
+      "Sync สถานะการเชื่อมต่อ",
+    ],
+  },
+  {
+    icon: Puzzle,
+    title: "ปลักอิน / Add-on (Plugin Manager)",
+    description: "MBSuite = Core; โมดูลเพิ่มเติมติดตั้ง/ถอนได้ต่อ company ผ่าน /admin/plugins",
+    details: [
+      "ติดตั้ง/ถอนกลุ่มโมดูล (packs)",
+      "กลุ่มลูกค้า: Retail, F&B, Pharmacy, Service",
+      "Core ปิดไม่ได้, Add-on เปิด/ปิดได้",
+    ],
+  },
+  {
+    icon: ShieldCheck,
+    title: "ความปลอดภัยและสิทธิ์",
+    description: "RBAC ตามตำแหน่ง, multi-tenant แยกบริษัท, license perpetual/subscription",
+    details: [
+      "สิทธิ์ตามกลุ่ม/ตำแหน่ง (superadmin/admin/user)",
+      "แยกข้อมูลตาม company (multi-tenant)",
+      "ขายขาด (perpetual) หรือรายเดือน/รายปี (subscription)",
+    ],
+  },
+  {
+    icon: Package,
+    title: "คลังสินค้า (Inventory)",
+    description: "จัดการสต็อกสินค้า พร้อม QR Code + Barcode",
+    details: [
+      "สต็อกสินค้าและหมวดหมู่",
+      "QR Code + Barcode ต่อสินค้า",
+      "แจ้งเตือนสินค้าใกล้หมด",
+    ],
+  },
+  {
+    icon: CreditCard,
+    title: "การชำระเงินและใบเสร็จ",
+    description: "รองรับการชำระหลายรูปแบบ และพิมพ์ใบเสร็จ/ใบกำกับภาษี",
+    details: [
+      "เงินสด, QR Code, บัตรเครดิต/เดบิต",
+      "พิมพ์ใบเสร็จ/ใบกำกับภาษี",
+      "บันทึกการชำระเงินอัตโนมัติ",
     ],
   },
 ];
@@ -71,7 +169,7 @@ export default function LandingFeatures() {
 
   return (
     <>
-      <div className="mt-12 grid gap-5 md:grid-cols-3">
+      <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
         {features.map((feature) => {
           const Icon = feature.icon;
           return (

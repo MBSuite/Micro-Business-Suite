@@ -14,6 +14,20 @@
 - Access control: RBAC groups/permissions
 - Settings/integrations: company settings + Google integration
 
+## Plugin / Add-on Architecture (MBSuite Core)
+
+- MBSuite = Core: โมดูลหลัก (บัญชี/ภาษี/ผู้ติดต่อ/COA/สมาชิก/กลุ่ม/โมดูลควบคุม) มี `core: true` ใน `lib/module-registry.ts` → ปิดไม่ได้
+- Plugin modules: `core: false` → ติดตั้ง/เปิด-ปิดต่อ company ผ่าน `/admin/modules` หรือ `/admin/plugins`
+- Plugin packs: `lib/plugin-packs.ts` กลุ่ม module เป็น pack (retail_pos, f_and_b, pharmacy, service_business, ...)
+- ฐานข้อมูล tenant-scoped (`company_id`) บนทุกตารางใหม่ (branches, product_variants, loyalty_*, promotions, branch_stock, fb_*, integration_connections)
+- Migration files: `migrations/add_*.sql` (idempotent, guarded FK, indexes)
+
+## Plugin Modules (installable)
+
+- pos_checkout, promotions, sales_analytics, crm_loyalty, employee_sales
+- f_and_b, ecommerce_integration, delivery_integration
+- multi_branch, inventory_variants, offline_mode
+
 ## Canonical Data Flow
 
 1. Business document created (`invoice`, `expense`, `payment_voucher`, `payment`)

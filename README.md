@@ -11,6 +11,30 @@
 - ใบแจ้งหนี้ (Invoice) พร้อมหน้าพิมพ์ + AI Auto-Journal (บันทึกเดบิต/เครดิตอัตโนมัติเมื่อออกบิล)
 - รอบบิลอัตโนมัติ (Recurring) — สร้างใบแจ้งหนี้จากรอบที่ตั้งไว้
 - ใบเสร็จรับเงิน (Receipt) — **พิมพ์ใบเสร็จ/ใบกำกับภาษีแบบเดียว** (RECEIPT / TAX INVOICE) จากทุกจุดเข้ารายการ
+- **POS คิดเงินด่วน** (`/pos`) — สแกนบาร์โค้ด/SKU, ตะกร้า, ชำระหลายรูปแบบ (เงินสด/QR/บัตร), ตัดสต็อกอัตโนมัติ (plugin: retail_pos)
+- **โปรโมชัน/ส่วนลด** (`/promotions`) — rules engine percentage/fixed/bogo/bundle, auto-apply ที่ POS (plugin: promotions)
+
+### วิเคราะห์ (Analytics)
+- **วิเคราะห์ยอดขาย** (`/reports/sales-analytics`) — สรุปรายวัน/รายเดือน, สินค้าขายดี, ช่วงเวลาขายดี, ช่องทางชำระ
+
+### CRM & สมาชิก
+- **CRM/สะสมคะแนน** (`/crm`) — ประวัติการซื้อ, สะสมคะแนน (1 แต้ม/100฿), ระดับสมาชิก bronze/silver/gold/platinum, auto-accrual ที่ POS (plugin: crm_loyalty)
+
+### หลายสาขา (Multi-Branch)
+- **สาขา** (`/branches`) — จัดการสาขา + สต็อกแยกสาขา (branch_stock), branch selector ที่ POS (plugin: multi_branch)
+
+### ร้านอาหาร/คาเฟ่ (F&B)
+- **F&B** (`/fb`) — ผังโต๊ะ, เปิด/รวมบิล, ส่งออเดอร์เข้าครัว (KOT), ออกบิล, ชำระเงิน (plugin: f_and_b)
+
+### เชื่อมต่อ (Integrations)
+- **E-commerce** (`/integrations/ecommerce`) — Shopee, Lazada, เว็บไซต์ร้าน (plugin: ecommerce_integration)
+- **Delivery** (`/integrations/delivery`) — GrabFood, LINE MAN, Foodpanda (plugin: delivery_integration)
+- Inbound webhook: `POST /api/integrations/webhook` (import ออเดอร์ → invoice)
+
+### ปลักอิน/Add-on (Plugin Manager)
+- **จัดการปลักอิน** (`/admin/plugins`) — ติดตั้ง/ถอนการติดตั้ง กลุ่มโมดูล (packs) ต่อ company
+- โมดูลหลัก = MBSuite Core (ปิดไม่ได้); add-on ติดตั้งเพิ่มได้
+- กลุ่ม packs: retail_pos, sales_analytics, crm_loyalty, multi_branch, inventory_variants, employee_sales, f_and_b, ecommerce_integration, delivery_integration, offline_mode, pharmacy, service_business
 
 ### ค่าใช้จ่ายและบัญชี (Operations)
 - ค่าใช้จ่าย / ซัพพลายเออร์ พร้อมแนบหลักฐาน (รูป / ลิงก์ Google Drive)
@@ -44,6 +68,7 @@
 - จัดการสมาชิก / บทบาท (RBAC) ตาม `docs/RBAC_STANDARD.md`
 - จัดการกลุ่ม / สิทธิ์เข้าถึงรายโมดูล
 - เปิด-ปิดโมดูลได้ (ตั้งค่าผ่านหน้า /admin/modules หรือ env `NEXT_PUBLIC_MODULE_*`)
+- จัดการปลักอิน/Add-on (`/admin/plugins`)
 - Database Backup
 
 ---

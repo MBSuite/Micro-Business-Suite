@@ -13,15 +13,15 @@ type RegistryModule = {
   core?: boolean;
 };
 
-const categoryOrder = [
-  "admin",
-  "finance_accounting",
-  "finance_tax",
-  "stock",
-  "hr",
-  "sales_co",
-  "service",
-];
+const CATEGORY_LABELS: Record<string, string> = {
+  sales: "SALES",
+  operations: "OPERATIONS",
+  master_data: "MASTER DATA",
+  reports: "REPORTS",
+  admin: "ADMIN",
+};
+
+const categoryOrder = ["sales", "operations", "master_data", "reports", "admin"];
 
 export default function AdminModulesPage() {
   const [loading, setLoading] = useState(true);
@@ -123,7 +123,7 @@ export default function AdminModulesPage() {
             if (mods.length === 0) return null;
             return (
               <div key={category} className="bg-white rounded-2xl border border-slate-100 p-6 md:p-8 shadow-sm">
-                <h2 className="text-sm font-black uppercase tracking-widest text-slate-500 mb-4">{category}</h2>
+                <h2 className="text-sm font-black uppercase tracking-widest text-slate-500 mb-4">{CATEGORY_LABELS[category] || category}</h2>
                 <div className="space-y-3">
 {mods.map((mod) => (
                     <label key={mod.id} className="flex items-center justify-between border border-slate-100 rounded-xl px-4 py-3">

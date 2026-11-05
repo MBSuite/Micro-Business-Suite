@@ -65,6 +65,7 @@ export const MODULE_REGISTRY: AppModule[] = [
   { id: "backup", label: "Database Backup", icon: "database", category: "admin", route: "/admin/backup", requiresAdmin: true, enabledByDefault: true, core: true },
   { id: "customer_console", label: "ลูกค้า & Subscription", icon: "building2", category: "admin", route: "/admin/customers", requiresAdmin: true, superadminOnly: true, enabledByDefault: true, core: true, description: "Customer & Subscription Console — เฉพาะ superadmin" },
   { id: "company_profile", label: "ข้อมูลบริษัท (หัวเอกสาร)", icon: "building", category: "admin", route: "/admin/company", requiresAdmin: true, enabledByDefault: true, core: true, description: "เลขที่ภาษี, ชื่อบริษัท, ที่อยู่, โทรศัพท์, อีเมล, โลโก้ — ใช้ทำหัวเอกสาร" },
+  { id: "plugin_manager", label: "จัดการปลักอิน/Add-on", icon: "settings", category: "admin", route: "/admin/plugins", requiresAdmin: true, enabledByDefault: true, core: true, description: "ติดตั้ง/ถอนการติดตั้ง โมดูล ปลักอิน extension ต่อ company" },
 ];
 
 export const MODULE_CATEGORIES: Array<{ id: AppModule["category"]; label: string }> = [
