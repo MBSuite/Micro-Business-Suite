@@ -92,6 +92,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (body.price_currency !== undefined) push("price_currency", String(body.price_currency));
     if (body.notes !== undefined) push("notes", String(body.notes));
     if (body.max_users !== undefined) push("max_users", Math.max(1, parseInt(body.max_users, 10) || 1));
+    if (body.business_type !== undefined) push("business_type", String(body.business_type));
 
     if (fields.length === 0) return NextResponse.json({ error: "ไม่มีข้อมูลให้อัปเดต" }, { status: 400 });
     fields.push("updated_at = NOW()");
@@ -100,6 +101,36 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       `UPDATE companies SET ${fields.join(", ")} WHERE id = $${values.length + 1}`,
       [...values, companyId]
     );
+
+    // Auto-install plugin pack if business_type changed
+    if (body.business_type !== undefined) {
+      try {
+        const { listPluginPacks } = await import("@/lib/plugin-packs");
+        const { saveCompanyModuleOverrides } = await import("@/lib/module-config");
+        const packMap: Record<string, string> = {
+          retail: "retail_pos", fnb: "f_and_b", pharmacy: "pharmacy", service: "service_business",
+        };
+        const packId = packMap[String(body.business_type)];
+        if (packId) {
+          const pack = listPluginPacks().find((p) => p.id === packId);
+          if (pack) {
+            const existing = await query(`SELECT module_id, is_enabled FROM company_module_settings WHERE company_id = $1`, [companyId]);
+            const overrides: Record<string, boolean> = {};
+            for (const r of existing.rows) overrides[String(r.module_id)] = r.is_enabled === true;
+            for (const m of pack.modules) overrides[m] = true;
+            if (pack.dependencies) {
+              for (const dep of pack.dependencies) {
+                const depPack = listPluginPacks().find((p) => p.id === dep);
+                if (depPack) for (const m of depPack.modules) overrides[m] = true;
+              }
+            }
+            await saveCompanyModuleOverrides(companyId, overrides, parseInt(session.user.id, 10));
+          }
+        }
+      } catch (e) {
+        console.error("auto-install pack error", e);
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

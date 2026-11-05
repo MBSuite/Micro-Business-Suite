@@ -28,6 +28,7 @@ type Customer = {
   user_count: number | string;
   event_count: number | string;
   total_paid: number | string;
+  business_type?: string | null;
 };
 
 type SubscriptionEvent = {
@@ -278,6 +279,7 @@ export default function AdminCustomersPage() {
                   <tr className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wider">
                     <th className="px-4 py-3 font-black">บริษัท/ลูกค้า</th>
                     <th className="px-4 py-3 font-black">แผน/สถานะ</th>
+                    <th className="px-4 py-3 font-black">Business Type</th>
                     <th className="px-4 py-3 font-black">ผู้ใช้</th>
                     <th className="px-4 py-3 font-black">License</th>
                     <th className="px-4 py-3 font-black">หมดอายุ/Trial</th>
@@ -308,6 +310,7 @@ export default function AdminCustomersPage() {
                             </span>
                           </div>
                         </td>
+                        <td className="px-4 py-3 text-xs font-bold text-slate-500 capitalize">{c.business_type || "general"}</td>
                         <td className="px-4 py-3 text-slate-600 font-bold">{c.user_count}/{c.max_users}</td>
                         <td className="px-4 py-3">
                           {c.license_key ? (
@@ -381,6 +384,7 @@ export default function AdminCustomersPage() {
           loading={!details}
           onClose={() => { setDetailId(null); setDetails(null); }}
           onCopyKey={copyKey}
+          onReload={() => { if (detailId) openDetail(detailId); }}
         />
       )}
     </main>
@@ -580,13 +584,14 @@ function LicenseModal({ customer, mode, onClose, onSaved, setBusy, setError }: {
 }
 
 // ============  Modal: รายละเอียด + ประวัติ ============
-function DetailModal({ customer, events, users, loading, onClose, onCopyKey }: {
+function DetailModal({ customer, events, users, loading, onClose, onCopyKey, onReload }: {
   customer: Customer | null;
   events: SubscriptionEvent[];
   users: UserRow[];
   loading: boolean;
   onClose: () => void;
   onCopyKey: (k?: string | null) => void;
+  onReload: () => void;
 }) {
   return (
     <div className="fixed inset-0 z-[200] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
@@ -602,19 +607,8 @@ function DetailModal({ customer, events, users, loading, onClose, onCopyKey }: {
         <div className="p-6 space-y-6">
           {loading && <div className="text-sm font-bold text-slate-400">กำลังโหลด...</div>}
           {customer && (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-              <InfoCell label="อีเมล" value={customer.customer_email || "—"} />
-              <InfoCell label="โทรศัพท์" value={customer.customer_phone || "—"} />
-              <InfoCell label="ผู้ใช้รวม" value={`${customer.user_count}/${customer.max_users}`} />
-              <InfoCell label="ราคา/เดือน" value={`${customer.price_currency} ${fmtMoney(customer.price_amount)}`} />
-              <InfoCell label="ยอดชำระรวม" value={fmtMoney(customer.total_paid)} />
-              <InfoCell label="สถานะ" value={String(customer.subscription_status)} />
-              <InfoCell label="trial_end" value={fmtDate(customer.trial_end)} />
-              <InfoCell label="หมดอายุ (paid)" value={fmtDate(customer.expiry_date)} />
-              <InfoCell label="ต่ออายุครั้งล่าสุด" value={fmtDate(customer.last_renewed_at)} />
-            </div>
+            <BusinessTypeControl customer={customer} onReload={onReload} />
           )}
-
           {customer?.license_key && (
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
               <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">License Key</div>
@@ -677,6 +671,52 @@ function DetailModal({ customer, events, users, loading, onClose, onCopyKey }: {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function BusinessTypeControl({ customer, onReload }: { customer: Customer; onReload: () => void }) {
+  const [type, setType] = useState(customer.business_type || "general");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { setType(customer.business_type || "general"); }, [customer.business_type]);
+
+  const save = async () => {
+    if (type === (customer.business_type || "general")) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/customers/${customer.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ business_type: type }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "บันทึกไม่สำเร็จ");
+      alert("เปลี่ยนประเภทธุรกิจและติดตั้งโมดูลเรียบร้อย");
+      onReload();
+    } catch (e: any) {
+      alert(e instanceof Error ? e.message : "เกิดข้อผิดพลาด");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="border border-slate-100 rounded-xl px-4 py-3 space-y-2">
+      <div className="text-xs font-black text-slate-400 uppercase tracking-widest">Business Type (ประเภทธุรกิจ)</div>
+      <div className="flex items-center gap-2">
+        <select value={type} onChange={(e) => setType(e.target.value)} className="flex-1 h-9 px-3 border border-slate-200 rounded-lg text-sm">
+          <option value="general">ทั่วไป (General)</option>
+          <option value="retail">ร้านค้าปลีก (Retail)</option>
+          <option value="fnb">ร้านอาหาร/คาเฟ่ (F&B)</option>
+          <option value="pharmacy">ร้านขายยา (Pharmacy)</option>
+          <option value="service">ธุรกิจบริการ (Service)</option>
+        </select>
+        <button onClick={save} disabled={busy || type === (customer.business_type || "general")} className="h-9 px-4 bg-indigo-600 text-white rounded-lg text-xs font-black disabled:opacity-50">
+          {busy ? "กำลังบันทึก..." : "บันทึก (auto-install pack)"}
+        </button>
+      </div>
+      <div className="text-[10px] text-slate-400">ปัจจุบัน: {customer.business_type || "general"} — เปลี่ยนแล้วระบบจะติดตั้ง plugin pack ที่ตรงให้อัตโนมัติ</div>
     </div>
   );
 }
