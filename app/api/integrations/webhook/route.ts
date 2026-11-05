@@ -24,7 +24,6 @@ export async function POST(req: Request) {
     const items = b.order.items;
     // invoice number
     let prefix = "INV";
-    const sRes = await (await import("@/lib/db")).default ? null : null;
     const { rows: s } = await query(`SELECT invoice_prefix FROM company_settings LIMIT 1`);
     if (s.length > 0) prefix = s[0].invoice_prefix || "INV";
     const { rows: last } = await query(`SELECT invoice_number FROM invoices WHERE invoice_number LIKE $1 ORDER BY id DESC LIMIT 1`, [`${prefix}%`]);

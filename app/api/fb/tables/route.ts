@@ -18,6 +18,7 @@ export async function POST(req: Request) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const companyId = await getUserCompanyId(session.user.id);
   const b = await req.json();
+  if (!b.code) return NextResponse.json({ error: "code required" }, { status: 400 });
   const { rows } = await query(
     `INSERT INTO fb_tables (company_id, code, name, seats, zone, pos_x, pos_y) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
     [companyId, b.code, b.name || b.code, Number(b.seats || 2), b.zone || null, Number(b.pos_x || 0), Number(b.pos_y || 0)]

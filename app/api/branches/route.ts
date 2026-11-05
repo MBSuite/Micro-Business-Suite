@@ -18,6 +18,7 @@ export async function POST(req: Request) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const companyId = await getUserCompanyId(session.user.id);
   const b = await req.json();
+  if (!b.code || !b.name) return NextResponse.json({ error: "code and name required" }, { status: 400 });
   const { rows } = await query(
     `INSERT INTO branches (company_id, code, name, address, phone, is_main, is_active) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
     [companyId, b.code, b.name, b.address || null, b.phone || null, !!b.is_main, b.is_active !== false]

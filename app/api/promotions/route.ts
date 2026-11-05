@@ -18,6 +18,7 @@ export async function POST(req: Request) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const companyId = await getUserCompanyId(session.user.id);
   const b = await req.json();
+  if (!b.name) return NextResponse.json({ error: "name required" }, { status: 400 });
   const { rows } = await query(
     `INSERT INTO promotions (company_id, code, name, description, promo_type, value, min_purchase, max_discount, applies_to, applies_ids, starts_at, ends_at, usage_limit, is_active, created_by)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,

@@ -1,6 +1,11 @@
 import { updateCompanySettings } from "@/lib/settings";
+import { auth } from "@/lib/auth";
 
 export async function POST(req: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return Response.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const formData = await req.formData();
     const settings: Record<string, unknown> = {};
