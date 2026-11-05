@@ -109,7 +109,8 @@ export async function POST(req: Request) {
       totalAmount,
       date,
       client,
-      false
+      false,
+      companyId
     );
     if (!jr.success) throw new Error(`Journal failed: ${jr.error}`);
 
@@ -131,7 +132,8 @@ export async function POST(req: Request) {
       client,
       0,
       vatAmount,
-      false
+      false,
+      companyId
     );
     if (!rjr.success) throw new Error(`Receipt journal failed: ${rjr.error}`);
 

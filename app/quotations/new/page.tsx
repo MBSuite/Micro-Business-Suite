@@ -1,10 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
   Save,
   Plus,
   Trash2,
@@ -12,7 +11,6 @@ import {
   FileText,
   User,
   Zap,
-  ChevronRight,
 } from "lucide-react";
 
 type Contact = {
@@ -83,8 +81,10 @@ export default function NewQuotationPage() {
     const loadNextNo = async () => {
       try {
         const res = await getNextQuotationNumber();
-        if (res.success) setDocNo(res.data);
-      } catch (err) {}
+        if (res.success && typeof res.data === "string") setDocNo(res.data);
+      } catch (error) {
+        console.error("Failed to load next quotation number", error);
+      }
     };
     loadContacts();
     loadProducts();

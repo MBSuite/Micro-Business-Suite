@@ -91,9 +91,32 @@ Scripts ที่ใช้ได้: `npm test` (รัน `tests/*.test.mjs`), 
 
 cron ภายนอก (ตั้งแล้วบนเครื่องพี่): `scripts/auto-backup.mjs` 02:00 น. + `scripts/dashboard-sheet.mjs` 02:05 น.
 
+### ฐานข้อมูลและการทดสอบ
+
+- แอปใช้ PostgreSQL ผ่าน `pg` Pool ใน `lib/db.ts`; ตั้ง `DATABASE_URL` หรือ `POSTGRES_URL` ให้ตรงกับ Neon branch ที่ตั้งใจใช้งาน
+- ก่อนรัน local dev, seed, bootstrap หรือ migration ให้ตรวจ branch ปลายทางก่อนเสมอ เพราะคำสั่งเหล่านี้อาจอ่าน/เขียนข้อมูลจริง
+- ใช้ Neon branch แยกสำหรับ staging/test ก่อนการเปลี่ยน schema; migration ให้ใช้ direct (ไม่ผ่าน `-pooler`) URL ส่วนแอปปกติใช้ pooled URL
+- ห้ามใช้ `tests/integration/run.mjs` กับ Neon หรือฐานข้อมูลที่มีข้อมูลต้องเก็บ เพราะ harness รีเซ็ตตารางใน `mbs-integration-pg`; ใช้เฉพาะฐานข้อมูลทดสอบที่แยกและทิ้งได้
+
+### เชื่อมต่อ Google Drive ของบริษัท
+
+1. ตั้ง `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` และ `GOOGLE_TOKEN_ENCRYPTION_KEY` ใน environment ฝั่ง server เท่านั้น (`CLIENT_ID/SECRET` เป็นของแอป; ไม่ใช่ email หรือ credential ของผู้จัดการ)
+2. ตั้ง Authorized redirect URI ใน Google Cloud ให้ตรงกับ `GOOGLE_REDIRECT_URI` (เช่น `https://your-domain.example/api/google-drive/callback`) และเปิด Drive API กับ Sheets API
+3. สร้างคีย์เข้ารหัส 32 bytes ด้วย `openssl rand -base64 32`; เก็บเป็น secret ที่ `GOOGLE_TOKEN_ENCRYPTION_KEY` และใช้ค่าเดิมต่อเนื่องทุก deployment เพื่อถอดรหัส refresh token ที่จัดเก็บไว้
+4. รัน DB bootstrap/migrations ก่อน deploy feature นี้; migration แบบ one-time จะล้าง OAuth credentials เก่าที่เป็น plaintext เพื่อบังคับให้แต่ละบริษัทเชื่อมต่อใหม่
+5. ผู้ดูแลบริษัทเข้า Settings → Google Drive → “เชื่อมต่อด้วย Google” และอนุญาตด้วยบัญชีผู้จัดการบริษัท
+
+OAuth callback URL ต้องเป็น HTTPS ใน production และต้องตั้ง Google OAuth consent screen / publishing status สำหรับผู้ใช้จริง หาก Google app ยังอยู่ใน Testing การอนุญาตอาจมีข้อจำกัดหรือ refresh token หมดอายุตามนโยบายของ Google
+
+เอกสารและ Spreadsheet จะอยู่ใน Drive ของบัญชี Google ที่หน้าเชื่อมต่อแสดง อีเมลบัญชีจะแยกเก็บตามบริษัท; ระบบไม่ใช้ refresh token กลางหรือ service account สำรอง หากยังไม่เชื่อมต่อหรือ credential ไม่ถูกต้อง การส่งไฟล์จะล้มเหลวพร้อมแจ้งข้อผิดพลาด ไม่ย้ายไปบันทึกที่ Drive ของบริษัทอื่น
+
+`NEXT_PUBLIC_GOOGLE_CLIENT_ID` และ `NEXT_PUBLIC_GOOGLE_API_KEY` ใช้เฉพาะ Google Drive Picker ฝั่ง browser; client ID นี้ต้องตรงกับ `GOOGLE_CLIENT_ID` แต่ไม่ใช่ข้อมูลยืนยันตัวตนของบัญชีบริษัท. การเลือกไฟล์ใน Picker ปัจจุบันบันทึกเป็นลิงก์อ้างอิง ไม่ได้คัดลอกไฟล์เข้า Drive บริษัท; การอัปโหลดไฟล์จากเครื่องและการสร้างเอกสารใช้ Drive ของบัญชีบริษัทที่เชื่อมต่อ
+
+หลัง deploy ให้ลบ `GOOGLE_REFRESH_TOKEN` รุ่นเก่าออกจาก environment หากเคยตั้งไว้; migration ล้าง token/client secret แบบเดิมใน `company_settings` เพียงครั้งเดียวและบริษัทต้อง authorize ใหม่
+
 ---
 
-## ส่งมอบแบบ Docker (ขายขาด / ติดตั้งให้ลูกค้า)
+## ส่งมอบแอพแบบ Docker โดยใช้ Neon PostgreSQL
 
 ```bash
 cp .env.example .env.local
@@ -103,17 +126,21 @@ node scripts/issue-license.mjs \
   --mode perpetual --company "ชื่อลูกค้า" --licensee "อีเมลลูกค้า" \
   --max-users 5
 
-# 2) ใส่ค่าจริงใน .env.local (ของเครื่องลูกค้า):
+# 2) ใส่ค่าจริงใน .env.local:
 #    LICENSE_SALT   = salt เดียวกับฝั่งผู้ขาย
 #    MBS_LICENSE_KEY = license key ที่ออกให้ลูกค้ารายนี้
-#    DATABASE_URL   = postgresql://mbs:mbs@db:5432/mbs?sslmode=disable
-#    NEXTAUTH_SECRET / AUTH_SECRET = random secret
+#    DATABASE_URL   = Neon pooled connection string
+#    NEXTAUTH_SECRET = random secret (AUTH_SECRET ใช้ค่านี้เป็น fallback ได้)
+#    NEXTAUTH_URL = URL จริงที่ผู้ใช้เปิดเว็บ (เช่น http://localhost:3000 สำหรับ local)
+#    GOOGLE OAuth values = ตั้งเมื่อเปิดใช้ Google Drive integration
 
-# 3) รัน (สร้าง PostgreSQL + app พร้อมกัน — schema โหลดอัตโนมัติ)
-docker compose up -d --build
+# 3) รัน app container (เชื่อม Neon; ไม่มี PostgreSQL ภายใน Compose)
+docker compose --env-file .env.local up -d --build
 ```
 
 - เปิดแอพที่: `http://localhost:3000`
+- ฐานข้อมูล Neon ต้องมี schema และ migrations ที่แอพต้องใช้ก่อนเริ่มใช้งาน; Compose จะไม่สร้างหรือ migrate schema ให้อัตโนมัติ
+- ก่อน migration ให้สำรองข้อมูลและทดสอบบน Neon branch แยกก่อน ใช้ direct (ไม่ผ่าน `-pooler`) URL กับเครื่องมือ migration; อย่าชี้ bootstrap ไปยัง production โดยไม่ตรวจ SQL และอนุมัติการเปลี่ยนแปลงก่อน
 - สร้าง admin ครั้งแรก: หน้า `/register` → register แล้วกด `promote` เป็น superadmin
 - **license lock:** production (`docker compose`) จะ fail-fast ถ้า `MBS_LICENSE_KEY` ผิด/หมดอายุ (subscription) — perpetual ไม่หมดอายุ, subscription หมดอายุเมื่อถึง `expires_at`
 - โหมดการขาย: `PRODUCT_MODE=perpetual` (ขายขาด) หรือ `PRODUCT_MODE=subscription` (เช่า รายเดือน)
@@ -124,7 +151,7 @@ docker compose up -d --build
 
 - **Stack:** Next.js 16 (App Router) + React 19 + TypeScript 5
 - **UI:** Tailwind CSS 4 + lucide-react
-- **ฐานข้อมูล:** PostgreSQL (ผ่าน `@vercel/postgres`; สคริปต์อัตโนมัติใช้ `pg`)
+- **ฐานข้อมูล:** Neon PostgreSQL ผ่าน `pg` Pool (`lib/db.ts`)
 - **เอกสาร PDF:** jspdf / jspdf-autotable / exceljs · **Barcode/QR:** react-barcode / qrcode.react
 - **จ็อบเบื้องหลัง:** node-cron (recurring, tax, ai-audit)
 - **Integration:** googleapis (Drive / Sheets / Calendar) — อ่าน OAuth จาก `.env.local` ผ่าน `scripts/google-auth.mjs`

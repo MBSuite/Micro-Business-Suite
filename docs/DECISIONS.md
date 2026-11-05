@@ -20,6 +20,30 @@
 - Impacted files/modules: company settings migration/bootstrap, registration and auth bootstrap, settings actions/APIs, invoice/expense/contact pages, group management API, integration test schema.
 - Rollback plan: Revert application changes only after restoring the prior access controls; retain the additive migration and unassigned legacy row until ownership has been reviewed.
 
+### [2026-11-06] Journal tenant isolation and company-scoped exports
+- Context: Journal reads, writes, generated reference numbers, dashboard alerts, and Google Drive reports were not consistently scoped to the signed-in company.
+- Decision: Add `journal_entries.company_id`, backfill it from linked invoices, expenses, and payments, require authenticated company context for journal operations, and scope dashboard/export queries and Drive folders by company.
+- Alternatives considered: Keep shared journal records or assign unlinked legacy entries to a default company.
+- Why this was chosen: Prevents cross-company disclosure while avoiding guessed ownership for unlinked historical journal rows.
+- Impacted files/modules: journal migration/bootstrap, journal writer/actions, dashboard, expense import/actions, POS/invoice/voucher journal creation, Google Drive exports, integration schema.
+- Rollback plan: Revert application changes only after restoring equivalent tenant checks; retain the additive migration and review any unassigned legacy journal rows before assigning ownership.
+
+### [2026-11-06] Company-owned Google Drive connections and canonical superadmin roles
+- Context: Google Drive initialization selected the first company settings row or fell back to global credentials, so company folders could still be created in another account's Drive. Legacy membership in group 1 could also grant superadmin privileges.
+- Decision: Require each company admin to authorize the app through Google OAuth; store the verified Google account email and an AES-256-GCM encrypted per-company refresh token, with app credentials and a stable encryption key configured as server secrets. Clear legacy plaintext Google OAuth credentials once through a tracked bootstrap migration. Make `users.role = 'superadmin'` the only source of superadmin authority.
+- Alternatives considered: Continue global OAuth/service-account fallback, or trust legacy group membership.
+- Why this was chosen: Ensures each tenant's files are owned by the Google account that tenant connected and prevents stale group membership from granting administrative elevation.
+- Impacted files/modules: Google Drive/Sheets clients and exports, OAuth connect/callback/disconnect routes, settings UI, company-settings migration, one-time legacy credential cleanup, permission checks, user group assignment, security integration tests, CORE_RULES.md.
+- Rollback plan: Restore only with explicit tenant isolation and role-authority checks; do not re-enable global Google credential fallback or group-based superadmin elevation.
+
+### [2026-11-06] Keep MBSuite.Dev separate and use Neon in Docker Compose
+- Context: A duplicate clone of the separate `MBSuite.Dev` website was nested inside this Next.js repository, and Docker Compose configured an internal PostgreSQL service even though this app's configured database is Neon.
+- Decision: Keep `MBSuite.Dev` at the sibling path `../MBSuite.Dev` only; exclude it from this app's TypeScript project. Docker Compose runs only the app and requires an externally supplied Neon `DATABASE_URL`; runtime uses the pooled URL, while migrations use a direct URL on a reviewed test branch first.
+- Alternatives considered: Build both websites from this repository or keep a local PostgreSQL service in Compose.
+- Why this was chosen: The websites have separate responsibilities and releases, and a single explicit database target prevents accidental divergence between `.env.local` and Compose.
+- Impacted files/modules: `tsconfig.json`, `.gitignore`, `Dockerfile`, `docker-compose.yml`, README, agent guidance, and MBS project skills.
+- Rollback plan: Restore the prior Compose file only if the owner explicitly chooses an on-premises PostgreSQL deployment; keep the two website repositories separate.
+
 ---
 
 ### [2026-11-05] Modular installable plugin packs + capability audit

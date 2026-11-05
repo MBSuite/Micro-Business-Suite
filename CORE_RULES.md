@@ -308,7 +308,7 @@ CREATE TABLE activity_log (
 - Sidebar updated with Groups management link
 
 ### Access Control
-- **superadmin**: Full control including system groups (ID: 1)
+- **superadmin**: Full control including system groups (ID: 1). Privilege is determined only by `users.role = 'superadmin'`; membership in group 1 alone does not grant elevation.
 - **Admin**: Can create/manage custom groups (ID: 2)
 - **Users**: Inherit permissions from assigned groups
 - **System Groups**: Protected from deletion (only superadmin can modify)

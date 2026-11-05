@@ -4,11 +4,6 @@
 import { useState } from "react";
 import {
    Building2,
-   Users,
-   Mail,
-   Phone,
-   MapPin,
-   Globe,
    Database,
    Save,
    ShieldCheck,
@@ -21,7 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { updateCompanySettings } from "@/app/actions";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const menuItems = [
    { id: 'company', icon: Building2, label: "ข้อมูลบริษัท (Profile)" },
@@ -34,7 +29,10 @@ const menuItems = [
 
 export default function SettingsClient({ initialData }: { initialData: any }) {
    const router = useRouter();
-   const [activeTab, setActiveTab] = useState('company');
+   const searchParams = useSearchParams();
+   const [activeTab, setActiveTab] = useState(
+      searchParams.get("tab") === "google-drive" ? "google-drive" : "company"
+   );
    const [loading, setLoading] = useState(false);
    const [formData, setFormData] = useState({
       name: initialData?.name || "",
@@ -67,17 +65,6 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
       rd_api_key_masked: initialData?.has_rd_api_key ? "••••••••••••••••••••" : "",
       rd_base_url: initialData?.rd_base_url || "https://api-portal.rd.go.th",
       rd_enabled: initialData?.rd_enabled ?? false,
-      // Google Drive OAuth2 Settings
-      google_client_id: initialData?.google_client_id || "",
-      // SECURITY: Never hydrate google_client_secret into client state
-      // Only display asterisks if a secret was previously saved
-      google_client_secret: "", // Always start as empty, never expose existing secret
-      google_client_secret_masked: initialData?.has_google_client_secret ? "••••••••••••••••••••" : "",
-      // SECURITY: Never hydrate google_refresh_token into client state
-      google_refresh_token: "", // Always start as empty, never expose existing secret
-      google_refresh_token_masked: initialData?.has_google_refresh_token ? "••••••••••••••••••••" : "",
-      google_redirect_uri: initialData?.google_redirect_uri || "https://developers.google.com/oauthplayground",
-      google_drive_enabled: initialData?.google_drive_enabled ?? false,
    });
 
    const handleSave = async () => {
@@ -89,6 +76,21 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
          router.refresh();
       } else {
          alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+      }
+   };
+
+   const disconnectGoogleDrive = async () => {
+      if (!window.confirm("ยกเลิกการเชื่อมต่อ Google Drive ของบริษัทนี้หรือไม่?")) return;
+      setLoading(true);
+      try {
+         const response = await fetch("/api/google-drive/disconnect", { method: "POST" });
+         const result = await response.json();
+         if (!response.ok || !result.success) throw new Error(result.error || "ยกเลิกการเชื่อมต่อไม่สำเร็จ");
+         router.refresh();
+      } catch (error) {
+         alert(error instanceof Error ? error.message : "ยกเลิกการเชื่อมต่อไม่สำเร็จ");
+      } finally {
+         setLoading(false);
       }
    };
 
@@ -128,13 +130,15 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
                   <h3 className="font-bold text-gray-800 text-lg uppercase tracking-tight">
                      {menuItems.find(m => m.id === activeTab)?.label}
                   </h3>
-                  <button
-                     onClick={handleSave}
-                     disabled={loading}
-                     className="h-10 px-6 bg-green-600 hover:bg-green-700 text-white font-bold rounded flex items-center gap-2 text-sm transition-all shadow-sm disabled:opacity-50"
-                  >
-                     <Save size={16} /> {loading ? "กำลังบันทึก..." : "บันทึกข้อมูลส่วนนี้"}
-                  </button>
+                  {activeTab !== "google-drive" && (
+                     <button
+                        onClick={handleSave}
+                        disabled={loading}
+                        className="h-10 px-6 bg-green-600 hover:bg-green-700 text-white font-bold rounded flex items-center gap-2 text-sm transition-all shadow-sm disabled:opacity-50"
+                     >
+                        <Save size={16} /> {loading ? "กำลังบันทึก..." : "บันทึกข้อมูลส่วนนี้"}
+                     </button>
+                  )}
                </div>
 
                <div className="p-10 flex-1">
@@ -367,98 +371,52 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
 
                   {activeTab === 'google-drive' && (
                      <div className="max-w-3xl space-y-8 animate-in slide-in-from-bottom-2 duration-500">
+                        {searchParams.get("googleDrive") === "connected" && (
+                           <p role="status" className="rounded border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+                              เชื่อมต่อ Google Drive สำเร็จ
+                           </p>
+                        )}
+                        {searchParams.get("googleDrive") === "error" && (
+                           <p role="alert" className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                              เชื่อมต่อไม่สำเร็จ กรุณาตรวจสอบการอนุญาตและการตั้งค่า OAuth ของระบบ แล้วลองใหม่
+                           </p>
+                        )}
                         <div className="bg-blue-50 border border-blue-100 p-4 rounded flex items-center gap-4 mb-6">
                            <Cloud className="text-blue-500" size={32} />
                            <div>
-                              <p className="text-blue-800 font-bold text-sm">{'Google Drive OAuth2 Configuration'}</p>
-                              <p className="text-blue-600 text-xs italic">{'กำหนดค่าการเชื่อมต่อ Google Drive สำหรับเก็บไฟล์เอกสาร'}</p>
+                              <p className="text-blue-800 font-bold text-sm">เชื่อมต่อ Google Drive ของบริษัท</p>
+                              <p className="text-blue-600 text-xs italic">อนุญาตให้ระบบสร้างและจัดเก็บไฟล์ใน Drive ของบัญชี Google ที่เลือก</p>
                            </div>
                         </div>
-
-                        <div className="bg-yellow-50 border border-yellow-200 p-4 rounded mb-6">
-                           <p className="text-yellow-800 text-sm font-bold mb-2">ขั้นตอนการขอ OAuth2 Credentials:</p>
-                           <ol className="text-yellow-700 text-xs list-decimal list-inside space-y-1">
-                              <li>ไปที่ <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" className="underline">Google Cloud Console</a></li>
-                              <li>สร้าง Project ใหม่ หรือเลือก Project ที่มีอยู่</li>
-                              <li>เปิดใช้งาน Google Drive API</li>
-                              <li>ไปที่ Credentials → Create Credentials → OAuth 2.0 Client ID</li>
-                              <li>เลือก Application type: Web application</li>
-                              <li>ใส่ Authorized redirect URI: <code>https://developers.google.com/oauthplayground</code></li>
-                              <li>คัดลอก Client ID และ Client Secret มาใส่ด้านล่าง</li>
-                              <li>ไปที่ <a href="https://developers.google.com/oauthplayground" target="_blank" rel="noreferrer" className="underline">OAuth2 Playground</a> เพื่อขอ Refresh Token</li>
-                           </ol>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-8">
-                           <div className="flex items-center gap-3 p-4 bg-gray-50 rounded border border-gray-100">
-                              <input
-                                 type="checkbox"
-                                 id="google_drive_enabled"
-                                 checked={formData.google_drive_enabled}
-                                 onChange={e => setFormData({ ...formData, google_drive_enabled: e.target.checked })}
-                                 className="w-5 h-5 rounded text-blue-600"
-                              />
-                              <label htmlFor="google_drive_enabled" className="text-sm font-bold text-gray-700">เปิดใช้งาน Google Drive OAuth2 (แทน Service Account)</label>
-                           </div>
-
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                              <div className="space-y-2">
-                                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Google Client ID</label>
-                                 <input
-                                    type="text"
-                                    value={formData.google_client_id}
-                                    onChange={e => setFormData({ ...formData, google_client_id: e.target.value })}
-                                    placeholder="xxxxx.apps.googleusercontent.com"
-                                    className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700"
-                                 />
-                              </div>
-                              <div className="space-y-2">
-                                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Google Client Secret</label>
-                                 {formData.google_client_secret_masked && !formData.google_client_secret ? (
-                                    <div className="w-full h-11 px-4 bg-gray-100 border border-gray-300 rounded flex items-center text-sm text-gray-600 font-bold">
-                                       {formData.google_client_secret_masked}
-                                       <span className="text-xs text-gray-500 ml-2 italic">(Saved)</span>
-                                    </div>
-                                 ) : null}
-                                 <input
-                                    type="password"
-                                    value={formData.google_client_secret}
-                                    onChange={e => setFormData({ ...formData, google_client_secret: e.target.value })}
-                                    placeholder={formData.google_client_secret_masked ? "Leave blank to keep existing secret. Enter new secret to replace." : "GOCSPX-xxxxx"}
-                                    className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700"
-                                 />
-                                 <p className="text-xs text-gray-500">⚠️ Secret is stored securely server-side only. Leave blank if no changes needed.</p>
-                              </div>
-                           </div>
-
-                           <div className="space-y-2">
-                              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Refresh Token</label>
-                              {formData.google_refresh_token_masked && !formData.google_refresh_token ? (
-                                 <div className="w-full p-4 bg-gray-100 border border-gray-300 rounded flex items-center text-sm text-gray-600 font-bold">
-                                    {formData.google_refresh_token_masked}
-                                    <span className="text-xs text-gray-500 ml-2 italic">(Saved)</span>
-                                 </div>
-                              ) : null}
-                              <textarea
-                                 rows={3}
-                                 value={formData.google_refresh_token}
-                                 onChange={e => setFormData({ ...formData, google_refresh_token: e.target.value })}
-                                 placeholder={formData.google_refresh_token_masked ? "Leave blank to keep existing token. Enter new token to replace." : "1//xxxxx-xxxxxx..."}
-                                 className="w-full p-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700 resize-none font-mono"
-                              />
-                              <p className="text-xs text-gray-500">Refresh Token ใช้สำหรับเข้าถึง Google Drive โดยไม่ต้อง Login ซ้ำ — เก็บอยู่ใน server เท่านั้น ปล่อยว่างหากไม่ต้องการเปลี่ยน</p>
-                           </div>
-
-                           <div className="space-y-2">
-                              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Redirect URI</label>
-                              <input
-                                 type="text"
-                                 value={formData.google_redirect_uri}
-                                 onChange={e => setFormData({ ...formData, google_redirect_uri: e.target.value })}
-                                 placeholder="https://developers.google.com/oauthplayground"
-                                 className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700"
-                              />
-                           </div>
+                        <p className="text-sm text-gray-600">
+                           ไฟล์จะถูกบันทึกใน Drive ของบัญชี Google ที่อนุญาตด้านล่าง สมาชิกบริษัทจะเข้าถึงได้ตามสิทธิ์ที่บัญชีนั้นแชร์ไว้
+                        </p>
+                        <div className="rounded border border-gray-200 p-6 space-y-4">
+                           {initialData?.google_drive_enabled && initialData?.google_drive_account_email ? (
+                              <>
+                                 <p className="text-sm font-bold text-green-700">
+                                    เชื่อมต่อแล้ว: <span className="text-gray-800">{initialData.google_drive_account_email}</span>
+                                 </p>
+                                 <button
+                                    type="button"
+                                    onClick={disconnectGoogleDrive}
+                                    disabled={loading}
+                                    className="h-10 px-5 bg-red-600 hover:bg-red-700 text-white font-bold rounded text-sm disabled:opacity-50"
+                                 >
+                                    {loading ? "กำลังดำเนินการ..." : "ยกเลิกการเชื่อมต่อ"}
+                                 </button>
+                              </>
+                           ) : (
+                              <>
+                                 <p className="text-sm text-gray-700">ยังไม่ได้เชื่อมต่อบัญชี Google Drive</p>
+                                 <a
+                                    href="/api/google-drive/connect"
+                                    className="inline-flex h-10 items-center px-5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded text-sm"
+                                 >
+                                    เชื่อมต่อด้วย Google
+                                 </a>
+                              </>
+                           )}
                         </div>
                      </div>
                   )}

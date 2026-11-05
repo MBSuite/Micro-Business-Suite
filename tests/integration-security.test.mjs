@@ -79,6 +79,8 @@ test("protected routes reject requests without a token", async (t) => {
     ["/api/payments/1", "GET"],
     ["/api/company", "GET"],
     ["/api/settings", "GET"],
+    ["/api/google-drive/connect", "GET"],
+    ["/api/google-drive/disconnect", "POST"],
     ["/api/import", "POST"],
     ["/api/admin/backup", "GET"],
     ["/api/db_schema", "GET"],
@@ -98,6 +100,8 @@ test("regular users cannot access admin actions", async (t) => {
   const token = await tokenFor("user");
 
   await expectStatus("/api/admin/backup?format=json", 403, { token });
+  await expectStatus("/api/google-drive/connect", 403, { token });
+  await expectStatus("/api/google-drive/disconnect", 403, { method: "POST", token });
   await expectStatus("/api/reset_billing", 403, {
     method: "POST",
     token,
@@ -191,9 +195,16 @@ test("non-superadmins cannot assign the superadmin group", async (t) => {
     "INSERT INTO users (name, email, password, role, status, company_id) VALUES ($1, $2, $3, 'user', 'active', $4) RETURNING id",
     ["Test Target", `${fixture}_target@security-test.invalid`, "not-a-password", company.rows[0].id],
   );
+  await client.query(
+    "INSERT INTO user_groups (user_id, group_id) VALUES ($1, 1)",
+    [admin.rows[0].id],
+  );
 
   try {
     const token = await tokenFor("admin", String(admin.rows[0].id));
+    const staleGroupAccess = await request("/api/ai/audit", { token });
+    assert.equal(staleGroupAccess.status, 403, "a legacy group 1 membership must not grant superadmin access");
+
     const response = await request(`/api/users/${target.rows[0].id}/groups`, {
       method: "POST",
       token,

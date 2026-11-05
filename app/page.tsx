@@ -32,11 +32,11 @@ import { cn } from "@/lib/utils";
 
 export const dynamic = 'force-dynamic';
 
-import { auth } from "@/lib/auth";
+import { auth, getUserCompanyId } from "@/lib/auth";
 import WaitingRoom from "@/components/WaitingRoom";
 import LandingPage from "@/components/LandingPage";
 
-async function getDashboardData() {
+async function getDashboardData(companyId: number) {
   try {
     // Get company settings first
     const companyResult = await getCompanySettings();
@@ -53,8 +53,8 @@ async function getDashboardData() {
       const expenseRes = await query(`
         SELECT SUM(amount) as total, COUNT(*) as count 
         FROM expenses 
-        WHERE expense_date >= $1 
-      `, [firstDayOfMonth]);
+        WHERE expense_date >= $1 AND company_id = $2
+      `, [firstDayOfMonth, companyId]);
       expenseTotal = Number(expenseRes.rows[0]?.total || 0);
       expenseCount = Number(expenseRes.rows[0]?.count || 0);
     } catch (error) {
@@ -69,9 +69,9 @@ async function getDashboardData() {
       const journalExpenseRes = await query(`
         SELECT SUM(amount) as total, COUNT(*) as count 
         FROM journal_entries 
-        WHERE entry_date >= $1 
+        WHERE entry_date >= $1 AND company_id = $2
         AND debit_account_id IN (SELECT id FROM chart_of_accounts WHERE account_type = 'expense')
-      `, [firstDayOfMonth]);
+      `, [firstDayOfMonth, companyId]);
       journalExpenseTotal = Number(journalExpenseRes.rows[0]?.total || 0);
       journalExpenseCount = Number(journalExpenseRes.rows[0]?.count || 0);
     } catch (error) {
@@ -88,8 +88,8 @@ async function getDashboardData() {
           SUM(CASE WHEN debit_account_id IN (1111, 1112, 1113) THEN amount ELSE 0 END) as total_inflow,
           SUM(CASE WHEN credit_account_id IN (1111, 1112, 1113) THEN amount ELSE 0 END) as total_outflow
         FROM journal_entries 
-        WHERE entry_date >= $1
-      `, [firstDayOfMonth]);
+        WHERE entry_date >= $1 AND company_id = $2
+      `, [firstDayOfMonth, companyId]);
 
       const cashFlowData = cashFlowRes.rows[0];
       if (cashFlowData) {
@@ -106,10 +106,11 @@ async function getDashboardData() {
       `SELECT SUM(net_amount) as total
        FROM invoices
        WHERE status != 'cancelled'
-         AND issue_date >= $1::date`,
-      [firstDayOfMonth.split("T")[0]]
+         AND issue_date >= $1::date
+         AND company_id = $2`,
+      [firstDayOfMonth.split("T")[0], companyId]
     );
-    const pendingRes = await query(`SELECT SUM(net_amount) as total FROM invoices WHERE status != 'paid'`);
+    const pendingRes = await query(`SELECT SUM(net_amount) as total FROM invoices WHERE status != 'paid' AND company_id = $1`, [companyId]);
     const journalsRes = await query(`
       SELECT
         je.*,
@@ -120,10 +121,11 @@ async function getDashboardData() {
       LEFT JOIN invoices inv ON je.reference_type = 'invoice' AND je.reference_id = inv.id
       LEFT JOIN chart_of_accounts debit_acc ON je.debit_account_id = debit_acc.id
       LEFT JOIN chart_of_accounts credit_acc ON je.credit_account_id = credit_acc.id
+      WHERE je.company_id = $1
       ORDER BY je.entry_date DESC, je.id DESC
       LIMIT 5
-    `);
-    const pendingUsersRes = await query(`SELECT COUNT(*) FROM users WHERE status = 'Pending'`);
+    `, [companyId]);
+    const pendingUsersRes = await query(`SELECT COUNT(*) FROM users WHERE status = 'Pending' AND company_id = $1`, [companyId]);
 
     // Fetch alerts for Phase 2
     const { getDashboardAlerts } = await import("@/app/actions");
@@ -141,7 +143,7 @@ async function getDashboardData() {
         monthlyExpense: finalExpenseTotal,
         expenseCount: finalExpenseCount,
         totalPending: Number(pendingRes.rows[0]?.total || 0),
-        customers: (await query('SELECT COUNT(*) FROM contacts')).rows[0].count,
+        customers: (await query('SELECT COUNT(*) FROM contacts WHERE company_id = $1', [companyId])).rows[0].count,
         pendingApprovals: Number(pendingUsersRes.rows[0]?.count || 0),
         cashFlow: {
           totalInflow: totalCashInflow,
@@ -181,6 +183,7 @@ export default async function Dashboard() {
   }
 
   const user = session?.user as any;
+  const companyId = await getUserCompanyId(user.id);
 
   const userStatusRes = await query("SELECT status, name, email FROM users WHERE id = $1", [user?.id]);
   const currentUser = userStatusRes.rows[0];
@@ -189,7 +192,7 @@ export default async function Dashboard() {
     return <WaitingRoom userName={currentUser.name} userEmail={currentUser.email} />;
   }
 
-  const data = await getDashboardData();
+  const data = await getDashboardData(companyId);
   const { company, stats, recentJournals, alerts } = data;
   const netProfit = stats.monthlyIncome - stats.monthlyExpense;
 

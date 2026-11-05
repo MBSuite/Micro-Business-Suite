@@ -17,12 +17,10 @@ async function getCompanyData() {
             vat_rate, withholding_tax_rate, is_vat_registered, currency,
             invoice_prefix, quotation_prefix, receipt_prefix, journal_prefix,
             invoice_footer, quotation_footer, receipt_footer,
-            rd_client_id, rd_base_url, rd_enabled, google_client_id,
-            google_redirect_uri, google_drive_enabled,
+            rd_client_id, rd_base_url, rd_enabled, google_drive_enabled,
+            google_drive_account_email,
             (rd_client_secret IS NOT NULL AND rd_client_secret <> '') AS has_rd_client_secret,
-            (rd_api_key IS NOT NULL AND rd_api_key <> '') AS has_rd_api_key,
-            (google_client_secret IS NOT NULL AND google_client_secret <> '') AS has_google_client_secret,
-            (google_refresh_token IS NOT NULL AND google_refresh_token <> '') AS has_google_refresh_token
+            (rd_api_key IS NOT NULL AND rd_api_key <> '') AS has_rd_api_key
      FROM company_settings WHERE company_id = $1 LIMIT 1`,
     [companyId]
   );

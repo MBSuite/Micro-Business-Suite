@@ -191,9 +191,13 @@ export default function GoogleDrivePicker({ value, onChange, onClear }: GoogleDr
           className="flex-1 h-14 bg-white border-2 border-dashed border-gray-200 text-gray-400 rounded-2xl flex items-center justify-center gap-3 text-sm font-bold hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50 transition-all disabled:opacity-50"
         >
           <FolderOpen size={20} />
-          เลือกจากไฟล์ใน Google Drive
+          อ้างอิงไฟล์จาก Google Drive
         </button>
       </div>
+
+      <p className="text-xs text-gray-500">
+        ระบบบันทึกเป็นลิงก์อ้างอิงเท่านั้น ไฟล์ยังอยู่ใน Drive ของบัญชี Google ที่เลือกไฟล์
+      </p>
 
       <div className="relative group">
         <div className="absolute inset-y-0 left-4 flex items-center text-gray-400 group-focus-within:text-blue-500 transition-colors">

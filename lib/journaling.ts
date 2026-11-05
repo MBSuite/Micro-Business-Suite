@@ -305,9 +305,14 @@ export async function generateDocumentNumber(
 
 export async function createJournalEntry(
   entry: JournalEntry,
-  db: Queryable = { query }
+  db: Queryable = { query },
+  companyId?: number
 ): Promise<{ success: boolean; error?: string; id?: number }> {
   try {
+    if (!Number.isInteger(companyId) || !companyId || companyId < 1) {
+      return { success: false, error: "Company context required" };
+    }
+
     const date = new Date(entry.entry_date);
     const fiscal_year = date.getFullYear();
     const fiscal_month = date.getMonth() + 1;
@@ -315,14 +320,15 @@ export async function createJournalEntry(
     
     const { rows } = await db.query(
       `INSERT INTO journal_entries (
-        reference_no, entry_date, journal_type, reference_type, reference_id, description,
+        company_id, reference_no, entry_date, journal_type, reference_type, reference_id, description,
         debit_account_id, credit_account_id, amount,
         vat_rate, vat_amount, withholding_rate, withholding_amount,
         fiscal_year, fiscal_month, document_number, notes, created_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW()
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW()
       ) RETURNING id`,
       [
+        companyId,
         document_number,
         entry.entry_date, entry.journal_type, entry.reference_type, entry.reference_id, entry.description,
         entry.debit_account_id, entry.credit_account_id, entry.amount,
@@ -347,7 +353,8 @@ export async function createSalesJournalEntry(
   totalAmount: number,
   invoiceDate: string,
   db: Queryable = { query },
-  isService: boolean = false
+  isService: boolean = false,
+  companyId?: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const saleEntry = await createJournalEntry({
@@ -361,7 +368,7 @@ export async function createSalesJournalEntry(
       amount: netAmount,
       document_number: invoiceNumber,
       notes: `Customer ID: ${customerId}`
-    }, db);
+    }, db, companyId);
     
     if (!saleEntry.success) return saleEntry;
     
@@ -380,7 +387,7 @@ export async function createSalesJournalEntry(
         vat_amount: vatAmount,
         document_number: invoiceNumber,
         notes: `VAT 7% - Customer ID: ${customerId}`
-      }, db);
+      }, db, companyId);
     }
     
     return { success: true };
@@ -398,7 +405,8 @@ export async function createReceiptJournalEntry(
   db: Queryable = { query },
   whtAmount: number = 0,
   vatAmount: number = 0,
-  isService: boolean = false
+  isService: boolean = false,
+  companyId?: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const cashEntry = await createJournalEntry({
@@ -411,7 +419,7 @@ export async function createReceiptJournalEntry(
       credit_account_id: COA_ACCOUNTS.ACCOUNTS_RECEIVABLE,
       amount: amount - whtAmount,
       document_number: receiptNumber
-    }, db);
+    }, db, companyId);
     if (!cashEntry.success) return cashEntry;
 
     if (whtAmount > 0) {
@@ -425,7 +433,7 @@ export async function createReceiptJournalEntry(
         credit_account_id: COA_ACCOUNTS.ACCOUNTS_RECEIVABLE,
         amount: whtAmount,
         document_number: receiptNumber,
-      }, db);
+      }, db, companyId);
     }
 
     if (isService && vatAmount > 0) {
@@ -439,7 +447,7 @@ export async function createReceiptJournalEntry(
         credit_account_id: COA_ACCOUNTS.VAT_PAYABLE,
         amount: vatAmount,
         document_number: receiptNumber,
-      }, db);
+      }, db, companyId);
     }
     
     return { success: true };
@@ -456,7 +464,8 @@ export async function createExpenseJournalEntry(
   category: string,
   expenseDate: string,
   withholdingAmount: number = 0,
-  db: Queryable = { query }
+  db: Queryable = { query },
+  companyId?: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const categoryAccountMap: Record<string, number> = {
@@ -484,7 +493,7 @@ export async function createExpenseJournalEntry(
       credit_account_id: COA_ACCOUNTS.ACCOUNTS_PAYABLE,
       amount: amount - vatAmount,
       document_number: `EXP-${expenseId}`
-    }, db);
+    }, db, companyId);
     
     if (!expenseEntry.success) return expenseEntry;
     
@@ -499,7 +508,7 @@ export async function createExpenseJournalEntry(
         credit_account_id: COA_ACCOUNTS.ACCOUNTS_PAYABLE,
         amount: vatAmount,
         document_number: `EXP-${expenseId}`
-      }, db);
+      }, db, companyId);
     }
 
     if (withholdingAmount > 0) {
@@ -513,7 +522,7 @@ export async function createExpenseJournalEntry(
         credit_account_id: COA_ACCOUNTS.WHT_PAYABLE,
         amount: withholdingAmount,
         document_number: `EXP-${expenseId}`
-      }, db);
+      }, db, companyId);
     }
     
     return { success: true };

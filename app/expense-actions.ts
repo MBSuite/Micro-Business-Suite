@@ -8,13 +8,17 @@ import { auth, getUserCompanyId } from "@/lib/auth";
 import { assertCompanyQuota } from "@/lib/company-gate";
 
 export async function deleteExpenseJournalEntries(expenseId: number) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+  const companyId = await getUserCompanyId(session.user.id);
   const journalReference = `EXP-${expenseId}`;
   await query(
     `DELETE FROM journal_entries
-     WHERE (reference_type = 'expense' AND reference_id = $1)
-        OR reference_no = $2
-        OR document_number = $2`,
-    [expenseId, journalReference]
+     WHERE company_id = $3
+       AND ((reference_type = 'expense' AND reference_id = $1)
+         OR reference_no = $2
+         OR document_number = $2)`,
+    [expenseId, journalReference, companyId]
   );
 }
 
@@ -227,7 +231,9 @@ export async function createExpense(data: {
       data.vat_amount || 0,
       data.category,
       data.expense_date,
-      data.wht_amount || 0
+      data.wht_amount || 0,
+      undefined,
+      companyId
     );
 
     if (!journalResult.success) {
@@ -331,7 +337,10 @@ export async function updateExpense(
       data.amount,
       data.vat_amount || 0,
       data.category,
-      data.expense_date
+      data.expense_date,
+      0,
+      undefined,
+      companyId
     );
 
     if (!journalResult.success) {

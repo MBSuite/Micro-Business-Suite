@@ -178,7 +178,8 @@ export async function createInvoice(data: any) {
       totalAmount,
       invoiceDate,
       client,
-      data.is_service === true 
+      data.is_service === true,
+      companyId
     );
 
     if (!journalResult.success) {
@@ -245,7 +246,9 @@ export async function updateInvoice(id: string | number, data: any) {
         Number(data.vat_amount),
         Number(data.net_amount) + Number(data.vat_amount),
         data.due_date,
-        client
+        client,
+        false,
+        companyId
       );
       if (!journalResult.success) {
         throw new Error(`Journal entry failed: ${journalResult.error}`);

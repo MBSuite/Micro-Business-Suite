@@ -94,9 +94,7 @@ export async function POST(
 
     // Check if user exists
     const userCheck = await query(
-      `SELECT u.id, u.name, u.role,
-              EXISTS (SELECT 1 FROM user_groups ug WHERE ug.user_id = u.id AND ug.group_id = 1) AS in_superadmin_group
-       FROM users u WHERE u.id = $1`,
+      "SELECT id, name, role FROM users WHERE id = $1",
       [userId]
     );
 
@@ -106,9 +104,7 @@ export async function POST(
 
     const targetUser = userCheck.rows[0];
     const actorIsSuperAdmin = await isSuperAdmin(session.user.id);
-    const targetIsSuperAdmin =
-      String(targetUser.role || "").toLowerCase() === "superadmin" ||
-      Boolean(targetUser.in_superadmin_group);
+    const targetIsSuperAdmin = String(targetUser.role || "").toLowerCase() === "superadmin";
     if (!actorIsSuperAdmin && targetIsSuperAdmin) {
       return NextResponse.json(
         { error: "Only a superadmin can manage a superadmin's groups" },
@@ -252,17 +248,13 @@ export async function DELETE(
 
     const actorIsSuperAdmin = await isSuperAdmin(session.user.id);
     const targetCheck = await query(
-      `SELECT u.role,
-              EXISTS (SELECT 1 FROM user_groups ug WHERE ug.user_id = u.id AND ug.group_id = 1) AS in_superadmin_group
-       FROM users u WHERE u.id = $1`,
+      "SELECT role FROM users WHERE id = $1",
       [userId]
     );
     if (targetCheck.rows.length === 0) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
-    const targetIsSuperAdmin =
-      String(targetCheck.rows[0].role || "").toLowerCase() === "superadmin" ||
-      Boolean(targetCheck.rows[0].in_superadmin_group);
+    const targetIsSuperAdmin = String(targetCheck.rows[0].role || "").toLowerCase() === "superadmin";
     const groupCheck = await query(
       "SELECT is_system FROM groups WHERE id = $1",
       [groupIdNum]

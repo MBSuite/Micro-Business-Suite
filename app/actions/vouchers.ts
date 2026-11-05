@@ -62,7 +62,8 @@ export async function createPaymentVoucher(data: any) {
       data.category || "อื่นๆ",
       data.issue_date,
       Number(data.withholding_amount || 0),
-      client
+      client,
+      companyId
     );
 
     if (!journalResult.success) {
@@ -150,7 +151,8 @@ export async function createPayment(data: any) {
       client,
       Number(data.withholdingAmount || 0),
       vatAmount,
-      isService
+      isService,
+      companyId
     );
 
     if (!journalResult.success) {

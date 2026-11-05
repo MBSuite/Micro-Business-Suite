@@ -204,14 +204,12 @@ async function getUserRole(userId: string | number): Promise<string | null> {
 }
 
 /**
- * Check if user is superadmin
- *  - role = 'superadmin' on the users table (authoritative, seeded at bootstrap)
- *  - OR member of the canonical superadmin group (id 1) — legacy/secondary source
+ * Superadmin privileges are determined only by the canonical users.role value.
+ * Legacy group 1 memberships are not authoritative and must not grant elevation.
  */
 export async function isSuperAdmin(userId: string | number): Promise<boolean> {
   const role = await getUserRole(userId);
-  if (role === "superadmin") return true;
-  return isInGroup(userId, 1); // canonical superadmin group ID
+  return String(role || "").toLowerCase() === "superadmin";
 }
 
 /**

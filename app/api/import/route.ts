@@ -86,20 +86,27 @@ export async function POST(request: NextRequest) {
 
       try {
         // Insert into expenses table
-        await query(`
+        const expenseRes = await query(`
           INSERT INTO expenses (title, category, amount, expense_date, reference_no, notes, status, company_id)
           VALUES ($1, $2, $3, $4, $5, $6, 'paid', $7)
+          RETURNING id
         `, [title, category, amount, expense_date, reference_no, notes, companyId]);
 
         // Create journal entry
-        await createExpenseJournalEntry(
-          i + 1, // expenseId
+        const journalResult = await createExpenseJournalEntry(
+          expenseRes.rows[0].id,
           0, // vendorId (placeholder)
           amount,
           0, // vatAmount (placeholder)
           category,
-          expense_date
+          expense_date,
+          0,
+          undefined,
+          companyId
         );
+        if (!journalResult.success) {
+          throw new Error(`Journal entry failed: ${journalResult.error}`);
+        }
 
         imported++;
       } catch (error) {

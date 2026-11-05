@@ -1,7 +1,8 @@
-# Subscription / Trial / License Gating (P2)
+# Subscription / Trial / License Gating
 
 > ระบบ "1 ลูกค้า 1 บริษัท": trial 30 วัน 1 user → ต้อง license จริง (paid) ถึงใช้ได้เต็ม
 > โค้ดหลัก: `lib/company-gate.ts`, `lib/license.ts`, `lib/license-packages.ts`, `app/register/*`
+> สถานะ schema ต้องตรวจจาก migration และ Neon branch เป้าหมาย; ห้ามอนุมานว่าไฟล์ migration แปลว่ารัน production แล้ว
 
 ## รูปแบบ license key
 ```
@@ -27,14 +28,12 @@ MBS.<base64url(payload)>.<base64url(hmac)>   // hmac = HMAC-SHA256(payload, LICE
 - `BLOCKED_SUBSCRIPTION_STATUSES` (Suspended/Expired/Blocked) ใช้ใน `assertCompanyQuota` → block ผ่านกึ่ง gate
 
 ## Quota
-- `countCompanyTransactions(companyId)` = **นับ `invoices` + `payments` เท่านั้น** (ไม่นับ expenses เพราะยังไม่มี company_id → ถ้านับจะ 500)
-- `createInvoice` / `createPayment` **ตั้ง `company_id` แล้ว** → ปิดช่องหลบ quota (เคยเป็น hole)
+- `countCompanyTransactions(companyId)` reads invoices, payments, quotations, expenses, and payment vouchers filtered by company and period. Confirm live schema migrations before rollout.
+- Company-scoped create/update/delete actions must keep their `company_id` predicates; check current action code when changing quota-sensitive flows.
 - `maxTransactionsPerMonth` / `max_users` มาจาก license หรือ trial default
 
 ## Security fixes สำคัญ (ธาร review F1–F6 → fix แล้ว เข้า approve)
-- Server actions ต้อง auth + tenant check:
-  - `updateInvoice` / `deleteInvoice` / `markInvoiceAsPaid` → session + company ตรวจ
-  - `updateQuotation` / `deleteQuotation` / `updateQuotationStatus` → auth-check เท่านั้น (quotations ยังไม่มี company_id → tenant เต็มรอ WS-3)
+- Server actions ต้อง auth + tenant check; quotation, invoice, expense, journal, payment, voucher, and company settings paths have tenant-scoped code/migrations. Verify both the current action and target database schema before claiming the deployed tenant boundary is active.
 - `register` wrap ใน transaction (client BEGIN/COMMIT/ROLLBACK) — ลด orphan company
 - `updateVouchers` Pattern? (ดู `app/actions/vouchers.ts` ตามงาน)
 - TrialBanner (`components/TrialBanner.tsx`) มี branch expired
@@ -44,6 +43,8 @@ MBS.<base64url(payload)>.<base64url(hmac)>   // hmac = HMAC-SHA256(payload, LICE
 - API: `/api/admin/customers` (GET list/POST+suspend), `/api/admin/customers/[id]` (GET/PUT/DELETE), `/api/admin/customers/[id]/license` (POST issue)
 - register unlock: แรกเริ่มเพดาน superadmin ปลดล็อกผ่าน `app/register/db-init.ts` (อัปเกรด role → superadmin ในบาง flow)
 
-## RED ที่ค้าง (ตกลงไว้ หลัง deploy)
-1. WS-3 #4: เติม `company_id` ให้ quotations/expenses/contacts/products/services/journals + UNIQUE `users.email`
-2. (ไม่มี blocking ด้าน subscription เหลือ)
+## Deployment safety
+
+- `isSuperAdmin` uses `users.role`; legacy membership in group 1 must not grant superadmin.
+- Test migrations on a disposable Neon branch using a direct (non-pooled) URL. Production application requires explicit approval and backup planning.
+- The integration harness resets tables in `mbs-integration-pg`; never use it against Neon or a database containing data to retain.

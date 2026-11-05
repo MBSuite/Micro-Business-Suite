@@ -1,6 +1,6 @@
 ---
 name: mbs-project
-description: สำหรับโปรเจกต์ Micro-Business-Suite (MBS) — project context แบบครบวงจร ใช้เมื่อต้องทำงาน/แก้ไข/ถามเรื่องระบบนี้ แล้วต้องการเข้าใจสถาปัตยกรรมก่อนลงมือ (แทนการเริ่มค้นใหม่): tech stack, การ auth/admin group, schema ตารางหลัก, ระบบ subscription/trial/license gating, integration security harness ที่ทดสอบแล้ว, และ env การพัฒนา. โหลด references ตามงานที่เจอ. อย่าใช้กับโปรเจกต์อื่น; เรื่อง superadmin credential ให้ใช้ skill mbs-admin-access แทน.
+description: สำหรับโปรเจกต์ Micro-Business-Suite (MBS) — ใช้เมื่อต้องทำงานหรือถามเรื่องสถาปัตยกรรม, Neon/PostgreSQL, multi-tenant, license gating, integration tests, Docker Compose หรือ environment. โหลด references ตามงาน; ตรวจ Neon branch ก่อนการเขียนข้อมูล. อย่าใช้กับ MBSuite.Dev ซึ่งเป็นเว็บแยก; เรื่อง superadmin credential ให้ใช้ mbs-admin-access.
 version: 0.1.0
 license: MIT
 compatibility: opencode
@@ -21,7 +21,7 @@ Project context ของ Micro-Business-Suite (MBS)—ชุดระบบบ�
 - เริ่มงานใหม่/แก้บั๊ก/เพิ่มฟีเจอร์ในโปรเจกต์นี้ ที่ต้องเข้าใจ architecture
 - ถามเรื่อง schema ตาราง, ความสัมพันธ์ company_id / multi-tenant
 - เรื่อง subscription, trial 30 วัน, license key (MBS.<payload>.<hmac>), gating
-- เรื่อง test harness integration security (MBS_TEST_*) ที่ 6/6 เขียวแล้ว
+- เรื่อง test harness integration security (MBS_TEST_*) และข้อควรระวังฐานข้อมูลทดสอบ
 - เรื่อง dev environment, port, env, script bootstrap
 
 ## When NOT to use it
@@ -32,19 +32,14 @@ Project context ของ Micro-Business-Suite (MBS)—ชุดระบบบ�
 
 ## ภาพรวมระบบ (ตรวจสอบแล้วในงาน P1/P2)
 
-- **Tech stack:** Next.js App Router + TypeScript, `pg` Pool เชื่อม PostgreSQL (Neon prod),
-  Auth.js (next-auth) พร้อม `NEXTAUTH_SECRET`/`AUTH_SECRET`, bcryptjs hash password,
-  โหลด env จาก `.env.local` (ต่อ **prod DB จริง** แม้รัน local)
-- **Auth/perm:** `lib/auth.ts` (session + `getUserCompanyId`), `lib/permissions.ts`
-  (group-based; group id **1 = superadmin**, 2 = admin), `lib/core-standards.ts`
-  (CORE_ROLES = superadmin/admin/user)
+- **Tech stack:** Next.js App Router + TypeScript, `pg` Pool (`lib/db.ts`) ต่อ PostgreSQL/Neon ผ่าน `POSTGRES_URL` หรือ `DATABASE_URL`; Auth.js (next-auth), bcryptjs
+- **Database safety:** `.env.local` is not inherently a test database. Verify its Neon branch before local commands that write data. Compose runs only the app and requires a Neon URL.
+- **Auth/perm:** `lib/auth.ts` (session + `getUserCompanyId`), `lib/permissions.ts`; `users.role = 'superadmin'` is the authoritative superadmin check, not legacy group membership.
 - **Menu/feature registry:** `lib/module-registry.ts` (id/label/icon/category/route/requiresAdmin/superadminOnly/enabledByDefault)
   → `components/Sidebar.tsx` + `LayoutWrapper.tsx`; admin console `/admin/customers` เป็น superadminOnly
-- **Multi-tenant:** คอลัมน์ `company_id` บนเอกสาร (invoices/payments **ตั้งตอนสร้างแล้ว**);
-  **RED/ยังไม่ครบ:** quotations/expenses/contacts/products/services/journals ยังไม่มี/ไม่ครบ `company_id`
-  (งาน WS-3 #4) และ `users.email` **ยังไม่มี UNIQUE constraint**
+- **Multi-tenant:** tenant scoping is implemented across company settings, journals, quotations, expenses, contacts, products, services, vouchers, invoices and payments. Read the current migration and action before relying on any particular table's live schema; production migration status is not inferred from code.
 - **stale license → ล็อก "Expired"** ไม่ fallback trial; trial 30 วัน/1 user; register สร้าง company trial
-- **Test coverage:** 8 หน่วย + 6 integration (harness แยก DB, เขียวหมด)
+- **Test status (2026-11-06):** `pnpm build` passes; `pnpm test` reports 8 pass and 9 integration tests skipped unless a disposable test environment is configured.
 
 ## References (โหลดตามงาน)
 
@@ -60,10 +55,12 @@ Project context ของ Micro-Business-Suite (MBS)—ชุดระบบบ�
 
 1. กฎ #1: ห้ามเดา — ตรวจ DB/code จริงก่อนตอบ (probe ผ่าน `lib/db.ts` + dotenv `.env.local`)
 2. กฎ #2: ห้ามพิมพ์ token/key/password เต็มลง chat หรือ command
-3. `.env.local` ต่อ **prod DB ตัวจริง** — ทุก script ที่รัน local ทำงานกับข้อมูลจริง ระวังทุกแก้
+3. Before any DB write, seed, bootstrap, or migration, verify the selected Neon branch and obtain approval before production changes.
 4. เปลี่ยน schema/โครงสร้างภาษาไทยของ comment ตามแบบเดิมใน repo เสมอ
 5. งานสำคัญผ่าน workflow: ฌอน implement → ธาร review/approve → พี่ทดลองก่อน deploy
 6. ห้าม commit/push เว้นแต่ผู้ใช้สั่งชัดเจน
+7. `MBSuite.Dev` is a separate sibling repository at `../MBSuite.Dev`; never copy it into or build it from this repo.
+8. Use a disposable Neon branch and a direct (non-pooled) URL for migration tests; app traffic should use a pooled URL.
 
 ## Contributing
 

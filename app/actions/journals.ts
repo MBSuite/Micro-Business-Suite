@@ -2,11 +2,12 @@
 "use server";
 
 import { query } from "@/lib/db";
+import { auth, getUserCompanyId } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { expandJournalRowsForPresentation } from "@/lib/journaling";
 import * as ExcelJS from "exceljs";
 
-async function getJournalRowsForPresentation() {
+async function getJournalRowsForPresentation(companyId: number) {
   const { rows } = await query(`
     SELECT
       je.*,
@@ -17,8 +18,9 @@ async function getJournalRowsForPresentation() {
     LEFT JOIN invoices inv ON je.reference_type = 'invoice' AND je.reference_id = inv.id
     LEFT JOIN chart_of_accounts debit_acc ON je.debit_account_id = debit_acc.id
     LEFT JOIN chart_of_accounts credit_acc ON je.credit_account_id = credit_acc.id
+    WHERE je.company_id = $1
     ORDER BY je.entry_date DESC, COALESCE(je.reference_no, inv.invoice_number, je.document_number, '') ASC, je.id ASC
-  `);
+  `, [companyId]);
 
   return expandJournalRowsForPresentation(rows);
 }
@@ -88,7 +90,10 @@ async function hasJournalAccountMappingColumns() {
 
 export async function getJournalEntries() {
   try {
-    return { success: true, data: await getJournalRowsForPresentation() };
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+    const companyId = await getUserCompanyId(session.user.id);
+    return { success: true, data: await getJournalRowsForPresentation(companyId) };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -96,6 +101,9 @@ export async function getJournalEntries() {
 
 export async function createJournalEntry(data: any) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+    const companyId = await getUserCompanyId(session.user.id);
     const account = await resolveChartAccount(data.account_name);
     const supportsMapping = await hasJournalAccountMappingColumns();
     const debit = Number(data.debit || 0);
@@ -108,11 +116,12 @@ export async function createJournalEntry(data: any) {
     const res = supportsMapping
       ? await query(
           `INSERT INTO journal_entries (
-             entry_date, reference_no, account_name, description, debit, credit, receipt_url, journal_type,
+             company_id, entry_date, reference_no, account_name, description, debit, credit, receipt_url, journal_type,
              debit_account_id, credit_account_id, amount, document_number
            )
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
           [
+            companyId,
             data.entry_date,
             data.reference_no,
             accountDisplayName,
@@ -128,9 +137,10 @@ export async function createJournalEntry(data: any) {
           ]
         )
       : await query(
-          `INSERT INTO journal_entries (entry_date, reference_no, account_name, description, debit, credit, receipt_url, journal_type) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+          `INSERT INTO journal_entries (company_id, entry_date, reference_no, account_name, description, debit, credit, receipt_url, journal_type)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
           [
+            companyId,
             data.entry_date,
             data.reference_no,
             accountDisplayName,
@@ -150,6 +160,9 @@ export async function createJournalEntry(data: any) {
 
 export async function updateJournalEntry(id: number | string, data: any) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+    const companyId = await getUserCompanyId(session.user.id);
     const account = await resolveChartAccount(data.account_name);
     const supportsMapping = await hasJournalAccountMappingColumns();
     const debit = Number(data.debit || 0);
@@ -173,7 +186,7 @@ export async function updateJournalEntry(id: number | string, data: any) {
              credit_account_id=$9,
              amount=$10,
              document_number=$11
-         WHERE id=$12`,
+         WHERE id=$12 AND company_id=$13`,
         [
           data.entry_date,
           data.reference_no,
@@ -187,13 +200,14 @@ export async function updateJournalEntry(id: number | string, data: any) {
           amount,
           data.reference_no || null,
           id,
+          companyId,
         ]
       );
     } else {
       await query(
         `UPDATE journal_entries SET entry_date=$1, reference_no=$2, account_name=$3, description=$4, debit=$5, credit=$6, receipt_url=$7 
-         WHERE id=$8`,
-        [data.entry_date, data.reference_no, accountDisplayName, data.description, debit, credit, data.receipt_url || null, id]
+         WHERE id=$8 AND company_id=$9`,
+        [data.entry_date, data.reference_no, accountDisplayName, data.description, debit, credit, data.receipt_url || null, id, companyId]
       );
     }
     revalidatePath("/journals");
@@ -205,7 +219,10 @@ export async function updateJournalEntry(id: number | string, data: any) {
 
 export async function deleteJournalEntry(id: number | string) {
   try {
-    await query("DELETE FROM journal_entries WHERE id = $1", [id]);
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+    const companyId = await getUserCompanyId(session.user.id);
+    await query("DELETE FROM journal_entries WHERE id = $1 AND company_id = $2", [id, companyId]);
     revalidatePath("/journals");
     return { success: true };
   } catch (error: any) {
@@ -215,7 +232,10 @@ export async function deleteJournalEntry(id: number | string) {
 
 export async function exportJournalsToExcel() {
   try {
-    const entries = await getJournalRowsForPresentation();
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+    const companyId = await getUserCompanyId(session.user.id);
+    const entries = await getJournalRowsForPresentation(companyId);
     if (entries.length === 0) throw new Error("No data to export");
     
     const workbook = new ExcelJS.Workbook();

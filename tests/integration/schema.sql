@@ -98,6 +98,7 @@ CREATE TABLE IF NOT EXISTS company_settings (
     google_refresh_token TEXT,
     google_redirect_uri VARCHAR(255),
     google_drive_enabled BOOLEAN DEFAULT FALSE,
+    google_drive_account_email VARCHAR(320),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -250,6 +251,7 @@ CREATE TABLE IF NOT EXISTS chart_of_accounts (
 
 CREATE TABLE IF NOT EXISTS journal_entries (
     id SERIAL PRIMARY KEY,
+    company_id INTEGER,
     entry_date DATE NOT NULL DEFAULT CURRENT_DATE,
     reference_no VARCHAR(50),
     journal_type VARCHAR(20),

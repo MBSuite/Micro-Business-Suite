@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { auth } from '@/lib/auth';
+import { auth, getUserCompanyId } from '@/lib/auth';
 import { canAccessAdmin } from '@/lib/core-standards';
 import { createSalesJournalEntry, createExpenseJournalEntry, COA_ACCOUNTS } from '@/lib/journaling';
 
@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
       { status: 403 }
     );
   }
+  const companyId = await getUserCompanyId(session.user.id);
 
   const { searchParams } = new URL(request.url);
   const test = searchParams.get('test');
@@ -35,9 +36,9 @@ export async function GET(request: NextRequest) {
   try {
     switch (test) {
       case 'invoice':
-        return await testInvoiceJournal();
+        return await testInvoiceJournal(companyId);
       case 'expense':
-        return await testExpenseJournal();
+        return await testExpenseJournal(companyId);
       case 'database':
         return await testDatabaseSchema();
       default:
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function testInvoiceJournal() {
+async function testInvoiceJournal(companyId: number) {
   console.log('🧪 Testing Invoice Journal Entry Creation...');
   
   // Test Data
@@ -107,7 +108,10 @@ async function testInvoiceJournal() {
       testInvoice.netAmount,
       testInvoice.vatAmount,
       testInvoice.totalAmount,
-      testInvoice.invoiceDate
+      testInvoice.invoiceDate,
+      undefined,
+      false,
+      companyId
     );
     
     if (journalResult.success) {
@@ -115,8 +119,9 @@ async function testInvoiceJournal() {
       const { rows } = await query(
         `SELECT * FROM journal_entries 
          WHERE reference_type = 'invoice' AND reference_id = $1 
+           AND company_id = $2
          ORDER BY created_at DESC`,
-        [testInvoice.invoiceId]
+        [testInvoice.invoiceId, companyId]
       );
       
       results.push({
@@ -135,7 +140,7 @@ async function testInvoiceJournal() {
       });
       
       // Clean up test data
-      await query(`DELETE FROM journal_entries WHERE reference_type = 'invoice' AND reference_id = $1`, [testInvoice.invoiceId]);
+      await query(`DELETE FROM journal_entries WHERE reference_type = 'invoice' AND reference_id = $1 AND company_id = $2`, [testInvoice.invoiceId, companyId]);
       
     } else {
       results.push({
@@ -162,7 +167,7 @@ async function testInvoiceJournal() {
   });
 }
 
-async function testExpenseJournal() {
+async function testExpenseJournal(companyId: number) {
   console.log('🧪 Testing Expense Journal Entry Creation...');
   
   // Test Data
@@ -206,7 +211,10 @@ async function testExpenseJournal() {
       testExpense.amount,
       testExpense.vatAmount,
       testExpense.category,
-      testExpense.expenseDate
+      testExpense.expenseDate,
+      0,
+      undefined,
+      companyId
     );
     
     if (journalResult.success) {
@@ -214,8 +222,9 @@ async function testExpenseJournal() {
       const { rows } = await query(
         `SELECT * FROM journal_entries 
          WHERE reference_type = 'expense' AND reference_id = $1 
+           AND company_id = $2
          ORDER BY created_at DESC`,
-        [testExpense.expenseId]
+        [testExpense.expenseId, companyId]
       );
       
       results.push({
@@ -234,7 +243,7 @@ async function testExpenseJournal() {
       });
       
       // Clean up test data
-      await query(`DELETE FROM journal_entries WHERE reference_type = 'expense' AND reference_id = $1`, [testExpense.expenseId]);
+      await query(`DELETE FROM journal_entries WHERE reference_type = 'expense' AND reference_id = $1 AND company_id = $2`, [testExpense.expenseId, companyId]);
       
     } else {
       results.push({

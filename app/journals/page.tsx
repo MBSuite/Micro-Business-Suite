@@ -1,10 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 
 import { query } from "@/lib/db";
+import { auth, getUserCompanyId } from "@/lib/auth";
 import { expandJournalRowsForPresentation, getEffectiveJournalReference } from "@/lib/journaling";
 import { formatDateDisplay } from "@/lib/dateFormatter";
 import { BookOpen, Plus, Calendar, ShoppingCart, Wallet, Truck, Banknote, Library, AlertCircle, Search } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { cn } from "@/lib/utils";
 import JournalEntryRow from "./JournalEntryRow";
 import ExportButton from "./ExportButton";
@@ -95,6 +97,9 @@ function compactInvoiceVoucherItems(items: any[]) {
 }
 
 export default async function JournalsPage({ searchParams }: { searchParams: { type?: string, search?: string } }) {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/");
+  const companyId = await getUserCompanyId(session.user.id);
   const type = (await searchParams)?.type;
   const search = (await searchParams)?.search || "";
 
@@ -122,9 +127,9 @@ export default async function JournalsPage({ searchParams }: { searchParams: { t
       LEFT JOIN invoices inv ON je.reference_type = 'invoice' AND je.reference_id = inv.id
       LEFT JOIN chart_of_accounts debit_acc ON je.debit_account_id = debit_acc.id
       LEFT JOIN chart_of_accounts credit_acc ON je.credit_account_id = credit_acc.id
-      WHERE 1=1
+      WHERE je.company_id = $1
     `;
-    const params: any[] = [];
+    const params: any[] = [companyId];
 
     if (search) {
       params.push(`%${search}%`);

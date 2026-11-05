@@ -206,14 +206,26 @@ export async function submitInvoiceToRDPortal(id: string) {
 
 export async function exportMonthlySummaryToDrive() {
   try {
+    const gate = await requireCompanyId();
+    if (!gate.ok) return { success: false, error: gate.error };
     const now = new Date();
     const { getOrCreateFolder } = await import("@/lib/actions-helpers");
     const { getGoogleSheets } = await import("@/lib/google-server");
-    const googleSheets = await getGoogleSheets();
-    const folderId = await getOrCreateFolder("Micro-Business-Suite Reports");
+    const { getGoogleDrive } = await import("@/lib/google-server");
+    const googleSheets = await getGoogleSheets(gate.companyId);
+    const googleDrive = await getGoogleDrive(gate.companyId);
+    const folderId = await getOrCreateFolder(gate.companyId, `Micro-Business-Suite Reports ${gate.companyId}`);
     const spreadsheet = await googleSheets.spreadsheets.create({
       requestBody: { properties: { title: `Budget Summary ${now.getMonth() + 1}/${now.getFullYear()}` } }
     });
-    return { success: true, url: `https://docs.google.com/spreadsheets/d/${spreadsheet.data.spreadsheetId}/edit` };
+    const spreadsheetId = spreadsheet.data.spreadsheetId;
+    if (!spreadsheetId) throw new Error("Google Sheets did not return the created spreadsheet ID");
+    await googleDrive.files.update({
+      fileId: spreadsheetId,
+      addParents: folderId,
+      removeParents: "root",
+      fields: "id, parents",
+    });
+    return { success: true, url: `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit` };
   } catch (err: any) { return { success: false, error: err.message }; }
 }

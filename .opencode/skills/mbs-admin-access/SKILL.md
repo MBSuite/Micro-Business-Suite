@@ -39,7 +39,8 @@ metadata:
 - ไฟล์ `.secure/initial-admin-credential.txt` (mode 0600) ถูก `.gitignore` ละเว้น
   อยู่แล้ว (.gitignore บรรทัด `.secure/`) — เขียนรหัสใหม่ได้ที่นี่แต่ต้องไม่ commit
 - `lib/db.ts` ต้องการ `POSTGRES_URL` หรือ `DATABASE_URL` — อ่านจาก `.env.local`
-  ดังนั้น script ทุกตัวต้อง `config({ path: ".env.local" })` **ก่อน** `import "./lib/db.ts"`
+  ดังนั้น script ทุกตัวต้อง `config({ path: ".env.local" })` **ก่อน** `import "./lib/db.ts"`.
+  `.env.local` may target a persistent Neon branch; verify project/branch before even read-only investigation, and obtain owner approval before any write.
 - คำเตือน `MODULE_TYPELESS_PACKAGE_JSON` + `Reparsing as ES module` เป็น noise ไม่กระทบ
 - dev server ท้องถิ่น: **พอร์ต 3000 ถูก service `open-webui` ครอบอยู่** (uvicorn)
   → ใช้ **3001** เสมอ; เปิดด้วย `setsid nohup` (bash tool ฆ่าทั้ง process group) ×
@@ -54,6 +55,7 @@ metadata:
 - `ADMIN_EMAIL = admin@mbsuite.app`
 
 ### 1) ตรวจว่ามี superadmin อยู่แล้วและได้ไฟล์ credential หรือไม่
+ก่อน query ให้ตรวจ Neon project/branch ที่ `.env.local` ชี้ไป โดยไม่พิมพ์ connection string; ถ้าปลายทางไม่ชัดเจนให้หยุดและถาม ห้ามถือว่า local dev เป็น test DB
 ```bash
 ls -la .secure/ # ถ้ามี initial-admin-credential.txt -> บอก path ให้ผู้ใช้ อย่า cat
 node --input-type=module -e '
@@ -67,6 +69,7 @@ process.exit(0);
 ```
 
 ### 2) ถ้าไม่มี credential และต้องการรหัส — Reset (ต้องได้รับอนุมัติก่อน เพราะแก้ prod DB)
+ตรวจ Neon project/branch อีกครั้ง และต้องได้รับอนุมัติจาก owner สำหรับฐานข้อมูลนั้นก่อนรันคำสั่งเขียนทุกครั้ง
 ```bash
 node --input-type=module -e '
 import { config } from "dotenv";
@@ -107,7 +110,8 @@ URL: `http://localhost:3001` → ล็อกอินด้วย credential �
 
 - กฎ #1: ห้ามเดา — ตรวจ DB จริงก่อนสรุป
 - กฎ #2: ห้ามพิมพ์ token/key/password เต็มลง chat หรือ command
-- การ reset เปลี่ยนข้อมูลจริงใน prod DB → ต้องได้อนุมัติ owner ก่อนเสมอ
+- `.env.local` can point at production or another persistent Neon branch; local execution does not make database writes safe.
+- การ reset เปลี่ยนข้อมูลในฐานข้อมูลเป้าหมาย → ตรวจ branch และต้องได้อนุมัติ owner ก่อนเสมอ
 - `.secure/` ต้องอยู่ใน .gitignore เสมอ ไม่ commit ไฟล์ credential
 - ไม่ปิด dev server ที่เหลือค้าง แต่ให้ kill เจาะ PID (`pgrep -f 'next dev -p 3001'` ไม่ใช้ `pkill -f` ที่ชน command ตัวเอง)
 

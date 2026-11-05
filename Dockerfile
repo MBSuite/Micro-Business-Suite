@@ -17,10 +17,9 @@ RUN corepack enable
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# Placeholder so fail-fast guards (db.ts, auth.ts) pass during page-data collection;
-# replaced by real values at runtime via compose environment.
-ENV DATABASE_URL=postgresql://mbs:mbs@db:5432/mbs?sslmode=disable
-ENV POSTGRES_URL=postgresql://mbs:mbs@db:5432/mbs?sslmode=disable
+# Build-only placeholder so fail-fast guards pass during page-data collection.
+# The runtime image receives its real Neon URL from the deployment environment.
+ENV DATABASE_URL=postgresql://build:build@database-placeholder.invalid:5432/mbs?sslmode=require
 ENV NEXTAUTH_SECRET=docker-build-placeholder-not-used-at-runtime
 ENV AUTH_SECRET=docker-build-placeholder-not-used-at-runtime
 RUN pnpm build

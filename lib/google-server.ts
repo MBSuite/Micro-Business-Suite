@@ -1,172 +1,79 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { google } from 'googleapis';
-import path from 'path';
-import { query } from '@/lib/db';
+import "server-only";
+import { google } from "googleapis";
+import { query } from "@/lib/db";
+import { decryptGoogleRefreshToken } from "@/lib/google-token-crypto";
 
-/**
- * ตั้งค่าการยืนยันตัวตน (Authentication)
- * รองรับ 3 โหมด:
- * 1. OAuth2 from Database - อ่านจาก company_settings (แนะนำ)
- * 2. OAuth2 from .env - ใช้ Environment Variables (fallback)
- * 3. Service Account - ใช้ไฟล์ JSON (สำหรับบอทเฉพาะทาง)
- */
+type GoogleSettings = {
+  google_refresh_token: string | null;
+  google_drive_enabled: boolean | null;
+};
 
-let auth: any;
-let driveClient: any;
-let sheetsClient: any;
+function getGoogleOAuthConfig(redirectUri?: string) {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error("Google OAuth is not configured on the server");
+  }
+  return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+}
 
-/**
- * ดึงการตั้งค่า Google Drive จาก Database
- */
-async function getGoogleSettingsFromDB() {
+export function getGoogleOAuthClient(redirectUri: string) {
+  return getGoogleOAuthConfig(redirectUri);
+}
+
+export async function getGoogleDrive(companyId: number) {
+  if (!Number.isInteger(companyId) || companyId < 1) {
+    throw new Error("Valid company context is required for Google Drive");
+  }
+
+  const { rows } = await query(
+    `SELECT google_refresh_token, google_drive_enabled
+     FROM company_settings
+     WHERE company_id = $1
+     LIMIT 1`,
+    [companyId]
+  );
+  const settings = rows[0] as GoogleSettings | undefined;
+  if (!settings?.google_drive_enabled || !settings.google_refresh_token) {
+    throw new Error("Google Drive is not connected for this company");
+  }
+
+  const auth = getGoogleOAuthConfig();
+  auth.setCredentials({ refresh_token: decryptGoogleRefreshToken(settings.google_refresh_token) });
+  return google.drive({ version: "v3", auth });
+}
+
+export async function getGoogleSheets(companyId: number) {
+  if (!Number.isInteger(companyId) || companyId < 1) {
+    throw new Error("Valid company context is required for Google Sheets");
+  }
+
+  const { rows } = await query(
+    `SELECT google_refresh_token, google_drive_enabled
+     FROM company_settings
+     WHERE company_id = $1
+     LIMIT 1`,
+    [companyId]
+  );
+  const settings = rows[0] as GoogleSettings | undefined;
+  if (!settings?.google_drive_enabled || !settings.google_refresh_token) {
+    throw new Error("Google Drive is not connected for this company");
+  }
+
+  const auth = getGoogleOAuthConfig();
+  auth.setCredentials({ refresh_token: decryptGoogleRefreshToken(settings.google_refresh_token) });
+  return google.sheets({ version: "v4", auth });
+}
+
+export async function checkGoogleAuth(companyId: number) {
   try {
-    const result = await query(
-      `SELECT google_client_id, google_client_secret, google_refresh_token, 
-              google_redirect_uri, google_drive_enabled 
-       FROM company_settings 
-       LIMIT 1`
-    );
-    if (result.rows.length > 0) {
-      return result.rows[0];
-    }
-    return null;
+    const drive = await getGoogleDrive(companyId);
+    await drive.about.get({ fields: "user(emailAddress)" });
+    return { success: true };
   } catch (error) {
-    console.error('❌ Error fetching Google settings from DB:', error);
-    return null;
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }
-
-/**
- * สร้าง OAuth2 Client
- */
-function createOAuth2Client(clientId: string, clientSecret: string, redirectUri: string, refreshToken: string) {
-  const oauth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
-  oauth2Client.setCredentials({ refresh_token: refreshToken });
-  return oauth2Client;
-}
-
-/**
- * สร้าง Service Account Auth
- */
-function createServiceAccountAuth() {
-  const SERVICE_ACCOUNT_FILE = path.join(process.cwd(), 'google-service-account.json');
-  const authOptions: any = {
-    scopes: [
-      'https://www.googleapis.com/auth/drive',
-      'https://www.googleapis.com/auth/spreadsheets',
-      'https://www.googleapis.com/auth/drive.file',
-      'https://www.googleapis.com/auth/calendar',
-    ],
-  };
-
-  if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
-    try {
-      authOptions.credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-    } catch (err) {
-      console.error('❌ GOOGLE_SERVICE_ACCOUNT_JSON Parse Error:', err);
-    }
-  } else {
-    authOptions.keyFile = SERVICE_ACCOUNT_FILE;
-  }
-
-  return new google.auth.GoogleAuth(authOptions);
-}
-
-/**
- * เริ่มต้น Authentication (ต้องเรียกก่อนใช้งาน)
- */
-export async function initializeGoogleAuth() {
-  try {
-    // โหมด 1: ลองอ่านจาก Database ก่อน
-    const dbSettings = await getGoogleSettingsFromDB();
-    
-    if (dbSettings?.google_drive_enabled && 
-        dbSettings?.google_client_id && 
-        dbSettings?.google_client_secret && 
-        dbSettings?.google_refresh_token) {
-      
-      auth = createOAuth2Client(
-        dbSettings.google_client_id,
-        dbSettings.google_client_secret,
-        dbSettings.google_redirect_uri || 'https://developers.google.com/oauthplayground',
-        dbSettings.google_refresh_token
-      );
-      
-      console.log('🛡️ Google Auth: Using OAuth2 from Database');
-    }
-    // โหมด 2: Fallback ไป .env
-    else if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REFRESH_TOKEN) {
-      auth = createOAuth2Client(
-        process.env.GOOGLE_CLIENT_ID,
-        process.env.GOOGLE_CLIENT_SECRET,
-        process.env.GOOGLE_REDIRECT_URI || 'https://developers.google.com/oauthplayground',
-        process.env.GOOGLE_REFRESH_TOKEN
-      );
-      
-      console.log('🛡️ Google Auth: Using OAuth2 from Environment Variables');
-    }
-    // โหมด 3: Service Account (Fallback สุดท้าย)
-    else {
-      auth = createServiceAccountAuth();
-      console.log('🤖 Google Auth: Using Service Account');
-    }
-
-    // สร้าง Clients
-    driveClient = google.drive({ version: 'v3', auth });
-    sheetsClient = google.sheets({ version: 'v4', auth });
-    
-    return { success: true };
-  } catch (error: any) {
-    console.error('❌ Google Auth Initialization Error:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * ดึง Google Drive Client (lazy init)
- */
-export async function getGoogleDrive() {
-  if (!driveClient) {
-    await initializeGoogleAuth();
-  }
-  return driveClient;
-}
-
-/**
- * ดึง Google Sheets Client (lazy init)
- */
-export async function getGoogleSheets() {
-  if (!sheetsClient) {
-    await initializeGoogleAuth();
-  }
-  return sheetsClient;
-}
-
-/**
- * ตรวจสอบความพร้อมของระบบ
- */
-export async function checkGoogleAuth() {
-  try {
-    if (!auth) {
-      await initializeGoogleAuth();
-    }
-    
-    if (auth.getClient) {
-      await auth.getClient();
-    } else {
-      await auth.getAccessToken();
-    }
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-}
-
-// สำหรับ backward compatibility - export ที่เรียก init อัตโนโมติ
-// แต่แนะนำให้เรียก initializeGoogleAuth() ใน startup
-initializeGoogleAuth().catch(err => {
-  console.log('⚠️ Google Auth auto-init failed (will retry on first use):', err.message);
-});
-
-// Export clients สำหรับใช้งาน (จะถูก update เมื่อ init สำเร็จ)
-export { driveClient as googleDrive, sheetsClient as googleSheets };
