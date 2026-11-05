@@ -60,6 +60,26 @@ export async function proxy(req: NextRequest) {
   const session = token ? await verifyToken(token) : null;
 
   if (session) {
+    // Role-based guard for admin areas
+    const role = String(session.role || "").toLowerCase();
+    const isAdmin = role === "admin" || role === "superadmin";
+    if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
+      if (!isAdmin) {
+        if (isApi) {
+          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+        return NextResponse.redirect(new URL("/", req.url));
+      }
+    }
+    // Superadmin-only console
+    if (pathname.startsWith("/admin/customers") || pathname.startsWith("/api/admin/customers")) {
+      if (role !== "superadmin") {
+        if (isApi) {
+          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+        return NextResponse.redirect(new URL("/admin/modules", req.url));
+      }
+    }
     return NextResponse.next();
   }
 
