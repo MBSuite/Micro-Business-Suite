@@ -55,10 +55,17 @@ export async function PUT(req: Request) {
 
     const body = await req.json();
     const rawOverrides = (body?.overrides || {}) as Record<string, boolean>;
+    const coreModuleIds = new Set(MODULE_REGISTRY.filter((m) => m.core).map((m) => m.id));
     const validModuleIds = new Set(MODULE_REGISTRY.map((m) => m.id));
     const overrides: Record<string, boolean> = {};
     for (const [moduleId, value] of Object.entries(rawOverrides)) {
-      if (validModuleIds.has(moduleId)) overrides[moduleId] = value === true;
+      if (!validModuleIds.has(moduleId)) continue;
+      // Core modules cannot be disabled
+      if (coreModuleIds.has(moduleId)) {
+        overrides[moduleId] = true;
+        continue;
+      }
+      overrides[moduleId] = value === true;
     }
     const companyId = await getUserCompanyId(session.user.id);
 

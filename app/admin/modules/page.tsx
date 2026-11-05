@@ -10,6 +10,7 @@ type RegistryModule = {
   category: string;
   route?: string;
   requiresAdmin?: boolean;
+  core?: boolean;
 };
 
 const categoryOrder = [
@@ -124,17 +125,21 @@ export default function AdminModulesPage() {
               <div key={category} className="bg-white rounded-2xl border border-slate-100 p-6 md:p-8 shadow-sm">
                 <h2 className="text-sm font-black uppercase tracking-widest text-slate-500 mb-4">{category}</h2>
                 <div className="space-y-3">
-                  {mods.map((mod) => (
+{mods.map((mod) => (
                     <label key={mod.id} className="flex items-center justify-between border border-slate-100 rounded-xl px-4 py-3">
                       <div>
-                        <div className="font-bold text-slate-800">{mod.label}</div>
+                        <div className="font-bold text-slate-800 flex items-center gap-2">
+                          {mod.label}
+                          {mod.core && <span className="text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 px-2 py-0.5 rounded">Core</span>}
+                        </div>
                         <div className="text-xs text-slate-400">{mod.route || "-"}</div>
                       </div>
                       <input
                         type="checkbox"
-                        checked={getValue(mod.id)}
-                        onChange={(e) => setValue(mod.id, e.target.checked)}
-                        className="w-5 h-5"
+                        checked={mod.core ? true : getValue(mod.id)}
+                        disabled={!!mod.core}
+                        onChange={(e) => { if (!mod.core) setValue(mod.id, e.target.checked); }}
+                        className="w-5 h-5 disabled:opacity-40"
                       />
                     </label>
                   ))}
