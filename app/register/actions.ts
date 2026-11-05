@@ -11,6 +11,7 @@ export async function registerUser(formData: FormData) {
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirmPassword") as string;
   const companyName = (formData.get("companyName") as string)?.trim() || null;
+  const businessType = (formData.get("businessType") as string)?.trim() || "general";
 
   if (!name || !normalizedEmail || !password) {
     return { error: "กรุณากรอกข้อมูลให้ครบทุกช่อง" };
@@ -39,16 +40,16 @@ export async function registerUser(formData: FormData) {
       return { error: "อีเมลนี้ถูกใช้งานไปแล้ว" };
     }
 
-    // สร้างบริษัทใหม่สำหรับลูกค้าคนนี้ 1 ลูกค้า = 1 บริษัท (แผน TRIAL 14 วัน, 1 user)
+    // สร้างบริษัทใหม่สำหรับลูกค้าคนนี้ 1 ลูกค้า = 1 บริษัท (แผน TRIAL, 1 user)
     const companyRes = await client.query(
       `
         INSERT INTO companies (
-          name, plan_type, max_users, subscription_status, trial_end, expiry_date
+          name, plan_type, max_users, subscription_status, trial_end, expiry_date, business_type
         )
-        VALUES ($1, 'TRIAL', 1, 'Active', NOW() + INTERVAL '14 days', NULL)
+        VALUES ($1, 'TRIAL', 1, 'Active', NOW() + INTERVAL '14 days', NULL, $2)
         RETURNING id, name
       `,
-      [companyName || `${name}'s Company`]
+      [companyName || `${name}'s Company`, businessType]
     );
     const companyId = companyRes.rows[0].id;
 
@@ -71,6 +72,35 @@ export async function registerUser(formData: FormData) {
     );
 
     await client.query("COMMIT");
+
+    // Auto-install plugin pack based on business type (best-effort, outside tx)
+    try {
+      const { listPluginPacks } = await import("@/lib/plugin-packs");
+      const { saveCompanyModuleOverrides } = await import("@/lib/module-config");
+      const packMap: Record<string, string> = {
+        retail: "retail_pos",
+        fnb: "f_and_b",
+        pharmacy: "pharmacy",
+        service: "service_business",
+      };
+      const packId = packMap[businessType];
+      if (packId) {
+        const pack = listPluginPacks().find((p) => p.id === packId);
+        if (pack) {
+          const overrides: Record<string, boolean> = {};
+          for (const m of pack.modules) overrides[m] = true;
+          if (pack.dependencies) {
+            for (const dep of pack.dependencies) {
+              const depPack = listPluginPacks().find((p) => p.id === dep);
+              if (depPack) for (const m of depPack.modules) overrides[m] = true;
+            }
+          }
+          await saveCompanyModuleOverrides(companyId, overrides, 0);
+        }
+      }
+    } catch (e) {
+      console.error("auto-install pack error", e);
+    }
 
     // Redirect to login on success
     return { success: true, company: companyRes.rows[0] };

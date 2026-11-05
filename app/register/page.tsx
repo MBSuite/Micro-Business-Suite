@@ -114,6 +114,17 @@ export default function RegisterPage() {
                   </div>
                </div>
 
+                <div className="space-y-1">
+                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Business Type (ประเภทธุรกิจ)</label>
+                   <select name="businessType" required className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium">
+                     <option value="general">ทั่วไป (General)</option>
+                     <option value="retail">ร้านค้าปลีก (Retail)</option>
+                     <option value="fnb">ร้านอาหาร/คาเฟ่ (F&B)</option>
+                     <option value="pharmacy">ร้านขายยา (Pharmacy)</option>
+                     <option value="service">ธุรกิจบริการ (Service)</option>
+                   </select>
+                </div>
+
                <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
                  <div className="relative group">
