@@ -116,6 +116,12 @@ MBS แก้ปัญหาทั้งหมดผ่าน **4 เสาห�
 - Offline license verification (HMAC-SHA256)
 - Docker standalone (multi-stage, non-root user)
 
+### สถานะ Production (อัปเดตตาม read-only audit)
+- **ผ่าน:** Build / TSC / Lint (0 errors), Unit tests 8/8, Integration tests 9/9, License valid, DB 53 ตาราง, column types ตรง
+- **แก้ไขแล้ว:** Backup route (superadmin only), Reset billing (transaction + company scope), auth backfill ย้ายไป migration, CSP tightened (ลบ unsafe-eval), start script 一致กับ Docker
+- **ข้อจำกัด:** Rate limiter in-memory (single-instance), CSP ยังมี unsafe-inline (Next.js ต้องการ), Neon branch ยังไม่ยืนยัน (staging vs production), Historical credentials ใน git history (ควร rotate ถ้าเคย live)
+- **สรุป:** พร้อม production สำหรับ core + Google Drive (หลังแก้ audit findings) — ควรยืนยัน Neon branch + deploy smoke test ก่อน go-live
+
 ---
 
 ## 5. เหมาะกับใคร? ธุรกิจประเภทใดบ้าง?

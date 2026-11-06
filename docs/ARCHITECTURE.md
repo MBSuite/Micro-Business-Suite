@@ -4,7 +4,7 @@
 
 - App: Next.js (App Router) + TypeScript
 - Database: PostgreSQL (Neon)
-- Auth: NextAuth credentials
+- Auth: JWT (jose) + bcryptjs, httpOnly cookie, role-based (superadmin/admin/user)
 
 ## Core Modules
 
