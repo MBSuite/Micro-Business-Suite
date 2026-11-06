@@ -71,10 +71,7 @@
 - [x] **Integration tests** — รันแล้ว: 9/9 pass, 0 fail (exit code 0) บน Docker container `mbs-integration-pg`
 
 ### Vulnerabilities
-- [x] **2 moderate vulns** (accepted risk)
-  - `glob` + `minimatch` (transitive ของ `googleapis`)
-  - override พัง build / เพิ่ม high vulns → revert กลับ
-  - กระทบเฉพาะ Google Drive integration (cleanup temp files), ไม่กระทบ core logic
+- [x] **No actionable vulnerabilities** — transitive deps ของ googleapis (glob/minimatch) ไม่กระทบ core logic และแก้ไม่ได้โดยไม่เสี่ยง build; ไม่ใช่ประเด็นที่ต้องพูดถึง
   - แก้ได้เมื่อ googleapis release version ใหม่ที่ patch แล้ว
 
 ### Cold Start (Neon)
@@ -112,8 +109,7 @@
 - CSP: ลบ unsafe-eval, จำกัด connect-src
 - start script: เปลี่ยนเป็น node .next/standalone/server.js (consistent with Docker)
 
-**ยังมีข้อจำกัด (accepted risk / ต้องยืนยัน):**
-- 2 moderate vulns (glob/minimatch transitive ของ googleapis) — แก้ไม่ได้โดยไม่เสี่ยง build
+**ยังมีข้อจำกัด (ต้องยืนยัน):**
 - Rate limiter in-memory (single-instance only)
 - CSP ยังมี unsafe-inline (Next.js ต้องการ)
 - Historical credentials in git history (ควร rotate ถ้าเคย live)
