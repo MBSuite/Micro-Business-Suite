@@ -163,7 +163,7 @@ export default function Sidebar({
             />
             {(!isCollapsed || isMobileOpen) && (
               <div className="flex flex-col">
-                 <span className="font-black text-white text-lg tracking-tight uppercase leading-none">MICRO-BUSINESS-SUITE</span>
+                 <span className="font-black text-white text-lg tracking-tight leading-none">MBSuite</span>
                  <span className="text-[9px] font-black text-violet-400 uppercase tracking-[0.4em] mt-1">Autonomous</span>
               </div>
             )}
