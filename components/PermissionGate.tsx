@@ -2,6 +2,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import Link from "next/link";
 import { checkPermission, getUserPermissions, type PermissionAction, type ModuleName } from "@/lib/permissions";
 
 // Permission context
@@ -45,6 +46,7 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPermissions();
   }, []);
 
@@ -124,12 +126,12 @@ export function PermissionDenied() {
         <p className="text-slate-500 mb-8 leading-relaxed">
           คุณไม่มีสิทธิ์เข้าถึงหน้านี้ กรุณาติดต่อผู้ดูแลระบบหากคุณคิดว่านี่เป็นข้อผิดพลาด
         </p>
-        <a
+        <Link
           href="/"
           className="inline-flex items-center gap-2 px-8 py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-colors"
         >
           กลับไปหน้าหลัก
-        </a>
+        </Link>
       </div>
     </div>
   );

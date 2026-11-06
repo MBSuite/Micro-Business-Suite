@@ -49,7 +49,7 @@ export default async function CategoriesPage() {
               <div className="bg-white p-8 rounded-[2rem] border border-violet-100 shadow-xl shadow-violet-100/20">
                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4">Pro Tip</h3>
                  <p className="text-slate-500 text-xs leading-relaxed font-medium">
-                    คุณควรตั้งชื่อประเภทสินค้าให้สั้นและเข้าใจง่าย เช่น "Hardware", "Software", "Service" เพื่อความสะดวกในการใช้งาน
+                    คุณควรตั้งชื่อประเภทสินค้าให้สั้นและเข้าใจง่าย เช่น &quot;Hardware&quot;, &quot;Software&quot;, &quot;Service&quot; เพื่อความสะดวกในการใช้งาน
                  </p>
               </div>
            </div>

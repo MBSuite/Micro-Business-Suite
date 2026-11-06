@@ -209,7 +209,7 @@ export default function NewContactPage() {
                       {formData.type}
                    </span>
                    <p className="mt-8 text-[11px] text-slate-400 font-bold text-center leading-relaxed italic px-4">
-                      "รายชื่อนี้จะถูกซิงค์ข้อมูลไปยังระบบออกใบแจ้งหนี้และรายงานภาษีอัตโนมัติ"
+                      &quot;รายชื่อนี้จะถูกซิงค์ข้อมูลไปยังระบบออกใบแจ้งหนี้และรายงานภาษีอัตโนมัติ&quot;
                    </p>
                 </div>
 

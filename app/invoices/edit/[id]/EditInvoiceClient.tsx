@@ -48,6 +48,19 @@ export default function EditInvoiceClient({ invoice }: { invoice: any }) {
     isVatRegistered: true,
   });
 
+  const createEmptyItem = (): InvoiceItem => ({
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    productId: "",
+    isCustom: false,
+    description: "",
+    quantity: 1,
+    unit_price: 0,
+    discount: 0,
+    markupCost: "",
+    markupProfit: 20,
+    total_price: 0,
+  });
+
   useEffect(() => {
     const fetchData = async () => {
       setFetching(true);
@@ -108,18 +121,7 @@ export default function EditInvoiceClient({ invoice }: { invoice: any }) {
     }
   }, [contacts, invoiceData.contactId]);
 
-  const createEmptyItem = (): InvoiceItem => ({
-    id: Date.now() + Math.floor(Math.random() * 1000),
-    productId: "",
-    isCustom: false,
-    description: "",
-    quantity: 1,
-    unit_price: 0,
-    discount: 0,
-    markupCost: "",
-    markupProfit: 20,
-    total_price: 0,
-  });
+
 
   const addItem = () => {
     setInvoiceData((prev) => ({ ...prev, items: [...prev.items, createEmptyItem()] }));

@@ -16,12 +16,40 @@ function getJWTSecret(): Uint8Array {
 
 const SECRET = getJWTSecret();
 
+// --- Simple in-memory rate limiter (single-instance; use Redis/Upstash for multi-instance prod) ---
+type RateBucket = { count: number; resetAt: number };
+const rateBuckets = new Map<string, RateBucket>();
+
+function rateLimit(key: string, limit: number, windowMs: number): { allowed: boolean; retryAfter: number } {
+  const now = Date.now();
+  const bucket = rateBuckets.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    rateBuckets.set(key, { count: 1, resetAt: now + windowMs });
+    return { allowed: true, retryAfter: 0 };
+  }
+  if (bucket.count >= limit) {
+    return { allowed: false, retryAfter: Math.ceil((bucket.resetAt - now) / 1000) };
+  }
+  bucket.count += 1;
+  return { allowed: true, retryAfter: 0 };
+}
+
+// Periodic cleanup to avoid unbounded memory growth
+if (typeof setInterval !== "undefined") {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of rateBuckets) {
+      if (v.resetAt <= now) rateBuckets.delete(k);
+    }
+  }, 60_000).unref?.();
+}
+
 const PUBLIC_PATHS = ["/", "/login", "/register", "/api/login", "/api/logout"];
 const PUBLIC_PREFIXES = ["/api/auth"];
 
 // APIs intentionally callable without a session.
 // Everything else under /api/* now requires a valid session-token.
-const PUBLIC_API_EXACT = new Set(["/api/login", "/api/logout", "/api/fx-rate"]);
+const PUBLIC_API_EXACT = new Set(["/api/login", "/api/logout", "/api/fx-rate", "/api/health"]);
 const PUBLIC_API_PREFIXES = ["/api/auth"];
 
 function isPublicApi(pathname: string): boolean {
@@ -44,6 +72,30 @@ async function verifyToken(token: string) {
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // Rate limiting: login endpoint (brute-force protection)
+  if (pathname === "/api/login") {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+    const rl = rateLimit(`login:${ip}`, 10, 60_000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Try again later." },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+      );
+    }
+  }
+
+  // Rate limiting: general API (per IP, generous)
+  if (pathname.startsWith("/api/")) {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+    const rl = rateLimit(`api:${ip}`, 120, 60_000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Try again later." },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+      );
+    }
+  }
 
   const isPublicPath = PUBLIC_PATHS.includes(pathname);
   const isPublicPrefix = PUBLIC_PREFIXES.some(

@@ -23,14 +23,15 @@ export async function POST(req: NextRequest) {
     const text = await file.text();
 
     // Basic JSON restore (skeleton for safety)
-    let parsed: any = null;
+    let parsed: unknown = null;
     try {
       parsed = JSON.parse(text);
     } catch {
       return NextResponse.json({ error: "File must be JSON backup" }, { status: 400 });
     }
 
-    if (!parsed?.tables) {
+    const parsedObj = parsed as { tables?: Record<string, unknown>; meta?: unknown } | null;
+    if (!parsedObj?.tables) {
       return NextResponse.json({ error: "Invalid backup format: missing tables" }, { status: 400 });
     }
 
@@ -39,10 +40,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Restore file validated — full database restoration requires manual execution (security guard). Tables detected: " + Object.keys(parsed.tables).join(", "),
-      meta: parsed.meta || {},
+      message: "Restore file validated — full database restoration requires manual execution (security guard). Tables detected: " + Object.keys(parsedObj.tables || {}).join(", "),
+      meta: parsedObj.meta || {},
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[ERROR] Restore operation failed:", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }

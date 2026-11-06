@@ -82,7 +82,7 @@ export default function NewInvoicePage() {
     billingTaxId: "",
     reference: "Loading...",
     date: new Date().toISOString().split("T")[0],
-    dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    dueDate: new Date(new Date().getTime() + 15 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
     items: [createEmptyItem()],
     vatRate: 7,
     isVatRegistered: true,

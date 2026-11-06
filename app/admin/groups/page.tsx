@@ -111,7 +111,7 @@ export default function GroupsPage() {
     fetchGroups();
   }, []);
 
-  const fetchGroups = async () => {
+  async function fetchGroups() {
     try {
       setError(null);
       const response = await fetch("/api/groups");
@@ -128,7 +128,7 @@ export default function GroupsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const fetchGroupPermissions = async (groupId: number) => {
     try {

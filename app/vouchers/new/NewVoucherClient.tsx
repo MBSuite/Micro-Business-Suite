@@ -339,7 +339,7 @@ export default function NewVoucherClient() {
                    </div>
 
                    <p className="mt-12 text-[9px] text-slate-500 font-medium leading-relaxed italic border-t border-white/5 pt-6">
-                      "Autonomous Accounting: บันทึกรายการนี้จะถูกรวบรวมเข้าสมุดรายวันโดยอัตโนมัติเมื่อทำการโพสต์"
+                      &quot;Autonomous Accounting: บันทึกรายการนี้จะถูกรวบรวมเข้าสมุดรายวันโดยอัตโนมัติเมื่อทำการโพสต์&quot;
                    </p>
                 </div>
 

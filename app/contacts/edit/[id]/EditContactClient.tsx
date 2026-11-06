@@ -196,7 +196,7 @@ export default function EditContactClient({ contact }: { contact: any }) {
                    <ShieldCheck size={48} className="mb-6 opacity-50 group-hover:scale-110 transition-transform" />
                    <p className="text-[11px] font-black uppercase tracking-[0.3em] mb-3 text-center">Neon Sync Protected</p>
                    <p className="text-[10px] opacity-70 text-center leading-relaxed font-bold italic px-2">
-                      "การเปลี่ยนแปลงข้อมูลจะถูกบันทึกและซิงค์ไปยังทุกเอกสารที่เกี่ยวข้องทันที"
+                      &quot;การเปลี่ยนแปลงข้อมูลจะถูกบันทึกและซิงค์ไปยังทุกเอกสารที่เกี่ยวข้องทันที&quot;
                    </p>
                 </div>
             </div>
