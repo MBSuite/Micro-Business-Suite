@@ -146,7 +146,7 @@ export default function Sidebar({
       {/* Sidebar main body */}
       <aside 
         className={cn(
-          "bg-slate-900 text-slate-300 transition-all duration-500 flex flex-col shadow-2xl z-60 fixed lg:static w-64 bg-[#0F172A] self-stretch",
+          "bg-slate-900 text-slate-300 transition-all duration-500 flex flex-col shadow-2xl z-60 fixed lg:static w-64 bg-[#0F172A] h-screen lg:h-auto lg:self-stretch overflow-hidden",
           // Desktop Widths
           isCollapsed ? "lg:w-24" : "lg:w-80",
           // Mobile Widths & Animation
@@ -198,7 +198,7 @@ export default function Sidebar({
         )}
 
         {/* Navigation Content */}
-        <nav className="flex-1 py-4 overflow-y-auto px-4 space-y-8 scrollbar-hide">
+        <nav className="flex-1 min-h-0 py-4 overflow-y-auto px-4 space-y-8 scrollbar-hide">
           
           {MODULE_CATEGORIES.map((section) => {
             const sectionModules = enabledModules.filter((mod) => mod.category === section.id);
