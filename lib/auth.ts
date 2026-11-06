@@ -77,8 +77,9 @@ async function ensureCompanyLicensingSchema() {
   const defaultCompanyRes = await query(`SELECT id FROM companies ORDER BY id ASC LIMIT 1`);
   const defaultCompanyId = Number(defaultCompanyRes.rows[0]?.id || 1);
 
-  await query(`UPDATE users SET company_id = $1 WHERE company_id IS NULL`, [defaultCompanyId]);
-
+  // NOTE: backfilling users.company_id is intentionally NOT done at runtime.
+  // It is handled by migration scripts/add_users_company_id_backfill.sql so that
+  // user-to-company mapping is reviewed and applied explicitly (see AGENTS.md).
   return defaultCompanyId;
 }
 

@@ -96,16 +96,27 @@
 
 ---
 
-## สรุป
+## สรุป (อัปเดตตาม read-only audit)
 
-**พร้อม production เต็มรูปแบบแล้ว** ✅
+**ผ่านด้าน build และการเชื่อมต่อ DB แบบอ่านอย่างเดียว** ✅
 
-ทุก env ตั้งครบ (Google Drive, Gmail, Gemini AI, Recurring billing, License, Auth)
-Integration tests 9/9 pass, Unit tests 8/8 pass
-Build / TSC / Lint ผ่าน (0 errors)
+- Build / TSC ผ่าน, Lint 0 errors (327 warnings)
+- Unit tests 8/8, Integration tests 9/9 pass
+- ทุก env ตั้งครบ (Google Drive, Gmail, Gemini AI, Recurring billing, License, Auth)
+- DB: 53 ตาราง, core tables ครบ, column types ตรง
 
-**เหลือเพียง (accepted risk):**
+**แก้ไขแล้ว (ตาม audit):**
+- Backup route: restrict to superadmin only (ป้องกัน data leakage ข้ามบริษัท)
+- Reset billing: superadmin only + transaction + company scope
+- auth.ts: ย้าย runtime company_id backfill ไป migration
+- CSP: ลบ unsafe-eval, จำกัด connect-src
+- start script: เปลี่ยนเป็น node .next/standalone/server.js (consistent with Docker)
+
+**ยังมีข้อจำกัด (accepted risk / ต้องยืนยัน):**
 - 2 moderate vulns (glob/minimatch transitive ของ googleapis) — แก้ไม่ได้โดยไม่เสี่ยง build
-- Integration tests รันแล้ว 9/9 pass
+- Rate limiter in-memory (single-instance only)
+- CSP ยังมี unsafe-inline (Next.js ต้องการ)
+- Historical credentials in git history (ควร rotate ถ้าเคย live)
+- Neon branch ยังไม่ยืนยันว่าเป็น staging หรือ production
 
-**พร้อม production เต็มรูปแบบ** ครับ.
+**สถานะ: พร้อม production สำหรับ core + Google Drive** (หลังแก้ backup/reset/auth/CSP/start) — แต่ควรยืนยัน Neon branch และ deploy smoke test ก่อน go-live.

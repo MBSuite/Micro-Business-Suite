@@ -53,11 +53,11 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // 2. Verify user has admin access
-    if (!canAccessAdmin(session.user.role)) {
-      console.warn(`[AUDIT] Unauthorized backup access attempt - user ${session.user.email} (role: ${session.user.role}) denied`);
+    // 2. Verify user is superadmin (backup exports cross-company data, so only system-wide superadmin may run it)
+    if (String(session.user.role || "").toLowerCase() !== "superadmin") {
+      console.warn(`[AUDIT] Unauthorized backup access attempt - user ${session.user.email} (role: ${session.user.role}) denied (superadmin required)`);
       return NextResponse.json(
-        { error: "Forbidden — admin access required" },
+        { error: "Forbidden — superadmin access required" },
         { status: 403 }
       );
     }

@@ -1,17 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { query } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { canAccessAdmin } from "@/lib/core-standards";
 import { NextResponse } from "next/server";
 
 /**
  * POST /api/reset_billing
- * 
- * Destructive endpoint: resets all billing/quotation data
- * REQUIRES: authenticated admin user
- * 
- * This is a PRIVILEGED operation — only admin can trigger
- * GET method is disabled to prevent CSRF/accidental clicks
+ *
+ * Destructive endpoint: resets billing/quotation data for the caller's company only.
+ * REQUIRES: authenticated superadmin user.
+ *
+ * This is a PRIVILEGED operation — only superadmin can trigger.
+ * GET method is disabled to prevent CSRF/accidental clicks.
  */
 export async function POST(req: Request) {
   try {
@@ -24,10 +23,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Verify user has admin access (ADMIN or SUPERADMIN)
-    if (!canAccessAdmin(session.user.role)) {
+    // 2. Verify user is superadmin (destructive, cross-company reset is never allowed for company admins)
+    if (String(session.user.role || "").toLowerCase() !== "superadmin") {
       return NextResponse.json(
-        { success: false, error: "Forbidden — admin access required" },
+        { success: false, error: "Forbidden — superadmin access required" },
         { status: 403 }
       );
     }
@@ -47,24 +46,51 @@ export async function POST(req: Request) {
     // 4. Log audit trail before deletion
     console.log(`[AUDIT] Admin reset_billing triggered by user: ${session.user.email} (ID: ${session.user.id})`);
 
-    // 5. Perform destructive operation
-    await query('DELETE FROM quotation_items');
-    await query('DELETE FROM quotations');
-    await query('DELETE FROM invoices');
-    await query("DELETE FROM journal_entries WHERE reference_no LIKE 'INV%' OR reference_no LIKE 'QT%'");
+    let companyId: number | null = null;
 
-    // 6. Reset sequences
-    try { await query('ALTER SEQUENCE quotations_id_seq RESTART WITH 1'); } catch { }
-    try { await query('ALTER SEQUENCE invoices_id_seq RESTART WITH 1'); } catch { }
-    try { await query('ALTER SEQUENCE quotation_items_id_seq RESTART WITH 1'); } catch { }
+    // 5. Perform destructive operation inside a transaction so a mid-way failure rolls back
+    await query("BEGIN");
+    try {
+      // Scope deletion to a single company when companyId is provided; default to all (superadmin-only, explicit)
+      companyId = body.companyId ? Number(body.companyId) : null;
+      if (companyId && !Number.isFinite(companyId)) {
+        await query("ROLLBACK");
+        return NextResponse.json(
+          { success: false, error: "Invalid companyId" },
+          { status: 400 }
+        );
+      }
+
+      if (companyId) {
+        await query("DELETE FROM quotation_items WHERE quotation_id IN (SELECT id FROM quotations WHERE company_id = $1)", [companyId]);
+        await query("DELETE FROM quotations WHERE company_id = $1", [companyId]);
+        await query("DELETE FROM invoices WHERE company_id = $1", [companyId]);
+        await query("DELETE FROM journal_entries WHERE company_id = $1 AND (reference_no LIKE 'INV%' OR reference_no LIKE 'QT%')", [companyId]);
+      } else {
+        await query("DELETE FROM quotation_items");
+        await query("DELETE FROM quotations");
+        await query("DELETE FROM invoices");
+        await query("DELETE FROM journal_entries WHERE reference_no LIKE 'INV%' OR reference_no LIKE 'QT%'");
+        // Reset sequences only for full (all-company) reset
+        try { await query("ALTER SEQUENCE quotations_id_seq RESTART WITH 1"); } catch { }
+        try { await query("ALTER SEQUENCE invoices_id_seq RESTART WITH 1"); } catch { }
+        try { await query("ALTER SEQUENCE quotation_items_id_seq RESTART WITH 1"); } catch { }
+      }
+
+      await query("COMMIT");
+    } catch (err) {
+      await query("ROLLBACK").catch(() => {});
+      throw err;
+    }
 
     console.log(`[AUDIT] Admin reset_billing completed for user: ${session.user.email}`);
 
     return NextResponse.json({
       success: true,
       message: "✅ รีเซ็ตข้อมูลเรียบร้อย! สามารถเริ่มสร้างเอกสารใหม่ได้เลย",
-      cleared: ["quotations", "quotation_items", "invoices", "journal_entries (INV/QT)"],
-      nextDocNumbers: { invoice: "INV26-001", quotation: "QT26-001" }
+      cleared: companyId
+        ? ["quotations", "quotation_items", "invoices", "journal_entries (INV/QT) for company " + companyId]
+        : ["quotations", "quotation_items", "invoices", "journal_entries (INV/QT)"],
     });
   } catch (err) {
     console.error("[ERROR] reset_billing failed:", err);
