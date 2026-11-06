@@ -38,103 +38,51 @@ import LandingPage from "@/components/LandingPage";
 
 async function getDashboardData(companyId: number) {
   try {
-    // Get company settings first
-    const companyResult = await getCompanySettings();
-    const company = companyResult.success ? companyResult.data : null;
-
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const firstDayDate = firstDayOfMonth.split("T")[0];
 
-    // Real expense data from expenses table for current month
-    let expenseTotal = 0;
-    let expenseCount = 0;
+    // Run all independent DB queries in parallel to minimize TTFB
+    const [
+      companyResult,
+      expenseRes,
+      journalExpenseRes,
+      cashFlowRes,
+      incomeRes,
+      pendingRes,
+      journalsRes,
+      pendingUsersRes,
+      customersRes,
+    ] = await Promise.all([
+      getCompanySettings().catch(() => ({ success: false, data: null })),
+      query(`SELECT SUM(amount) as total, COUNT(*) as count FROM expenses WHERE expense_date >= $1 AND company_id = $2`, [firstDayOfMonth, companyId]).catch(() => ({ rows: [{ total: 0, count: 0 }] })),
+      query(`SELECT SUM(amount) as total, COUNT(*) as count FROM journal_entries WHERE entry_date >= $1 AND company_id = $2 AND debit_account_id IN (SELECT id FROM chart_of_accounts WHERE account_type = 'expense')`, [firstDayOfMonth, companyId]).catch(() => ({ rows: [{ total: 0, count: 0 }] })),
+      query(`SELECT SUM(CASE WHEN debit_account_id IN (1111, 1112, 1113) THEN amount ELSE 0 END) as total_inflow, SUM(CASE WHEN credit_account_id IN (1111, 1112, 1113) THEN amount ELSE 0 END) as total_outflow FROM journal_entries WHERE entry_date >= $1 AND company_id = $2`, [firstDayOfMonth, companyId]).catch(() => ({ rows: [{}] })),
+      query(`SELECT SUM(net_amount) as total FROM invoices WHERE status != 'cancelled' AND issue_date >= $1::date AND company_id = $2`, [firstDayDate, companyId]).catch(() => ({ rows: [{ total: 0 }] })),
+      query(`SELECT SUM(net_amount) as total FROM invoices WHERE status != 'paid' AND company_id = $1`, [companyId]).catch(() => ({ rows: [{ total: 0 }] })),
+      query(`SELECT je.*, inv.invoice_number, debit_acc.account_name_th AS debit_account_name_th, credit_acc.account_name_th AS credit_account_name_th FROM journal_entries je LEFT JOIN invoices inv ON je.reference_type = 'invoice' AND je.reference_id = inv.id LEFT JOIN chart_of_accounts debit_acc ON je.debit_account_id = debit_acc.id LEFT JOIN chart_of_accounts credit_acc ON je.credit_account_id = credit_acc.id WHERE je.company_id = $1 ORDER BY je.entry_date DESC, je.id DESC LIMIT 5`, [companyId]).catch(() => ({ rows: [] })),
+      query(`SELECT COUNT(*) FROM users WHERE status = 'Pending' AND company_id = $1`, [companyId]).catch(() => ({ rows: [{ count: 0 }] })),
+      query(`SELECT COUNT(*) FROM contacts WHERE company_id = $1`, [companyId]).catch(() => ({ rows: [{ count: 0 }] })),
+    ]);
 
-    try {
-      const expenseRes = await query(`
-        SELECT SUM(amount) as total, COUNT(*) as count 
-        FROM expenses 
-        WHERE expense_date >= $1 AND company_id = $2
-      `, [firstDayOfMonth, companyId]);
-      expenseTotal = Number(expenseRes.rows[0]?.total || 0);
-      expenseCount = Number(expenseRes.rows[0]?.count || 0);
-    } catch (error) {
-      console.warn('Expenses table query failed:', error);
-    }
+    const company = companyResult.success ? companyResult.data : null;
 
-    // Fallback to journal entries if no expenses found
-    let journalExpenseTotal = 0;
-    let journalExpenseCount = 0;
+    const expenseTotal = Number(expenseRes.rows[0]?.total || 0);
+    const expenseCount = Number(expenseRes.rows[0]?.count || 0);
+    const journalExpenseTotal = Number(journalExpenseRes.rows[0]?.total || 0);
+    const journalExpenseCount = Number(journalExpenseRes.rows[0]?.count || 0);
 
-    try {
-      const journalExpenseRes = await query(`
-        SELECT SUM(amount) as total, COUNT(*) as count 
-        FROM journal_entries 
-        WHERE entry_date >= $1 AND company_id = $2
-        AND debit_account_id IN (SELECT id FROM chart_of_accounts WHERE account_type = 'expense')
-      `, [firstDayOfMonth, companyId]);
-      journalExpenseTotal = Number(journalExpenseRes.rows[0]?.total || 0);
-      journalExpenseCount = Number(journalExpenseRes.rows[0]?.count || 0);
-    } catch (error) {
-      console.warn('Journal expenses query failed:', error);
-    }
+    const cashFlowData = cashFlowRes.rows[0] || {};
+    const totalCashInflow = Number(cashFlowData.total_inflow || 0);
+    const totalCashOutflow = Number(cashFlowData.total_outflow || 0);
 
-    // Cash flow summary - use defensive approach
-    let totalCashInflow = 0;
-    let totalCashOutflow = 0;
-
-    try {
-      const cashFlowRes = await query(`
-        SELECT 
-          SUM(CASE WHEN debit_account_id IN (1111, 1112, 1113) THEN amount ELSE 0 END) as total_inflow,
-          SUM(CASE WHEN credit_account_id IN (1111, 1112, 1113) THEN amount ELSE 0 END) as total_outflow
-        FROM journal_entries 
-        WHERE entry_date >= $1 AND company_id = $2
-      `, [firstDayOfMonth, companyId]);
-
-      const cashFlowData = cashFlowRes.rows[0];
-      if (cashFlowData) {
-        totalCashInflow = Number(cashFlowData.total_inflow || 0);
-        totalCashOutflow = Number(cashFlowData.total_outflow || 0);
-      }
-    } catch (error) {
-      console.warn('Cash flow query failed:', error);
-    }
-
-    // Dashboard accounting rule:
-    // monthly profit should use accrual-basis invoice issue_date, not cash-basis paid-only invoices.
-    const incomeRes = await query(
-      `SELECT SUM(net_amount) as total
-       FROM invoices
-       WHERE status != 'cancelled'
-         AND issue_date >= $1::date
-         AND company_id = $2`,
-      [firstDayOfMonth.split("T")[0], companyId]
-    );
-    const pendingRes = await query(`SELECT SUM(net_amount) as total FROM invoices WHERE status != 'paid' AND company_id = $1`, [companyId]);
-    const journalsRes = await query(`
-      SELECT
-        je.*,
-        inv.invoice_number,
-        debit_acc.account_name_th AS debit_account_name_th,
-        credit_acc.account_name_th AS credit_account_name_th
-      FROM journal_entries je
-      LEFT JOIN invoices inv ON je.reference_type = 'invoice' AND je.reference_id = inv.id
-      LEFT JOIN chart_of_accounts debit_acc ON je.debit_account_id = debit_acc.id
-      LEFT JOIN chart_of_accounts credit_acc ON je.credit_account_id = credit_acc.id
-      WHERE je.company_id = $1
-      ORDER BY je.entry_date DESC, je.id DESC
-      LIMIT 5
-    `, [companyId]);
-    const pendingUsersRes = await query(`SELECT COUNT(*) FROM users WHERE status = 'Pending' AND company_id = $1`, [companyId]);
+    const finalExpenseTotal = expenseCount > 0 ? expenseTotal : journalExpenseTotal;
+    const finalExpenseCount = expenseCount > 0 ? expenseCount : journalExpenseCount;
+    const netCashFlow = totalCashInflow - totalCashOutflow;
 
     // Fetch alerts for Phase 2
     const { getDashboardAlerts } = await import("@/app/actions");
     const alertsRes = await getDashboardAlerts();
-
-    // Use real expense data or fallback to journal expenses
-    const finalExpenseTotal = expenseCount > 0 ? expenseTotal : journalExpenseTotal;
-    const finalExpenseCount = expenseCount > 0 ? expenseCount : journalExpenseCount;
-    const netCashFlow = totalCashInflow - totalCashOutflow;
 
     return {
       company,
@@ -143,7 +91,7 @@ async function getDashboardData(companyId: number) {
         monthlyExpense: finalExpenseTotal,
         expenseCount: finalExpenseCount,
         totalPending: Number(pendingRes.rows[0]?.total || 0),
-        customers: (await query('SELECT COUNT(*) FROM contacts WHERE company_id = $1', [companyId])).rows[0].count,
+        customers: Number(customersRes.rows[0]?.count || 0),
         pendingApprovals: Number(pendingUsersRes.rows[0]?.count || 0),
         cashFlow: {
           totalInflow: totalCashInflow,
@@ -151,7 +99,6 @@ async function getDashboardData(companyId: number) {
           netFlow: netCashFlow
         }
       },
-      // Compatibility rule: recent journals must pass through the shared presenter to avoid mixed-schema regressions.
       recentJournals: expandJournalRowsForPresentation(journalsRes.rows).slice(0, 5),
       alerts: alertsRes.success
         ? (alertsRes.data ?? { reminders: [], invoices: [] })
