@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["pg"],
+  experimental: {
+    optimizePackageImports: ["lucide-react", "framer-motion", "recharts", "date-fns"],
+  },
   async headers() {
     return [
       {
