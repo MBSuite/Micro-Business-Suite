@@ -10,6 +10,11 @@ import { Providers } from "@/components/Providers";
 export const metadata: Metadata = {
   title: "Micro-Business-Suite | ระบบจัดการบัญชีอัจฉริยะ",
   description: "จัดการบัญชี รายรับ รายจ่าย เอกสาร และภาษีธุรกิจได้ในระบบเดียว",
+  icons: {
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export const viewport = {
