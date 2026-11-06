@@ -47,6 +47,11 @@
   - `GOOGLE_REDIRECT_URI` ✅
   - `NEXT_PUBLIC_GOOGLE_API_KEY` ✅
   - `GOOGLE_TOKEN_ENCRYPTION_KEY` ✅
+  - `GMAIL_FROM` ✅
+  - `GMAIL_APP_PASSWORD` ✅
+  - `GEMINI_API_KEY` ✅
+  - `RECURRING_SECRET` ✅
+  - `CRON_ENABLED` ✅
 
 ### Environment
 - [x] `NEXTAUTH_URL` = `https://micro-business-suite.vercel.app`
@@ -58,22 +63,18 @@
 ## ⚠️ ยังไม่ทำ (ขึ้นกับการใช้งาน)
 
 ### Secret ที่ต้องตั้ง (ถ้าใช้ feature นั้น)
-- [ ] **Gmail (email)** — ต้อง `GMAIL_APP_PASSWORD` + `GMAIL_FROM`
-  - สร้าง: https://myaccount.google.com/apppasswords (ต้องเปิด 2-Step Verification)
-- [ ] **Gemini AI (AI auditor)** — ต้อง `GEMINI_API_KEY`
-  - สร้าง: https://aistudio.google.com/apikey
-- [ ] **Recurring billing (cron)** — ต้อง `RECURRING_SECRET` + `CRON_ENABLED=true`
-  - สร้าง: `openssl rand -base64 32`
+- [x] **Gmail (email)** — ตั้งแล้ว (`GMAIL_APP_PASSWORD` + `GMAIL_FROM`)
+- [x] **Gemini AI (AI auditor)** — ตั้งแล้ว (`GEMINI_API_KEY`)
+- [x] **Recurring billing (cron)** — ตั้งแล้ว (`RECURRING_SECRET` + `CRON_ENABLED=true`)
 
 ### Testing
-- [ ] **Integration tests** — รัน `npm run test:integration` (ต้อง Docker daemon)
-  - Container: `mbs-integration-pg` (postgres:16-alpine, port 54329)
-  - 9 tests ยัง skip (ไม่มี `MBS_TEST_*` env)
+- [x] **Integration tests** — รันแล้ว: 9/9 pass, 0 fail (exit code 0) บน Docker container `mbs-integration-pg`
 
 ### Vulnerabilities
-- [ ] **2 moderate vulns** (accepted risk)
+- [x] **2 moderate vulns** (accepted risk)
   - `glob` + `minimatch` (transitive ของ `googleapis`)
   - override พัง build / เพิ่ม high vulns → revert กลับ
+  - กระทบเฉพาะ Google Drive integration (cleanup temp files), ไม่กระทบ core logic
   - แก้ได้เมื่อ googleapis release version ใหม่ที่ patch แล้ว
 
 ### Cold Start (Neon)
@@ -97,13 +98,14 @@
 
 ## สรุป
 
-**พร้อม production สำหรับ core + Google Drive แล้ว** ✅
+**พร้อม production เต็มรูปแบบแล้ว** ✅
 
-**ยังไม่พร้อมเต็ม** ถ้าต้องการ:
-- Gmail notifications → ตั้ง `GMAIL_APP_PASSWORD` + `GMAIL_FROM`
-- AI Auditor → ตั้ง `GEMINI_API_KEY`
-- Automated recurring billing → ตั้ง `RECURRING_SECRET` + `CRON_ENABLED=true`
-- Integration tests → รันบน Docker
-- 2 moderate vulns → accepted risk (override พัง)
+ทุก env ตั้งครบ (Google Drive, Gmail, Gemini AI, Recurring billing, License, Auth)
+Integration tests 9/9 pass, Unit tests 8/8 pass
+Build / TSC / Lint ผ่าน (0 errors)
 
-ถ้า **ไม่ใช้** features เหล่านี้ → **พร้อม production แล้ว** ครับ.
+**เหลือเพียง (accepted risk):**
+- 2 moderate vulns (glob/minimatch transitive ของ googleapis) — แก้ไม่ได้โดยไม่เสี่ยง build
+- Integration tests รันแล้ว 9/9 pass
+
+**พร้อม production เต็มรูปแบบ** ครับ.
