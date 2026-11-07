@@ -19,8 +19,9 @@ export type PluginPackId =
   | "delivery_integration"
   | "offline_mode"
   | "pharmacy"
-  | "service_business";
-
+  | "service_business"
+  | "hotel_booking"
+  | "rental";
 export interface PluginPack {
   id: PluginPackId;
   name: string;
@@ -156,6 +157,26 @@ export const PLUGIN_PACKS: Record<PluginPackId, PluginPack> = {
     minTier: "STANDARD",
     icon: "briefcase",
     color: "#a855f7",
+  },
+  hotel_booking: {
+    id: "hotel_booking",
+    name: "Hotel/Booking (จองห้องพัก)",
+    description: "จัดการห้อง, การจอง, check-in/out, แม่บ้าน",
+    targetCustomers: ["โรงแรม", "เกสต์เฮาส์", "โฮมสเตย์"],
+    modules: ["hotel_booking"],
+    minTier: "PROFESSIONAL",
+    icon: "building2",
+    color: "#2563eb",
+  },
+  rental: {
+    id: "rental",
+    name: "Rental (ธุรกิจเช่า)",
+    description: "จัดการทรัพย์สิน, สัญญาเช่า, ค่าเช่า, บำรุงรักษา",
+    targetCustomers: ["เช่าอพาร์ทเมนท์", "เช่ารถ", "เช่าอุปกรณ์"],
+    modules: ["rental"],
+    minTier: "STANDARD",
+    icon: "briefcase",
+    color: "#ea580c",
   },
 };
 
