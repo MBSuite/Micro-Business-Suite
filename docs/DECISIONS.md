@@ -89,3 +89,22 @@
 - Decision: Implement จริง 5 โมดูล + migrations 7 ไฟล์ + APIs + pages
 - Impacted files/modules: lib/promotions.ts, lib/loyalty.ts, app/api/promotions/*, app/api/crm/*, app/api/branches/*, app/api/fb/*, app/api/integrations/*, pages (promotions, crm, branches, fb, integrations/*), migrations (add_branches_table, add_product_variants_table, add_loyalty_tables, add_promotions_table, add_branch_stock_table, add_fb_tables, add_integration_connections)
 - Rollback plan: migration files ใช้ IF NOT EXISTS, ปลอดภัย; code changes revert ได้
+
+---
+
+### [2026-11-07] Bridge/Sync + Auth + Tenant model สำหรับ MBSuite platform
+- Context: HANDOFF.md section 9 ระบุ 3 คำถามที่ต้องยืนยันก่อนเริ่ม Phase 3 (Bridge/Sync). ผู้ใช้ยืนยันทั้ง 3 ข้อใน session นี้.
+- Decision:
+  1. Sync endpoint: **สร้าง `/api/bridge/sync` ใหม่** (loose coupling, versioning, idempotency, batch sync, retry) — ไม่แตะ `/api/integrations/webhook` เดิม (legacy e-commerce/delivery)
+  2. Auth: **JWT เดียวกัน (SSO)** ผ่าน MBS Core — Suite ใช้ shared token
+  3. Tenant: **multi-tenant `company_id` เดียวกัน** ระหว่าง MBS Core + Suites (tenant isolation ผ่าน RLS/filter) — ไม่แยก DB ต่อ company
+- Alternatives considered: ใช้ `/api/integrations/webhook` ที่มีอยู่; แยก auth ต่อ Suite; แยก database ต่อ company.
+- Why this was chosen: ลด coupling, ใช้ auth/tenant model ที่มีอยู่แล้ว, ไม่เพิ่ม infra; สอดคล้องกับ constraint "ไม่เปลี่ยนแปลง MBS Core" (Bridge เป็น plugin/module layer).
+- Impacted files/modules: `app/api/bridge/sync` (ใหม่), `lib/auth.ts` (อ่าน shared JWT, ไม่แก้ core), `lib/db.ts` (tenant filter), `lib/module-registry.ts`, `lib/plugin-packs.ts`, Suite standalone apps (Micro-Menu-Online เป็น priority).
+- Rollback plan: revert commit ของ bridge route + plugin layer; endpoint ใหม่เป็น additive ไม่แตะ core/webhook เดิม, จึง rollback ได้โดยไม่กระทบ MBS Core.
+
+### [2026-11-07] ข้อมูลสำรวจ (exploration findings)
+- Micro-Menu-Online (priority Suite) อยู่ที่ `services/next/01-PRODUCTS-BUSINESS/Micro-Menu-Online` (และ `Micro-Menu-Online-V2`) — ยังไม่ได้ inspect ภายใน.
+- Local `.env.local` ของ Micro-Business-Suite target Neon branch `ep-delicate-base-b31rx7ol` (region ap-southeast-1), DB `neondb`, user `neondb_owner`, มีทั้ง pooled + unpooled hosts (migration ใช้ unpooled). ไฟล์มี duplicate DB blocks + trailing Vercel OIDC token.
+- Git status (Micro-Business-Suite): branch `main`, up to date with origin/main, working tree มี untracked 1 ไฟล์ = `docs/HANDOFF.md` (ยังไม่ commit).
+- Safety: ห้ามรัน migration/seed โดยไม่ backup + owner approval; verify Neon branch ก่อน write.
