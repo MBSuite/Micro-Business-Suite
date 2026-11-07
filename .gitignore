@@ -76,6 +76,8 @@ rmdir
 AGENTS.md
 CLAUDE.md
 
+# OpenCode local skills/config (may contain secrets or machine-specific data)
+.opencode/
 .env*
 !.env.example
 next-env.d.ts
