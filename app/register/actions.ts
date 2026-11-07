@@ -46,7 +46,7 @@ export async function registerUser(formData: FormData) {
         INSERT INTO companies (
           name, plan_type, max_users, subscription_status, trial_end, expiry_date, business_type
         )
-        VALUES ($1, 'TRIAL', 1, 'Active', NOW() + INTERVAL '14 days', NULL, $2)
+        VALUES ($1, 'TRIAL', 1, 'Active', NOW() + INTERVAL '30 days', NULL, $2)
         RETURNING id, name
       `,
       [companyName || `${name}'s Company`, businessType]

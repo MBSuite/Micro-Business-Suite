@@ -72,7 +72,7 @@ export default function RegisterPage() {
            </h1>
            <p className="text-gray-500 mt-2 font-medium">สร้างบัญชีผู้ใช้งานใหม่</p>
            <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-xs font-bold text-amber-700">
-              ทดลองใช้ฟรี 14 วัน · ผู้ใช้ 1 คน · สร้างบริษัทของคุณเองทันที เมื่อสิ้นสุดทดลองติดต่อทีมงานเพื่อออก license
+              ทดลองใช้ฟรี 30 วัน · ผู้ใช้ 1 คน · สร้างบริษัทของคุณเองทันที เมื่อสิ้นสุดทดลองติดต่อทีมงานเพื่อออก license
            </div>
         </div>
 
