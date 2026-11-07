@@ -30,3 +30,20 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - **Micro-Business-Suite** (`/home/neon13/workspace/services/next/00-MAIN-WEB/Micro-Business-Suite`) = https://micro-business-suite.vercel.app/ — โปรแกรม (production app)
 - **MBSuite.Dev** (`/home/neon13/workspace/services/next/00-MAIN-WEB/MBSuite.Dev`) = https://mb-suite-dev-pi.vercel.app/ — เอกสาร + เนื้อหา + โบชัว + โปรโมชั่น
+
+## GitHub Publishing — MBSuite-only exception
+
+For this project, the only permitted GitHub destination is `https://github.com/MBSuite/Micro-Business-Suite.git` (`origin`). Before every commit or push, verify the authenticated `gh` account is `MBSuite`, verify the exact remote, inspect `git status` and `git diff`, and scan staged changes for secrets. Stage only files related to the approved task, preserve unrelated work, and never force-push.
+
+This exception applies only to these eight project directories:
+
+- `/home/neon13/workspace/services/next/00-MAIN-WEB/Micro-Business-Suite`
+- `/home/neon13/workspace/services/next/00-MAIN-WEB/MBSuite.Dev`
+- `/home/neon13/workspace/services/next/00-MAIN-WEB/Micro-Business-Service`
+- `/home/neon13/workspace/services/next/00-MAIN-WEB/Micro-Business-Retail`
+- `/home/neon13/workspace/services/next/00-MAIN-WEB/Micro-Business-Rental`
+- `/home/neon13/workspace/services/next/00-MAIN-WEB/Micro-Business-Pharmacy`
+- `/home/neon13/workspace/services/next/00-MAIN-WEB/Micro-Business-Hotel`
+- `/home/neon13/workspace/services/next/00-MAIN-WEB/Micro-Business-FNB`
+
+Do not publish `.env` files, credentials, secrets, database dumps, customer data, or BACKUP FAMILY content. This project-scoped exception does not change the GridsMicro-only rules for other repositories or family backups.
