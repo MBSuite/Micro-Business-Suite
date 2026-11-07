@@ -25,3 +25,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Docker Compose runs only the app and requires a Neon `DATABASE_URL`. Use `docker compose --env-file .env.local ...`; the app URL should be Neon pooled. Do not add a local PostgreSQL service unless the owner explicitly changes this architecture.
 - Schema changes must first be reviewed and tested on a disposable Neon branch using a direct (non-pooled) URL. Back up and obtain explicit owner approval before any production migration. Keep the app's pooled URL separate from the migration URL.
 - `tests/integration/run.mjs` resets tables in the named `mbs-integration-pg` container. Never point it at Neon or a database containing data to retain; use only a disposable isolated test database.
+
+## Deployed URLs
+
+- **Micro-Business-Suite** (`/home/neon13/workspace/services/next/00-MAIN-WEB/Micro-Business-Suite`) = https://micro-business-suite.vercel.app/ — โปรแกรม (production app)
+- **MBSuite.Dev** (`/home/neon13/workspace/services/next/00-MAIN-WEB/MBSuite.Dev`) = https://mb-suite-dev-pi.vercel.app/ — เอกสาร + เนื้อหา + โบชัว + โปรโมชั่น
