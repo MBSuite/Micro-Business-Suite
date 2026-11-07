@@ -211,7 +211,14 @@ MBSuite = **Platform รวม Software บริหารจัดการอ�
 - `app/admin/modules/page.tsx` — เปิด/ปิด module ต่อ company
 - `app/admin/plugins/page.tsx` — จัดการ plug-in/add-on
 - `app/api/integrations/webhook/route.ts` — inbound webhook (import ออเดอร์ → invoice)
-- `app/api/bridge/sync` — (ยังไม่มี) Bridge API สำหรับ sync finance events
+- `app/api/bridge/sync/route.ts` — Bridge API (Suite → MBS Core finance sync)
+- `app/api/admin/bridge-sync/route.ts` — admin API สำหรับ bridge sync log
+- `app/admin/bridge-sync/page.tsx` — admin page แสดง bridge sync log
+- `lib/bridge-sync-validation.mjs` — validation helpers (testable)
+- `tests/bridge-sync-validation.test.mjs` — unit tests (15 pass)
+- `migrations/add_bridge_sync_log.sql` — idempotency store migration
+- `scripts/backup-prod.mjs`, `scripts/smoke-test-bridge.mjs` — production helpers
+- `docs/VERCEL_ENV_CHECKLIST.md` — Vercel env checklist
 - `docs/PRODUCTION_CHECKLIST.md` — production checklist
 - `docs/PRESENTATION.md` — presentation document
 - `docs/HANDOFF.md` — handoff document (นี้)
