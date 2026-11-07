@@ -46,6 +46,7 @@ const FILES = [
   "migrations/add_payroll_entries_table.sql",
   "migrations/add_services_table.sql",
   "migrations/add_company_tenant_scope_master_tables.sql",
+  "migrations/add_bridge_sync_log.sql",
   // migrations/fix_column_types_date_timestamp.sql is intentionally NOT run by the
   // bootstrap runner: it changes existing column types and requires manual review.
   // Verify current types first with: node scripts/check-column-types.mjs
