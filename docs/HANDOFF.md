@@ -139,6 +139,16 @@ MBSuite = **Platform รวม Software บริหารจัดการอ�
 - ✅ Query scoping by `companyId` (getCompanyId) ในทุก data routes (categories, products, tables, users, orders, payments, reports)
 - ✅ Vercel env checklist (`docs/VERCEL_ENV_CHECKLIST.md`)
 
+### Suites (Standalone — สร้างแล้ว 6 ตัว)
+- ✅ Micro-Retail (POS, inventory, promotions, bridge sync, company_id)
+- ✅ Micro-FNB (tables, KOT, orders, bridge sync, company_id)
+- ✅ Micro-Service (bookings, services, bridge sync, company_id)
+- ✅ Micro-Hotel (rooms, bookings, housekeeping, bridge sync, company_id)
+- ✅ Micro-Rental (assets, contracts, rents, maintenance, bridge sync, company_id)
+- ✅ Micro-Pharmacy (prescriptions, stock batches, expiry, bridge sync, company_id)
+- ✅ ทุก Suite: Prisma schema + migration + API routes + bridge sync + build ผ่าน
+- ✅ ทุก Suite: git repo เริ่มต้น + commit แล้ว
+
 ### MBSuite.Dev (Landing + Docs)
 - ✅ React + Vite, i18n (th/en)
 - ✅ Documents: guide, brochure, articles
@@ -175,7 +185,7 @@ MBSuite = **Platform รวม Software บริหารจัดการอ�
 | Phase 3 | Bridge/Sync layer (REST API + Webhook) ระหว่าง Suites ↔ MBS Core | ✅ Code เสร็จ (pending deploy + smoke test) |
 | Phase 4 | Standalone Suite deployment (แต่ละ app แยก deploy) | 🔲 ยังไม่ทำ |
 | Phase 5 | Marketplace (หน้ารวม module/app ให้ลูกค้าเลือก) | 🔲 เริ่มใน MBSuite.Dev |
-| Phase 6 | New Suites (Hotel, Rental, Pharmacy, Service) | 🔲 ยังไม่ทำ |
+| Phase 6 | New Suites (Retail, F&B, Service, Hotel, Rental, Pharmacy) | ✅ Scaffold + domain models + API routes + bridge sync + build pass |
 
 ### Priority Suite (ตามที่อนุมัติ)
 - **Micro-Menu-Online** (ปรับปรุง) → ทดสอบก่อน (อยู่ที่ `/home/neon13/workspace/services/next/01-PRODUCTS-BUSINESS/...` หรือ path อื่น)

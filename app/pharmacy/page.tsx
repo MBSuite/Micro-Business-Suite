@@ -1,19 +1,25 @@
-// app/pharmacy/page.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
+"use client";
+
 import { Package } from "lucide-react";
+import Link from "next/link";
+
 export default function PharmacyPage() {
   return (
-    <main className="p-6 md:p-12 min-h-screen bg-[#fdfaff]">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex items-center gap-4">
-          <span className="p-3 bg-violet-600 rounded-2xl shadow-xl shadow-violet-200"><Package className="text-white w-7 h-7" /></span>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">ร้านขายยา (Pharmacy)</h1>
-            <p className="text-[10px] uppercase tracking-[0.3em] text-violet-400">Module: pharmacy</p>
-          </div>
+    <main className="p-6 md:p-10 min-h-screen bg-[#f8fafc]">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex items-center gap-3 mb-6">
+          <Package size={28} className="text-indigo-600" />
+          <h1 className="text-2xl font-black text-slate-800">Pharmacy Suite</h1>
         </div>
-        <div className="bg-white rounded-2xl shadow border border-violet-50 p-8 text-center text-slate-500">
-          Scaffold — ใบสั่งยา, สต็อกยา, หมดอายุ (todo)
-        </div>
+        <p className="text-slate-600 mb-4">
+          โมดูลร้านขายยา — ใบสั่งยา, สต็อกยา, หมดอายุ. (scaffold)
+        </p>
+        <p className="text-sm text-slate-500 mb-6">
+          Suite นี้เป็น standalone app ที่ sync ข้อมูลการเงิน (รายรับ/รายจ่าย) ไป MBS Core ผ่าน Bridge API
+          (<code>/api/bridge/sync</code>).
+        </p>
+        <Link href="/" className="text-indigo-600 hover:underline text-sm">← กลับ Dashboard</Link>
       </div>
     </main>
   );

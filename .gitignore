@@ -81,4 +81,3 @@ CLAUDE.md
 .env*
 !.env.example
 next-env.d.ts
-backups/

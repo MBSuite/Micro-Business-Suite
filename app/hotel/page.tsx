@@ -1,19 +1,25 @@
-// app/hotel/page.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
+"use client";
+
 import { Building2 } from "lucide-react";
+import Link from "next/link";
+
 export default function HotelPage() {
   return (
-    <main className="p-6 md:p-12 min-h-screen bg-[#fdfaff]">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex items-center gap-4">
-          <span className="p-3 bg-violet-600 rounded-2xl shadow-xl shadow-violet-200"><Building2 className="text-white w-7 h-7" /></span>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">จองห้องพัก (Hotel/Booking)</h1>
-            <p className="text-[10px] uppercase tracking-[0.3em] text-violet-400">Module: hotel_booking</p>
-          </div>
+    <main className="p-6 md:p-10 min-h-screen bg-[#f8fafc]">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex items-center gap-3 mb-6">
+          <Building2 size={28} className="text-indigo-600" />
+          <h1 className="text-2xl font-black text-slate-800">Hotel/Booking Suite</h1>
         </div>
-        <div className="bg-white rounded-2xl shadow border border-violet-50 p-8 text-center text-slate-500">
-          Scaffold — จัดการห้อง, การจอง, check-in/out, แม่บ้าน (todo)
-        </div>
+        <p className="text-slate-600 mb-4">
+          โมดูลจองห้องพัก — ห้อง, การจอง, check-in/out, แม่บ้าน. (scaffold)
+        </p>
+        <p className="text-sm text-slate-500 mb-6">
+          Suite นี้เป็น standalone app ที่ sync ข้อมูลการเงิน (รายรับ/รายจ่าย) ไป MBS Core ผ่าน Bridge API
+          (<code>/api/bridge/sync</code>).
+        </p>
+        <Link href="/" className="text-indigo-600 hover:underline text-sm">← กลับ Dashboard</Link>
       </div>
     </main>
   );

@@ -161,9 +161,9 @@ export const PLUGIN_PACKS: Record<PluginPackId, PluginPack> = {
   hotel_booking: {
     id: "hotel_booking",
     name: "Hotel/Booking (จองห้องพัก)",
-    description: "จัดการห้อง, การจอง, check-in/out, แม่บ้าน",
-    targetCustomers: ["โรงแรม", "เกสต์เฮาส์", "โฮมสเตย์"],
-    modules: ["hotel_booking"],
+    description: "ห้อง, การจอง, check-in/out, แม่บ้าน, แม่บ้าน",
+    targetCustomers: ["โรงแรม", "เกสต์เฮาส์", "รีสอร์ท"],
+    modules: ["crm_loyalty", "multi_branch"],
     minTier: "PROFESSIONAL",
     icon: "building2",
     color: "#2563eb",
@@ -171,12 +171,12 @@ export const PLUGIN_PACKS: Record<PluginPackId, PluginPack> = {
   rental: {
     id: "rental",
     name: "Rental (ธุรกิจเช่า)",
-    description: "จัดการทรัพย์สิน, สัญญาเช่า, ค่าเช่า, บำรุงรักษา",
-    targetCustomers: ["เช่าอพาร์ทเมนท์", "เช่ารถ", "เช่าอุปกรณ์"],
-    modules: ["rental"],
-    minTier: "STANDARD",
+    description: "ทรัพย์สิน, สัญญาเช่า, ค่าเช่า, บำรุงรักษา",
+    targetCustomers: ["ธุรกิจเช่า", "อสังหาริมทรัพย์"],
+    modules: ["multi_branch", "crm_loyalty"],
+    minTier: "PROFESSIONAL",
     icon: "briefcase",
-    color: "#ea580c",
+    color: "#0d9488",
   },
 };
 
