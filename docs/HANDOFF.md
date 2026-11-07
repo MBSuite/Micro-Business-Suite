@@ -124,6 +124,20 @@ MBSuite = **Platform รวม Software บริหารจัดการอ�
 - ✅ Performance (parallel queries, optimizePackageImports)
 - ✅ Audit hardening (backup/reset scope, auth backfill migration, CSP, start script)
 - ✅ Production checklist (`docs/PRODUCTION_CHECKLIST.md`)
+- ✅ Bridge/Sync API `/api/bridge/sync` (Phase 3) — implemented, pending deploy + smoke test
+- ✅ Admin page `/admin/bridge-sync` — sync log viewer
+- ✅ Unit tests `tests/bridge-sync-validation.test.mjs` (15 pass)
+- ✅ Bridge API v1.0 (`/api/bridge/sync`) — POST + GET, auth 2-way, idempotency, transaction
+- ✅ Migration `add_bridge_sync_log.sql` (idempotent, tested on test container)
+- ✅ Backup script (`scripts/backup-prod.mjs`) + Smoke test script (`scripts/smoke-test-bridge.mjs`)
+- ✅ Vercel env checklist (`docs/VERCEL_ENV_CHECKLIST.md`)
+
+### Micro-Menu-Online (Suite)
+- ✅ Bridge sync trigger (fire-and-forget) หลังชำระเงิน (single + batch)
+- ✅ `lib/bridge-sync.ts` — standalone mode (no-op ถ้าไม่ตั้ง env), retry 2 ครั้ง
+- ✅ Multi-tenant `company_id` column (Prisma schema + migration `20261107_add_company_id`)
+- ✅ Query scoping by `companyId` (getCompanyId) ในทุก data routes (categories, products, tables, users, orders, payments, reports)
+- ✅ Vercel env checklist (`docs/VERCEL_ENV_CHECKLIST.md`)
 
 ### MBSuite.Dev (Landing + Docs)
 - ✅ React + Vite, i18n (th/en)
@@ -158,7 +172,7 @@ MBSuite = **Platform รวม Software บริหารจัดการอ�
 |---|---|---|
 | Phase 1 | MBS Core (บัญชี, ภาษี, ใบ paying) | ✅ เสร็จ |
 | Phase 2 | Plugin modules (POS, F&B, CRM, multi-branch, inventory) | ✅ Scaffold + บางส่วน implement |
-| Phase 3 | Bridge/Sync layer (REST API + Webhook) ระหว่าง Suites ↔ MBS Core | 🔲 ยังไม่ทำ |
+| Phase 3 | Bridge/Sync layer (REST API + Webhook) ระหว่าง Suites ↔ MBS Core | ✅ Code เสร็จ (pending deploy + smoke test) |
 | Phase 4 | Standalone Suite deployment (แต่ละ app แยก deploy) | 🔲 ยังไม่ทำ |
 | Phase 5 | Marketplace (หน้ารวม module/app ให้ลูกค้าเลือก) | 🔲 เริ่มใน MBSuite.Dev |
 | Phase 6 | New Suites (Hotel, Rental, Pharmacy, Service) | 🔲 ยังไม่ทำ |

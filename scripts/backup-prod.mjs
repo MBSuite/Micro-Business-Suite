@@ -1,52 +1,83 @@
 #!/usr/bin/env node
-// Production backup script (READ-ONLY — runs pg_dump against the configured DB URL)
-// Usage:
-//   node scripts/backup-prod.mjs                 # uses DATABASE_URL (or POSTGRES_URL)
-//   node scripts/backup-prod.mjs --unpooled       # prefers POSTGRES_URL_NON_POOLING / DATABASE_URL_UNPOOLED
-//   node scripts/backup-prod.mjs --out ./backups  # custom output dir
+// scripts/backup-prod.mjs
+// Backup Neon production DB (read-only). Does NOT modify any data.
 //
-// WARNING: This script READS from the database only. It does not write or migrate.
-// Always verify the target URL (Neon branch) before running.
+// Usage:
+//   node scripts/backup-prod.mjs            # uses DATABASE_URL / POSTGRES_URL (pooled OK for backup)
+//   node scripts/backup-prod.mjs --unpooled  # prefers unpooled/direct URL (PROD_UNPOOLED_URL / DATABASE_URL_UNPOOLED)
+//   node scripts/backup-prod.mjs --url "<CONN_URL>"
+//
+// Safety: runs pg_dump only. No writes, no schema changes.
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdirSync, statSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { config as loadEnv } from "dotenv";
+
+loadEnv({ path: ".env.local" });
 
 const args = process.argv.slice(2);
-const useUnpooled = args.includes("--unpooled");
-const outIdx = args.indexOf("--out");
-const outDir = outIdx !== -1 ? args[outIdx + 1] : "./backups";
+const unpooled = args.includes("--unpooled");
+const urlFlagIdx = args.indexOf("--url");
+const urlArg = urlFlagIdx >= 0 ? args[urlFlagIdx + 1] : null;
 
-// Load .env.local if present
-try { require("dotenv").config({ path: ".env.local" }); } catch {}
+function pickUrl() {
+  if (urlArg) return urlArg;
+  if (unpooled) {
+    return (
+      process.env.PROD_UNPOOLED_URL ||
+      process.env.DATABASE_URL_UNPOOLED ||
+      process.env.POSTGRES_URL_UNPOOLED ||
+      process.env.POSTGRES_URL ||
+      process.env.DATABASE_URL
+    );
+  }
+  return process.env.POSTGRES_URL || process.env.DATABASE_URL;
+}
 
-const url =
-  (useUnpooled && (process.env.POSTGRES_URL_NON_POOLING || process.env.DATABASE_URL_UNPOOLED)) ||
-  process.env.POSTGRES_URL ||
-  process.env.DATABASE_URL;
-
-if (!url) {
-  console.error("❌ No database URL found. Set POSTGRES_URL or DATABASE_URL in .env.local");
+const dbUrl = pickUrl();
+if (!dbUrl) {
+  console.error("ERROR: No database URL found. Set POSTGRES_URL/DATABASE_URL or use --url.");
   process.exit(1);
 }
 
-// Safety: refuse pooled URL for unpooled mode
-if (useUnpooled && url.includes("-pooler.")) {
-  console.error("❌ --unpooled requested but URL looks pooled (-pooler.). Use a direct/unpooled URL.");
+// mask credentials for logging
+const masked = dbUrl.replace(/\/\/[^@]+@/, "//***:***@");
+console.log(`Target DB (masked): ${masked}`);
+console.log(`Mode: ${unpooled ? "unpooled/direct" : "default"}\n`);
+
+// check pg_dump
+const check = spawnSync("which", ["pg_dump"], { encoding: "utf8" });
+if (check.status !== 0) {
+  console.error("ERROR: pg_dump not found. Install postgresql-client.");
   process.exit(1);
 }
 
-mkdirSync(outDir, { recursive: true });
-const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-const outFile = resolve(outDir, `mbs-backup-${stamp}.dump`);
-const redacted = url.replace(/:\/\/[^@]+@/, "://[redacted]@");
-console.log(`[backup] target: ${redacted}`);
-console.log(`[backup] output: ${outFile}`);
+const backupsDir = join(process.cwd(), "backups");
+if (!existsSync(backupsDir)) mkdirSync(backupsDir, { recursive: true });
 
-const r = spawnSync("pg_dump", ["-Fc", "-f", outFile, url], { stdio: "inherit" });
-if (r.status !== 0) {
-  console.error(`❌ pg_dump failed (exit ${r.status})`);
-  process.exit(r.status || 1);
+const ts = new Date().toISOString().replace(/[:.]/g, "-");
+const outFile = join(backupsDir, `backup-${ts}.sql`);
+
+console.log(`Running pg_dump -> ${outFile}`);
+const res = spawnSync(
+  "pg_dump",
+  ["--no-owner", "--no-acl", "--clean", "--if-exists", "-f", outFile, dbUrl],
+  { stdio: "inherit" }
+);
+
+if (res.status !== 0) {
+  console.error(`\nERROR: pg_dump failed (exit ${res.status}).`);
+  process.exit(res.status || 1);
 }
-console.log(`✅ Backup complete: ${outFile}`);
-console.log("   Restore with: pg_restore -d <URL> " + outFile);
+
+const size = statSync(outFile).size;
+if (size === 0) {
+  console.error("ERROR: backup file is empty.");
+  process.exit(1);
+}
+
+console.log(`\n✅ Backup complete: ${outFile}`);
+console.log(`   Size: ${(size / 1024).toFixed(1)} KB`);
+console.log("   Verify: head -20 " + outFile);
+console.log("   Restore: psql \"<URL>\" -f " + outFile);

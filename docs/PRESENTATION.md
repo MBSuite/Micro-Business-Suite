@@ -181,6 +181,13 @@ MBS แก้ปัญหาทั้งหมดผ่าน **4 เสาห�
 - AI Auditor (Gemini)
 - Google Drive integration (per-company)
 
+### Bridge & Integration (MBSuite Platform)
+- Bridge API `/api/bridge/sync` — Suite → MBS Core finance event sync (REST API + Webhook)
+- Idempotent sync (idempotency_key) — ป้องกัน duplicate invoice/journal
+- Service-to-service auth (MBS_BRIDGE_TOKEN) + JWT SSO
+- Suite standalone (Micro-Menu-Online ฯลฯ) → sync รายรับ/รายจ่าย/ใบ paying ไป MBS Core
+- MBS Core เป็น hub สำหรับภาษี (PP30, PND), P&L, รายงาน — Suite ใช้ standalone ได้แต่ถ้าต้องการรายละเอียดต้องซื้อ MBS Core
+
 ---
 
 ## 7. สถาปัตยกรรม (Architecture)

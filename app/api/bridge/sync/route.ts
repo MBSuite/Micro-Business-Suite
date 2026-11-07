@@ -7,38 +7,30 @@ import { query } from "@/lib/db";
 import { auth, getUserCompanyId } from "@/lib/auth";
 import { createJournalEntry } from "@/lib/journaling";
 import { COA_ACCOUNTS } from "@/lib/journaling";
+import {
+  validateBridgeSyncPayload,
+  validateOrderPaidData,
+  ALLOWED_EVENTS,
+} from "@/lib/bridge-sync-validation.mjs";
 
 export const dynamic = "force-dynamic";
 
-const ALLOWED_EVENTS = new Set(["order.paid", "payment.received"]);
-
-type SyncBody = {
-  event?: string;
-  idempotency_key?: string;
-  company_id?: number | string;
-  data?: any;
-};
-
-function bad(msg: string, status = 400) {
-  return NextResponse.json({ success: false, error: msg }, { status });
-}
+const bad = (msg: string, status = 400) => NextResponse.json({ success: false, error: msg }, { status });
 
 export async function POST(req: Request) {
-  let body: SyncBody;
+  let body: any;
   try {
     body = await req.json();
   } catch {
     return bad("Invalid JSON body");
   }
 
-  const event = String(body?.event || "").trim();
-  const idempotencyKey = String(body?.idempotency_key || "").trim();
-  if (!event) return bad("event is required");
-  if (!ALLOWED_EVENTS.has(event)) return bad(`Unsupported event: ${event}`);
-  if (!idempotencyKey) return bad("idempotency_key is required");
-  if (!body?.data || typeof body.data !== "object") return bad("data is required");
+  const v = validateBridgeSyncPayload(body);
+  if (!v.ok) return bad(v.error as string);
+  const { event, idempotencyKey, companyId: bodyCompanyId, data } = v.value!;
 
-  // Auth: service token OR user session
+  const od = validateOrderPaidData(data);
+  if (!od.ok) return bad(od.error as string);
   const authHeader = req.headers.get("authorization") || "";
   const serviceToken = authHeader.toLowerCase().startsWith("bearer ")
     ? authHeader.slice(7).trim()
@@ -48,9 +40,8 @@ export async function POST(req: Request) {
 
   let companyId: number;
   if (isService) {
-    const c = Number(body.company_id);
-    if (!Number.isInteger(c) || c < 1) return bad("company_id is required for service sync");
-    companyId = c;
+    if (bodyCompanyId) companyId = bodyCompanyId;
+    else return bad("company_id is required for service sync");
   } else {
     const session = await auth();
     if (!session?.user?.id) return bad("Unauthorized", 401);
@@ -79,7 +70,6 @@ export async function POST(req: Request) {
     return bad(e?.message || "Idempotency check failed", 500);
   }
 
-  const data = body.data;
   const pool = (await import("@/lib/db")).default;
   const client = await pool.connect();
   let syncId: number | null = null;
