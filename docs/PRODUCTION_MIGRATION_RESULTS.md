@@ -23,12 +23,16 @@ Scope: Create module-prefixed tables + roles + grants on the shared production D
 - Role passwords (rehearsal+production) stored in `/tmp/opencode/prod_roles_pass.txt` (mode 600, NOT committed). Owner should move to Vercel/secret manager and rotate.
 - Direct (non-pooled) host used for migrations: `ep-delicate-base-b31rx7ol.c-4.ap-southeast-1.aws.neon.tech`.
 
-## Not done (still pending, owner-driven)
-- Update each module's Vercel `DATABASE_URL` to the shared DB (direct for migrate, pooled for runtime) + `MBS_COMPANY_ID` mapping decision (§3.4).
-- `store_settings` tenant scope migration (§3.7) — additive, needs approval.
-- Auth/SSO (§3.6/§6.4).
-- Data import from old module DBs (if any real data exists) per §2.6.1.
-- Rotate role passwords + remove test keys (owner).
+## Done in this pass (store_settings tenant scope, §3.7)
+- Added `company_id` column + changed PK to `(company_id, key)` on all 6 `mbs_<module>_store_settings` tables (migration `mbs_<module>_add_store_settings_tenant`, applied + resolved).
+- Updated `app/api/settings/route.ts` in all 6 modules to filter/upsert by `companyId`.
+- Updated `db/seed.ts` in all 6 modules for composite key.
+- Typecheck passes all 6 modules.
+
+## Not done (still pending, owner-driven / dedicated pass)
+- Auth/SSO (§3.6/§6.4): decision recorded as **Option A (Core as IdP, asymmetric JWT)** recommended; implementation is a dedicated feature pass (Core JWKS endpoint + module verification + core_user_id mapping). Deferred to avoid partial/breaking auth changes.
+- Data import from old module DBs: production module tables were empty at migration time; nothing to import. If real data exists in a non-production module DB, run §2.6.1 import before cutover.
+- Rotate role passwords + remove test keys (owner) — passwords currently in `/tmp/opencode/prod_roles_pass.txt`.
 
 ## Status
 Production shared-DB schema + roles + grants: **DONE**. Core data untouched.

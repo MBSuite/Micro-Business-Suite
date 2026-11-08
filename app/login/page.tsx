@@ -1,17 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { LogIn, Lock, Mail, ShieldCheck, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
-export default function LoginPage() {
+function LoginPageInner() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect");
+  const audience = searchParams.get("audience") || "";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +36,23 @@ export default function LoginPage() {
       if (!res.ok) {
         setError(data.error || "เข้าสู่ระบบไม่สำเร็จ");
       } else {
+        if (redirectUrl) {
+          try {
+            const ssoRes = await fetch("/api/auth/sso-token", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ audience }),
+            });
+            const ssoData = await ssoRes.json();
+            if (ssoRes.ok && ssoData.token) {
+              const sep = redirectUrl.includes("?") ? "&" : "?";
+              window.location.href = `${redirectUrl}${sep}sso_token=${encodeURIComponent(ssoData.token)}`;
+              return;
+            }
+          } catch (e) {
+            console.error("[LOGIN] SSO token error:", e);
+          }
+        }
         console.log("[LOGIN] Redirecting to /");
         window.location.href = "/";
       }
@@ -142,5 +162,14 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">กำลังโหลด...</div>}>
+      <LoginPageInner />
+    </Suspense>
   );
 }
