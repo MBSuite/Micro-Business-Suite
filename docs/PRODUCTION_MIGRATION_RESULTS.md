@@ -29,10 +29,12 @@ Scope: Create module-prefixed tables + roles + grants on the shared production D
 - Updated `db/seed.ts` in all 6 modules for composite key.
 - Typecheck passes all 6 modules.
 
-## Not done (still pending, owner-driven / dedicated pass)
-- Auth/SSO (§3.6/§6.4): decision recorded as **Option A (Core as IdP, asymmetric JWT)** recommended; implementation is a dedicated feature pass (Core JWKS endpoint + module verification + core_user_id mapping). Deferred to avoid partial/breaking auth changes.
-- Data import from old module DBs: production module tables were empty at migration time; nothing to import. If real data exists in a non-production module DB, run §2.6.1 import before cutover.
-- Rotate role passwords + remove test keys (owner) — passwords currently in `/tmp/opencode/prod_roles_pass.txt`.
+## Done
+- Rotate role passwords: rotated to Vercel env vars (DATABASE_URL/DIRECT_URL); `/tmp` password file deleted; test keys (G2_DIRECT_URL) removed from `.env.local`.
+
+## Pending (dedicated pass)
+- Auth/SSO (§3.6/§6.4): Option A implemented (Core JWKS + SSO token + module SSO endpoint + wiring). End-to-end test on deployed apps pending.
+- Data import from old module DBs: production module tables were empty at migration time; nothing to import.
 
 ## Status
 Production shared-DB schema + roles + grants: **DONE**. Core data untouched.
