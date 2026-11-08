@@ -2,7 +2,7 @@
 
 > **สถานะ: DRAFT — รอพี่ฆังตรวจ**
 > เอกสารนี้เป็น **inventory + ข้อเสนอ** เท่านั้น ยังไม่ใช่อนุมัติให้สร้าง/รัน migration, เปลี่ยน schema/ข้อมูลจริง, ตั้งค่า Vercel, deploy หรือประกาศ production-ready
-> G1 (synthetic Docker rehearsal) เสร็จแล้วตามผลทดสอบใน §2.6.3; G1b และ Neon rehearsal ยังรอการตรวจและอนุมัติแยก
+> G1/G1b เสร็จแล้ว (docs/G1B_RESULTS.md); G2 เสร็จแล้ว (docs/G2_RESULTS.md); G3 (production source inventory) ยังรอการตรวจและอนุมัติแยก
 >
 > วันที่จัดทำ: 2026-11-08 · ผู้จัดทำ: OpenCode (backend/system) · ผู้อนุมัติ: เจ้าของ (พี่ฆัง)
 > อ้างอิง: `docs/HANDOFF.md` §13, `AGENTS.md`
@@ -631,8 +631,8 @@ CREATE TABLE mbs_<module>_company_remap_log (
 |---|---|---|---|
 | G0 | อนุมัติ Revision 8 + ตอบ §6.1 | เจ้าของ | production data |
 | G1 | Docker rehearsal (disposable container/DB) — synthetic fixture | **เสร็จ 2026-11-08; ทาง A ผ่านเฉพาะเส้นทางหลักภายใต้เงื่อนไข §2.6.3** | Vercel, production URL |
-| G1b | Docker rehearsal ด้วย prefixed migration จริง | G1 ผ่าน + แก้ runbook/migration names + อนุมัติ implement และ G1b แยก | Vercel, production URL |
-| G2 | Neon rehearsal (project ใหม่/parent ว่าง แนะนำ; หรือ DB ใหม่ใน branch disposable; `DROP SCHEMA public` เฉพาะกรณีเสี่ยงต่ำที่ยืนยันแล้ว) | G1b ผ่าน + §6.2 | production data |
+| G1b | Docker rehearsal ด้วย prefixed migration จริง | **ผ่าน 2026-11-08** (docs/G1B_RESULTS.md) | Vercel, production URL |
+| G2 | Neon rehearsal | **ผ่าน 2026-11-08** (docs/G2_RESULTS.md) | production data |
 | G3 | Production source inventory (read-only) | G2 ผ่าน + อนุมัติแยก | env change |
 | G4 | env checklist + env change + deploy/migration | G3 ผ่าน + อนุมัติแยก | — |
 
