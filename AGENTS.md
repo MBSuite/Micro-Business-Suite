@@ -8,7 +8,25 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## Product and integration boundaries
+
+- **MB** means Micro Business / SME; **Suite** is a set of business-specific applications customers can select by business need.
+- This repository is the **Core**: central accounting, monthly reporting, revenue/cost/profit-and-loss analysis, inventory overview, and tax workflows for organizations with branches or franchises.
+- The six sibling applications are standalone operational modules for smaller businesses. Do not make Core a runtime dependency for a module to sell, serve customers, book a stay, or record its source transaction.
+- A module owns its detailed operational records; Core owns the consolidated books, organization-level reports, and tax workflow. Avoid duplicate journal entries and define each inbound event's accounting treatment before implementing it.
+- Integrate only through authenticated APIs/Bridge contracts, never by directly reading or writing a module's database. Preserve source IDs, company and branch mapping, event time, currency, and idempotency; make duplicate/retried events safe and visible.
+- Standalone modules currently send the generic `order.paid` event; the Core validator also recognizes `payment.received`. Do not claim that booking, rental, service-contract, pharmacy-stock, inventory-cost, or other domain events are supported until their contracts and end-to-end tests exist.
+- Treat product intent and current code as separate facts. Update README status when a workflow is implemented and tested; do not document scaffold routes as a completed business feature.
+
 ---
+
+## AI-to-AI handoff
+
+- Follow the bidirectional English communication protocol in [AI-HANDOFF.md](./AI-HANDOFF.md).
+- Either Kiro or OpenCode may create and assign a request to the other. Kiro owns visible UI; OpenCode owns all backend/system logic.
+- Use `AI-HANDOFF/requests/REQ-<id>.md`, set `ready-for-<owner>`, and record acceptance criteria, outcome, and verification. Do not assume one fixed sender/receiver direction.
+- Never let Kiro modify backend/system code or OpenCode implement presentation/UI. Coordinate shared-file ownership before edits; no concurrent edits to the same file.
+- For backend-to-UI handoff, OpenCode must document the contract and set `ready-for-kiro`; for UI-to-backend requests, Kiro must document the user need and set `ready-for-opencode`.
 
 ## กฎการบันทึกรายงาน (Report Destination — ตรงข้อเท็จจริง)
 

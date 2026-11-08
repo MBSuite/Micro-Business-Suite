@@ -8,10 +8,13 @@ import {
 } from "../lib/bridge-sync-validation.mjs";
 
 // --- ALLOWED_EVENTS / isAllowedEvent ---
-test("ALLOWED_EVENTS contains order.paid and payment.received", () => {
+test("ALLOWED_EVENTS contains only implemented finance events", () => {
   assert.ok(ALLOWED_EVENTS.has("order.paid"));
   assert.ok(ALLOWED_EVENTS.has("payment.received"));
   assert.equal(ALLOWED_EVENTS.size, 2);
+  for (const event of ["hotel.booking", "rental.contract", "pharmacy.sale", "retail.sale", "quotation.created"]) {
+    assert.equal(isAllowedEvent(event), false);
+  }
 });
 
 test("isAllowedEvent accepts allowed and rejects unknown", () => {
