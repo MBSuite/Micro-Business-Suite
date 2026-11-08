@@ -197,7 +197,7 @@ MBSuite = **Platform รวม Software บริหารจัดการอ�
 
 1. **Sync method:** REST API + Webhook (อนุมัติแล้ว) — ใช้ `/api/bridge/sync` ใหม่ หรือ `/api/integrations/webhook` ที่มีอยู่?
 2. **Auth:** JWT เดียวกัน (SSO) หรือแยก auth ต่อ Suite?
-3. **Tenant:** แต่ละ Suite มี `company_id` เดียวกัน (multi-tenant) หรือแยก database ต่อ company?
+3. **Tenant / Database:** เจ้าของเลือกให้ Core และทั้ง 6 modules ใช้ฐานข้อมูลเดียวกันเพื่อหลีกเลี่ยงการ provision Neon DB เพิ่ม; **ยังห้ามตั้งค่า `DATABASE_URL` ของ modules ให้ชี้ Core DB จนกว่าจะออกแบบและอนุมัติ schema/table namespace กับ migration plan ก่อน**
 4. **Marketplace:** สร้างใน MBSuite.Dev (landing) — อนุมัติแล้ว
 5. **Priority Suite:** Micro-Menu-Online ก่อน — อนุมัติแล้ว
 
@@ -251,7 +251,77 @@ MBSuite = **Platform รวม Software บริหารจัดการอ�
 - **อย่า push** โดยไม่ได้รับคำสั่ง (workspace rule)
 - **อย่า copy/move/nest MBSuite.Dev** เป็นส่วนของ Micro-Business-Suite repo
 
+## 13. Shared Database — OpenCode Must Follow Before Any DB Work
+
+### Owner decision and current boundary
+- The target architecture is **one PostgreSQL database shared by MBS Core and all six standalone modules**. This is not authorization to point module `DATABASE_URL`s at Core or to change any environment variable yet.
+- Existing Core and module schemas contain generic model/table names. The exact module naming contract and env contract are specified below for OpenCode to implement and test in isolation; production DDL, data movement, Vercel env changes, and deployment remain unapproved.
+- The Core database currently contains owner-designated sample-company records for planning/testing: ID `1` `Your Company`, ID `2` `innovation`, ID `3` `บริษัท ทดสอบ จำกัด`. These are test references only, not confirmed production mappings for any module.
+
+### Local schema collision evidence (read-only inventory, 2026-11-08)
+- All six module Prisma schemas currently map shared models to the same physical table names: `users`, `categories`, `products`, `tables`, `orders`, `order_items`, `payments`, `store_settings`. All six also declare the same PostgreSQL enum names: `Role`, `OrderStatus`, `OrderSource`, `ItemStatus`, `PaymentMethod`.
+- Current domain tables: Service `bookings`; Retail `promotions`; Rental `assets`, `contracts`, `rents`, `maintenance`; Pharmacy `prescriptions`, `prescription_items`, `stock_batches`; Hotel `rooms`, `bookings`, `housekeeping`; F&B has no additional domain table in its current Prisma schema.
+- A prior read-only inventory of Core found existing `public` tables named `assets`, `bookings`, `categories`, `payments`, `products`, `promotions`, and `users`; Core also owns `tables`, `orders`, `order_items`, and other accounting tables. Recheck the complete live catalog before any DDL.
+
+### Naming contract for OpenCode implementation
+- Keep Core's existing table names and Core Prisma schema unchanged. Do not have modules share Core's table rows; integration remains through the authenticated Bridge API.
+- Keep module tables in PostgreSQL `public` and assign each module a unique physical prefix. This avoids dependence on `search_path` and Prisma multi-schema behavior:
+
+  | Module | Prefix | Current shared tables | Current domain tables |
+  |---|---|---|---|
+  | Service | `mbs_service_` | `users`, `categories`, `products`, `tables`, `orders`, `order_items`, `payments`, `store_settings` | `bookings` |
+  | Retail | `mbs_retail_` | `users`, `categories`, `products`, `tables`, `orders`, `order_items`, `payments`, `store_settings` | `promotions` |
+  | Rental | `mbs_rental_` | `users`, `categories`, `products`, `tables`, `orders`, `order_items`, `payments`, `store_settings` | `assets`, `contracts`, `rents`, `maintenance` |
+  | Pharmacy | `mbs_pharmacy_` | `users`, `categories`, `products`, `tables`, `orders`, `order_items`, `payments`, `store_settings` | `prescriptions`, `prescription_items`, `stock_batches` |
+  | Hotel | `mbs_hotel_` | `users`, `categories`, `products`, `tables`, `orders`, `order_items`, `payments`, `store_settings` | `rooms`, `bookings`, `housekeeping` |
+  | F&B | `mbs_fnb_` | `users`, `categories`, `products`, `tables`, `orders`, `order_items`, `payments`, `store_settings` | none currently |
+
+- Apply the prefix to every physical table and enum name, not Prisma model/field names. Examples: Service `User @@map("mbs_service_users")`, Service `Booking @@map("mbs_service_bookings")`, F&B `OrderItem @@map("mbs_fnb_order_items")`; enum physical names follow the same rule, e.g. `@@map("mbs_service_role")`. Preserve existing snake_case column names and all application-level model/field names.
+- Prefix every explicitly mapped PostgreSQL index, unique constraint, and relation constraint with the same module prefix as well. Check all generated identifiers are unique and within PostgreSQL's 63-byte identifier limit. Do not create any cross-module foreign keys.
+- Use a distinct least-privilege database role/credential per module, granting access only to that module's prefixed objects (and only required operations). Do not grant a module role access to Core or another module's objects. Include grants for newly migrated objects in the migration plan.
+- If an existing module database contains data, do not rename, drop, or overwrite its tables blindly. First inventory that source and provide a non-destructive data-preserving migration/import plan for owner approval.
+
+### Mandatory local Docker validation before any Vercel work
+- The Core `docker-compose.yml` runs only the app and connects it to Neon; it does not provide a database service. `tests/integration/run.mjs` creates/uses `mbs-integration-pg` and drops/recreates Core integration tables in database `mbs_test`. Do not point that runner at Neon or a database with retained data, and do not use its `mbs_test` database for module migration tests.
+- OpenCode must create/use a separate, disposable Docker PostgreSQL test container and database for the shared-module rehearsal (suggested names: container `mbs-shared-modules-test-pg`, database `mbs_shared_modules_test`; do not add a Postgres service to the app's production Docker Compose). Keep its port/credentials isolated from all retained databases and local `.env.local` files.
+- Apply all six module migrations to that same empty test database. Verify there are no duplicate objects; every table, enum, index, unique constraint, and relation constraint has the assigned module prefix; existing Core-style unprefixed objects are untouched; and each module role can access only its own prefixed objects. Exercise representative module CRUD and the existing Bridge contract using disposable fixtures only. Re-run the harness from a clean database to prove migrations are repeatable.
+- Local Docker test URLs are disposable direct PostgreSQL URLs; they are test-only and are not the Production `DATABASE_URL` contract. Do not copy Docker credentials into Vercel or `.env.local`.
+- Keep this Docker database after tests only if it is clearly named and documented as disposable test infrastructure; otherwise remove only the explicitly named test container/database after confirming it contains no retained data. Never remove the existing `mbs-integration-pg` container as part of this task.
+
+### Environment-variable contract for OpenCode implementation
+- Each module's Production Vercel project uses only these runtime variables:
+
+  | Variable | Contract |
+  |---|---|
+  | `DATABASE_URL` | Neon pooled runtime URL for the shared database, using that module's dedicated restricted role. Never point all modules at one unrestricted credential. |
+  | `SESSION_SECRET` | Unique cryptographically random value per module; at least 32 characters. Never reuse between modules. |
+  | `NEXT_PUBLIC_APP_URL` | Exact public HTTPS origin for that module: Service `https://micro-business-service.vercel.app`, Retail `https://micro-business-retail.vercel.app`, Rental `https://micro-business-rental.vercel.app`, Pharmacy `https://micro-business-pharmacy.vercel.app`, Hotel `https://micro-business-hotel.vercel.app`, F&B `https://micro-business-fnb.vercel.app`. |
+  | `MBS_HUB_URL` | Core origin `https://micro-business-suite.vercel.app`. Bridge remains optional for standalone operation. |
+  | `MBS_BRIDGE_TOKEN` | Bridge credential shared with Core's receiver; rotate only under a coordinated cutover plan. Do not print or commit it. |
+  | `MBS_COMPANY_ID` | Required positive integer tenant ID (stored as a string by module models) for company scoping; use the same explicit Core company mapping when Bridge is enabled. Production mapping is not known or approved yet, so do not configure a guessed/default value. |
+
+- Remove `MENU_COMPANY_ID` as a competing company selector; `MBS_COMPANY_ID` is the sole canonical name. Remove the implicit company ID `1` fallback from company scoping and Bridge payloads. Validate the tenant ID explicitly in both standalone and integrated operation; standalone mode may omit Bridge configuration, but a partially configured Bridge must report a clear configuration error rather than silently using company 1.
+- Module service-token Bridge requests must always send the validated `MBS_COMPANY_ID`. Core's current Bridge validator permits a missing `company_id` for authenticated user-session requests and the route requires it for service-token requests; preserve that distinction when updating Bridge validation/tests.
+- Keep Production `DATABASE_URL` pooled for runtime. Configure Prisma CLI migrations to require a separate `DIRECT_URL` pointing to a direct, non-pooled database. Use the disposable Docker database for the first full migration/isolation rehearsal; use a disposable Neon branch for a later production-like rehearsal only after the Docker checks pass. Never fall back from a missing migration URL to a production runtime `DATABASE_URL`. Do not put a migration credential in Vercel Production; prove `prisma generate` and the Vercel build can run without a production direct credential.
+- Do not change Core's existing `POSTGRES_URL`/`DATABASE_URL` configuration as part of this module task. Core's Bridge token change is a separately coordinated operation.
+
+### Required sequence
+1. In all six module repositories, implement the naming and environment contracts above: update Prisma physical mappings, every query/raw SQL reference, Prisma config, company scoping, Bridge validation, env examples, and directly related docs/tests. Do not edit Core's tables or existing production environment in this step.
+2. Inventory each module's current data source and existing migrations before generating a migration. Present the proposed non-destructive migration/data-preservation plan and per-module role grants for owner review; do not assume there are no existing module records.
+3. Perform the complete shared-schema rehearsal against the separate disposable Docker PostgreSQL database described above. Prove modules cannot read/write another module's prefixed tables or Core tables; run typecheck, lint, build, and focused tests for all six.
+4. After the Docker rehearsal passes, test migration compatibility on a disposable Neon branch using a direct (non-pooled) URL. Report the exact branch/database target and results without exposing connection strings.
+5. Do not run `prisma db push`, migrations, seeds, or write tests against the retained Core database. Do not change Production `DATABASE_URL`s, deploy, or migrate Production until the owner separately approves after reviewing the plan and backup.
+6. Use the sample company identities only in isolated test databases/fixtures. Never treat their IDs as module-to-company production mappings; do not set `MBS_COMPANY_ID` until the owner provides the explicit Production mapping.
+7. Only after code changes and both isolated rehearsals are complete, provide the exact per-project Production env checklist and identify unresolved values. Do not request Vercel access before these acceptance criteria pass; Vercel access/configuration is a later separately authorized step.
+
+### OpenCode acceptance criteria
+- Report the exact final table/type/index names and migration files for each module, plus tests proving namespace and role isolation.
+- Include the disposable Docker database setup/teardown procedure and the recorded results of both the Docker rehearsal and disposable Neon-branch rehearsal.
+- Report which env keys each module requires, which are optional in standalone mode, and any unresolved Production value. Never include secret values in the report.
+- No migration against the retained Core database, Production environment change, or deployment is approved by this handoff alone.
+- Do not ask the owner to repeat the selected shared-database direction or the three designated sample-company identities; ask only for decisions that remain genuinely unspecified.
+
 ---
 
-*เอกสารนี้สร้างเมื่อ 2026-11-07 สำหรับ handoff ไปยัง session ถัดไป*
+*เอกสารนี้เริ่มสร้างเมื่อ 2026-11-07 และอัปเดตข้อกำหนด Shared Database เมื่อ 2026-11-08*
 *อ้างอิง: README.md, AGENTS.md, docs/PRODUCTION_CHECKLIST.md, docs/PRESENTATION.md, docs/ARCHITECTURE.md, docs/BUSINESS_RULES.md, docs/RBAC_STANDARD.md, docs/CORE_RULES.md, docs/AUTH_RULES.md*

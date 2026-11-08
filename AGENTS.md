@@ -18,6 +18,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Standalone modules currently send the generic `order.paid` event; the Core validator also recognizes `payment.received`. Do not claim that booking, rental, service-contract, pharmacy-stock, inventory-cost, or other domain events are supported until their contracts and end-to-end tests exist.
 - Treat product intent and current code as separate facts. Update README status when a workflow is implemented and tested; do not document scaffold routes as a completed business feature.
 
+## Owner-designated sample companies
+
+The owner identified these Core database records as sample-company references for ongoing planning and testing:
+- Company ID `1`: `Your Company`
+- Company ID `2`: `innovation`
+- Company ID `3`: `บริษัท ทดสอบ จำกัด`
+
+Use these as test identities without asking the owner again unless the records are unavailable or have changed. They are not confirmed production mappings for any module. Do not write test data to a retained/live database; use an isolated disposable test database for write tests, and do not copy additional customer or contact data into this repository.
+
 ---
 
 ## AI-to-AI handoff
@@ -41,7 +50,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - `MBSuite.Dev` is a separate website/repository at `../MBSuite.Dev`; do not copy, move, nest, or build it as part of this Next.js repository.
 - This app connects through `lib/db.ts` using `POSTGRES_URL` or `DATABASE_URL`. Verify which Neon branch a local `.env.local` targets before running any write, seed, bootstrap, or migration command; never assume a local command targets a disposable database.
 - Docker Compose runs only the app and requires a Neon `DATABASE_URL`. Use `docker compose --env-file .env.local ...`; the app URL should be Neon pooled. Do not add a local PostgreSQL service unless the owner explicitly changes this architecture.
-- Schema changes must first be reviewed and tested on a disposable Neon branch using a direct (non-pooled) URL. Back up and obtain explicit owner approval before any production migration. Keep the app's pooled URL separate from the migration URL.
+- For shared module schema work, first validate all module migrations and isolation against a disposable local Docker PostgreSQL database. Then test the approved migration path on a disposable Neon branch with a direct URL. Back up and obtain explicit owner approval before any production migration. Keep production runtime pooled URLs separate from migration URLs.
+- Before shared-database work in Core or any module, follow the concrete table-prefix, DB-role, migration, and env-variable implementation contract in [docs/HANDOFF.md](./docs/HANDOFF.md). The contract does not authorize Production env changes, migrations, data movement, or deployment.
 - `tests/integration/run.mjs` resets tables in the named `mbs-integration-pg` container. Never point it at Neon or a database containing data to retain; use only a disposable isolated test database.
 
 ## Deployed URLs
