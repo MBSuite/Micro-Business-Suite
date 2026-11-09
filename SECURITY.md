@@ -16,14 +16,18 @@ responsibly. **Do not** open a public GitHub issue for security-sensitive bugs.
 - Include: description, reproduction steps, impact, suggested fix (optional)
 - We aim to acknowledge within 72 hours and provide a fix/mitigation plan within 14 days.
 
-## Security Practices
-- Multi-tenant isolation: every query is scoped by `company_id` from the authenticated session.
-- Authentication: JWT session cookie (`session-token`), HS256, 1-day expiry.
-- Passwords hashed with bcrypt.
-- Offline license keys signed with HMAC-SHA256 (`LICENSE_SALT`).
-- Secrets (OAuth tokens, RD API keys) are never returned to the browser; only `has_*` booleans are exposed.
-- Admin routes are guarded by role (superadmin/admin) in middleware and API.
-- Database migrations are idempotent and use guarded constraints.
+## Security Controls and Limitations
+
+These are implementation requirements and observed controls, not a guarantee that every route or query is already compliant. See [AUDIT.md](./AUDIT.md) for known findings and test limitations.
+
+- Tenant-owned data must be queried and changed using the authenticated user's company context. Do not assume every existing query has been verified; tenant isolation remains an audit concern.
+- Authentication uses a custom `jose` JWT in the `session-token` cookie (HS256, one-day expiry). The cookie is `httpOnly`, `sameSite=lax`, and `secure` in production.
+- Password verification uses `bcryptjs`.
+- Offline license keys use HMAC-SHA256 with `LICENSE_SALT`.
+- Do not return secrets such as OAuth tokens or RD API keys to the browser; expose only non-secret status indicators where appropriate.
+- `proxy.ts` applies session and role-based route checks. API handlers must also enforce authorization for their operations; proxy pass-through/public paths do not grant permission.
+- Migration scripts should be reviewed and tested on an isolated disposable database before any production change; do not assume every migration has been proven idempotent.
+- SSO has an open high-severity finding in [AUDIT.md](./AUDIT.md) and must not be represented as production-ready until remediated and verified.
 
 ## Out of Scope
 - Vulnerabilities in third-party dependencies (report upstream; we track via `npm audit`).

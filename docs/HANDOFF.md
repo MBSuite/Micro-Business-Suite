@@ -116,7 +116,7 @@ MBSuite = **Platform รวม Software บริหารจัดการอ�
 
 ### MBS Core (Micro-Business-Suite)
 - ✅ Build / TSC / Lint ผ่าน
-- ✅ Unit 8/8 + Integration 9/9 pass
+- ผลตรวจเดิม ณ 2026-11-07: Unit 8/8 + Integration 9/9 (ไม่ใช่ผลปัจจุบันหรือ owner acceptance; ดูผลล่าสุดใน [docs/PRODUCTION_CHECKLIST.md](./PRODUCTION_CHECKLIST.md))
 - ✅ License valid (perpetual, PROFESSIONAL)
 - ✅ DB: 53 tables, migrations applied
 - ✅ Security headers, Rate limiting, Health endpoint
@@ -124,10 +124,10 @@ MBSuite = **Platform รวม Software บริหารจัดการอ�
 - ✅ Performance (parallel queries, optimizePackageImports)
 - ✅ Audit hardening (backup/reset scope, auth backfill migration, CSP, start script)
 - ✅ Production checklist (`docs/PRODUCTION_CHECKLIST.md`)
-- ✅ Bridge/Sync API `/api/bridge/sync` (Phase 3) — implemented, pending deploy + smoke test
+- ⏳ Bridge/Sync API `/api/bridge/sync` — local code and disposable-DB auth checks pass; production deployment and authenticated production verification are not done.
 - ✅ Admin page `/admin/bridge-sync` — sync log viewer
 - ✅ Unit tests `tests/bridge-sync-validation.test.mjs` (15 pass)
-- ✅ Bridge API v1.0 (`/api/bridge/sync`) — POST + GET, auth 2-way, idempotency, transaction
+- ⏳ Bridge API v1.0 (`/api/bridge/sync`) — local implementation/tests cover POST and authenticated GET; production deployment and verification remain pending.
 - ✅ Migration `add_bridge_sync_log.sql` (idempotent, tested on test container)
 - ✅ Backup script (`scripts/backup-prod.mjs`) + Smoke test script (`scripts/smoke-test-bridge.mjs`)
 - ✅ Vercel env checklist (`docs/VERCEL_ENV_CHECKLIST.md`)

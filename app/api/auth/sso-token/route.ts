@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { jwtVerify, SignJWT, importPKCS8 } from "jose";
-import { query } from "@/lib/db";
+import { getTrustedSsoCallback } from "@/lib/sso-trust";
 
 function getHS256Secret(): Uint8Array {
   const secret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
@@ -29,10 +29,18 @@ export async function POST(req: Request) {
     const role = (payload.role as string) || "user";
     const companyId = payload.company_id ?? payload.companyId;
 
-    const body = await req.json().catch(() => ({}));
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ error: "invalid request body" }, { status: 400 });
+    }
     const audience = typeof body?.audience === "string" ? body.audience.trim() : "";
     if (!audience) {
       return NextResponse.json({ error: "audience required" }, { status: 400 });
+    }
+    const callbackUrl = typeof body?.callbackUrl === "string" ? body.callbackUrl : undefined;
+    const trustedCallback = getTrustedSsoCallback(audience, callbackUrl);
+    if (!trustedCallback) {
+      return NextResponse.json({ error: "untrusted SSO audience or callback" }, { status: 400 });
     }
 
     const privPem = process.env.AUTH_PRIVATE_KEY;
@@ -57,7 +65,7 @@ export async function POST(req: Request) {
       .setJti(jti)
       .sign(privateKey);
 
-    return NextResponse.json({ token: ssoToken, jti });
+    return NextResponse.json({ token: ssoToken, jti, callbackUrl: trustedCallback });
   } catch (err) {
     console.error("[SSO-TOKEN] Error:", err instanceof Error ? err.message : err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

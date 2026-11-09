@@ -65,7 +65,7 @@ MBS แก้ปัญหาทั้งหมดผ่าน **4 เสาห�
 - Mobile-responsive — ใช้งานบนมือถือได้
 
 ### เสาหลักที่ 3: สถาปัตยกรรมระดับสากล
-- Neon PostgreSQL (pooled) — ฐานข้อมูลระดับ enterprise
+- PostgreSQL — Neon for Dev; Supabase for Production per owner confirmation
 - Multi-tenant (company isolation) — ข้อมูลแต่ละบริษัทแยกกัน
 - Role-based access control (superadmin/admin/user)
 - Module system (เปิด/ปิด module ต่อ company)
@@ -74,9 +74,9 @@ MBS แก้ปัญหาทั้งหมดผ่าน **4 เสาห�
 - Rate limiting + Health endpoint
 
 ### เสาหลักที่ 4: ความเสถียรและความง่ายที่ทุกคนวางใจ
-- 53 ตารางฐานข้อมูล + migrations ที่ควบคุมได้
-- Integration tests 9/9 pass (auth, RBAC, cross-company isolation, IDOR)
-- Unit tests 8/8 pass
+- 53 ตารางฐานข้อมูล + migrations ที่ควบคุมได้ (ผลตรวจเดิม)
+- Local integration tests 12/12 pass + registration 1/1 pass (2026-11-09; disposable local DB)
+- Unit tests 27 pass, 12 skipped (2026-11-09; local workspace)
 - In-memory cache (ลด DB round-trip)
 - Docker standalone (multi-stage build, non-root user)
 - Health endpoint (`/api/health`) สำหรับ monitoring
@@ -98,11 +98,11 @@ MBS แก้ปัญหาทั้งหมดผ่าน **4 เสาห�
 | Cloud backup | ✅ Google Drive | ❌ ไม่มี |
 | Security headers | ✅ CSP, HSTS, X-Frame-Options | ❌ ไม่มี |
 | Rate limiting | ✅ login 10/min, API 120/min | ❌ ไม่มี |
-| Integration tests | ✅ 9/9 pass | ❌ ไม่มี |
+| Integration tests | ✅ 12/12 + registration 1/1 (local disposable DB, 2026-11-09) | ❌ ไม่มี |
 
 ### ข้อมูลด้านการทดสอบ
-- **Integration tests:** 9/9 pass (auth, admin access, cross-company isolation, IDOR, settings security, db_schema)
-- **Unit tests:** 8/8 pass
+- **Integration tests:** 12/12 pass + registration flow 1/1 pass on a disposable local DB (2026-11-09)
+- **Unit tests:** 27 passed, 12 skipped, 0 failed (2026-11-09)
 - **Build:** ผ่าน (Compiled successfully, 78 pages)
 - **TypeScript:** ผ่าน (0 errors)
 - **Lint:** 0 errors (327 warnings)
@@ -110,17 +110,19 @@ MBS แก้ปัญหาทั้งหมดผ่าน **4 เสาห�
 - **Security headers:** CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
 
 ### สถาปัตยกรรมระดับสากล
-- Neon PostgreSQL (pooled connection, SSL strict)
+- PostgreSQL (Neon for Dev, Supabase for Production per owner confirmation; SSL strict)
 - Next.js 16 (App Router, Server Components, Server Actions)
 - JWT (jose) + bcryptjs, httpOnly cookie, secure (prod)
 - Offline license verification (HMAC-SHA256)
 - Docker standalone (multi-stage, non-root user)
 
-### สถานะ Production (อัปเดตตาม read-only audit)
-- **ผ่าน:** Build / TSC / Lint (0 errors), Unit tests 8/8, Integration tests 9/9, License valid, DB 53 ตาราง, column types ตรง
-- **แก้ไขแล้ว:** Backup route (superadmin only), Reset billing (transaction + company scope), auth backfill ย้ายไป migration, CSP tightened (ลบ unsafe-eval), start script 一致กับ Docker
-- **ข้อจำกัด:** Rate limiter in-memory (single-instance), CSP ยังมี unsafe-inline (Next.js ต้องการ), Neon branch ยังไม่ยืนยัน (staging vs production), Historical credentials ใน git history (ควร rotate ถ้าเคย live)
-- **สรุป:** พร้อม production สำหรับ core + Google Drive (หลังแก้ audit findings) — ควรยืนยัน Neon branch + deploy smoke test ก่อน go-live
+### สถานะ Release gates — ยังไม่ผ่าน
+- ผล build ที่เคยบันทึกเป็นผลตรวจตามเวลานั้น ไม่ใช่การรับรอง production ปัจจุบัน
+- การตรวจล่าสุด: typecheck ผ่าน, unit 27 ผ่าน/12 ข้าม, integration 12/12 และ registration integration 1/1 ผ่านบน disposable DB เท่านั้น
+- การสมัคร Rental/Hotel และการลบข้อมูลทดสอบผ่านเฉพาะฐานข้อมูล disposable ในเครื่อง
+- เจ้าของยืนยันว่า Neon เป็นฐาน Dev และ Supabase เป็นฐาน Production
+- **Gate 1 ยังไม่ผ่าน:** ยังไม่ได้ทดสอบ signup และ delete จริงบนฐาน Dev; ไม่ได้เขียนข้อมูลลง Supabase Production
+- หลัง Gate 1 ผ่าน ต้องทำและตรวจ 2FA; ห้ามพิจารณา Production ก่อน 2FA ผ่าน
 
 ---
 
@@ -202,7 +204,7 @@ MBS แก้ปัญหาทั้งหมดผ่าน **4 เสาห�
 │  ├── Server Actions (app/actions)       │
 │  └── Proxy (proxy.ts) — auth + RBAC     │
 ├─────────────────────────────────────────┤
-│  Neon PostgreSQL (pooled)               │
+│  PostgreSQL (Neon Dev / Supabase Prod)  │
 │  ├── 53 tables                          │
 │  ├── Multi-tenant (company_id)          │
 │  └── Migrations (scripts/bootstrap)     │
@@ -248,15 +250,17 @@ docker compose --env-file .env.local up -d --build
 
 ## 9. สรุป
 
-**Micro-Business-Suite** เป็นระบบบัญชีอัจฉริยะสำหรับ SME ที่:
+**Micro-Business-Suite** มุ่งเป็นระบบบัญชีอัจฉริยะสำหรับ SME ที่:
 - ครอบคลุมบัญชี ภาษี เอกสาร และการจัดการธุรกิจในระบบเดียว
 - รองรับ multi-tenant + role-based access
-- ใช้ Next.js 16 + Neon PostgreSQL
-- พร้อม production (core + Google Drive + Gmail + AI + Recurring billing)
+- ใช้ Next.js 16 + PostgreSQL (Neon for Dev; Supabase for Production)
+- สถานะ Dev gate: **ยังไม่ผ่าน** — signup/delete บนฐาน Dev ยังต้องยืนยัน; 2FA ต้องทำต่อก่อน Production
 - มี security headers, rate limiting, health endpoint
-- มี integration tests 9/9 pass
+- มีผล integration test แบบจำกัดขอบเขตตามที่บันทึกในเอกสารตรวจของแต่ละรอบ
 
-**พร้อม deploy บน Vercel หรือ Docker** ✅
+**ห้ามถือว่า production พร้อมหรือ deploy ผ่านการรับรอง** จนกว่าจะผ่าน Dev
+signup/delete, ทำและตรวจ 2FA และได้รับอนุมัติ ตามลำดับใน
+`docs/PRODUCTION_CHECKLIST.md`
 
 ---
 

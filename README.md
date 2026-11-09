@@ -10,7 +10,7 @@
 
 แนวทางผลิตภัณฑ์ที่แนะนำคือให้บริการ Core และแต่ละโมดูลเป็น SaaS แยกตามความต้องการของลูกค้า โดย Core/โมดูลเป็นรูปแบบการให้บริการ ส่วน POS เป็นฟังก์ชันการขายหน้าร้าน ไม่ใช่รูปแบบผลิตภัณฑ์แทน SaaS
 
-คำว่า SaaS ในเอกสารนี้เป็น **ทิศทางการจัดแพ็กเกจผลิตภัณฑ์** ไม่ใช่คำรับรองว่าการสมัครใช้งาน การจัดการ tenant/สาขา การกำหนดสิทธิ์ตามแพ็กเกจ และการเรียกเก็บเงินอัตโนมัติครบแล้ว; license mode ที่มีอยู่ไม่ควรถูกเข้าใจว่าเป็นวงจร subscription billing ที่สมบูรณ์
+คำว่า SaaS ในเอกสารนี้เป็น **ทิศทางการจัดแพ็กเกจผลิตภัณฑ์** โค้ด Core มี self-service registration ที่สร้างบริษัท Trial และผู้ใช้แรก พร้อมเลือกประเภทธุรกิจ General, Retail, F&B, Pharmacy, Service, Rental หรือ Hotel ได้ โดย Rental/Hotel ผ่าน integration test บนฐานข้อมูล disposable ในเครื่องแล้ว ส่วนการยอมรับงานฝั่ง Dev ยังรอทดสอบ signup และลบสมาชิกจริงบนฐาน Dev ตามเกณฑ์เจ้าของ หลังผ่านขั้นนี้จึงทำและตรวจ 2FA; ห้ามพิจารณาขึ้น Production ก่อน 2FA ผ่าน Production ใช้ Supabase ส่วน Neon ที่เจ้าของยืนยันเป็นฐาน Dev และยังไม่มีการทดสอบเขียนข้อมูลในงานนี้ การระบุนี้ไม่ได้รับรองว่าการจัดการ tenant/สาขา การกำหนดสิทธิ์ตามแพ็กเกจ หรือการเรียกเก็บเงินอัตโนมัติครบแล้ว และ license mode ที่มีอยู่ไม่ใช่วงจร subscription billing ที่สมบูรณ์
 
 โมดูลธุรกิจทั้งหกเป็นแอปแยกและทำงานแบบ **standalone** ได้สำหรับร้านหรือ SME ที่ต้องการระบบปฏิบัติงานเฉพาะทาง การเชื่อม Core เป็นทางเลือก ไม่ใช่เงื่อนไขให้โมดูลใช้งานได้:
 
@@ -123,9 +123,9 @@ cron ภายนอก (ตั้งแล้วบนเครื่องพ�
 
 ### ฐานข้อมูลและการทดสอบ
 
-- แอปใช้ PostgreSQL ผ่าน `pg` Pool ใน `lib/db.ts`; ตั้ง `DATABASE_URL` หรือ `POSTGRES_URL` ให้ตรงกับ Neon branch ที่ตั้งใจใช้งาน
+- แอปใช้ PostgreSQL ผ่าน `pg` Pool ใน `lib/db.ts`; เจ้าของยืนยันว่า Neon ใช้ฝั่ง Dev และ Supabase ใช้ Production
 - ก่อนรัน local dev, seed, bootstrap หรือ migration ให้ตรวจ branch ปลายทางก่อนเสมอ เพราะคำสั่งเหล่านี้อาจอ่าน/เขียนข้อมูลจริง
-- ใช้ Neon branch แยกสำหรับ staging/test ก่อนการเปลี่ยน schema; migration ให้ใช้ direct (ไม่ผ่าน `-pooler`) URL ส่วนแอปปกติใช้ pooled URL
+- งานทดสอบที่เขียนข้อมูลต้องใช้ฐาน Dev ที่แยกและทิ้งได้; migration ให้ใช้ direct URL ส่วนแอปปกติใช้ connection URL ตาม environment
 - ห้ามใช้ `tests/integration/run.mjs` กับ Neon หรือฐานข้อมูลที่มีข้อมูลต้องเก็บ เพราะ harness รีเซ็ตตารางใน `mbs-integration-pg`; ใช้เฉพาะฐานข้อมูลทดสอบที่แยกและทิ้งได้
 
 ### เชื่อมต่อ Google Drive ของบริษัท
@@ -146,7 +146,7 @@ OAuth callback URL ต้องเป็น HTTPS ใน production และต
 
 ---
 
-## ส่งมอบแอพแบบ Docker โดยใช้ Neon PostgreSQL
+## ส่งมอบแอพแบบ Docker โดยใช้ PostgreSQL ภายนอก
 
 ```bash
 cp .env.example .env.local
@@ -159,18 +159,18 @@ node scripts/issue-license.mjs \
 # 2) ใส่ค่าจริงใน .env.local:
 #    LICENSE_SALT   = salt เดียวกับฝั่งผู้ขาย
 #    MBS_LICENSE_KEY = license key ที่ออกให้ลูกค้ารายนี้
-#    DATABASE_URL   = Neon pooled connection string
-#    NEXTAUTH_SECRET = random secret (AUTH_SECRET ใช้ค่านี้เป็น fallback ได้)
+#    DATABASE_URL   = PostgreSQL URL ของ environment เป้าหมาย
+#    NEXTAUTH_SECRET = random JWT secret (โค้ดยังรองรับ AUTH_SECRET เป็น fallback)
 #    NEXTAUTH_URL = URL จริงที่ผู้ใช้เปิดเว็บ (เช่น http://localhost:3000 สำหรับ local)
 #    GOOGLE OAuth values = ตั้งเมื่อเปิดใช้ Google Drive integration
 
-# 3) รัน app container (เชื่อม Neon; ไม่มี PostgreSQL ภายใน Compose)
+# 3) รัน app container (เชื่อม PostgreSQL ภายนอก; ไม่มี PostgreSQL ภายใน Compose)
 docker compose --env-file .env.local up -d --build
 ```
 
 - เปิดแอพที่: `http://localhost:3000`
-- ฐานข้อมูล Neon ต้องมี schema และ migrations ที่แอพต้องใช้ก่อนเริ่มใช้งาน; Compose จะไม่สร้างหรือ migrate schema ให้อัตโนมัติ
-- ก่อน migration ให้สำรองข้อมูลและทดสอบบน Neon branch แยกก่อน ใช้ direct (ไม่ผ่าน `-pooler`) URL กับเครื่องมือ migration; อย่าชี้ bootstrap ไปยัง production โดยไม่ตรวจ SQL และอนุมัติการเปลี่ยนแปลงก่อน
+- ฐานข้อมูลภายนอกต้องมี schema และ migrations ที่แอพต้องใช้ก่อนเริ่มใช้งาน; Compose จะไม่สร้างหรือ migrate schema ให้อัตโนมัติ
+- ก่อน migration ให้สำรองข้อมูลและทดสอบบนฐานแยกที่ทิ้งได้ของ environment เป้าหมาย ใช้ direct URL กับเครื่องมือ migration; อย่าชี้ bootstrap ไปยัง production โดยไม่ตรวจ SQL และอนุมัติการเปลี่ยนแปลงก่อน
 - สร้าง admin ครั้งแรก: หน้า `/register` → register แล้วกด `promote` เป็น superadmin
 - **license lock:** production (`docker compose`) จะ fail-fast ถ้า `MBS_LICENSE_KEY` ผิด/หมดอายุ (subscription) — perpetual ไม่หมดอายุ, subscription หมดอายุเมื่อถึง `expires_at`
 - โหมดการขาย: `PRODUCT_MODE=perpetual` (ขายขาด) หรือ `PRODUCT_MODE=subscription` (เช่า รายเดือน)
@@ -181,7 +181,7 @@ docker compose --env-file .env.local up -d --build
 
 - **Stack:** Next.js 16 (App Router) + React 19 + TypeScript 5
 - **UI:** Tailwind CSS 4 + lucide-react
-- **ฐานข้อมูล:** Neon PostgreSQL ผ่าน `pg` Pool (`lib/db.ts`)
+- **ฐานข้อมูล:** PostgreSQL ผ่าน `pg` Pool (`lib/db.ts`); environment Dev ใช้ Neon และ Production ใช้ Supabase ตามการกำหนดปัจจุบัน
 - **เอกสาร PDF:** jspdf / jspdf-autotable / exceljs · **Barcode/QR:** react-barcode / qrcode.react
 - **จ็อบเบื้องหลัง:** node-cron (recurring, tax, ai-audit)
 - **Integration:** googleapis (Drive / Sheets / Calendar) — อ่าน OAuth จาก `.env.local` ผ่าน `scripts/google-auth.mjs`

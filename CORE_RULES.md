@@ -385,11 +385,11 @@ ON CONFLICT (company_name) DO UPDATE SET
 - [ ] Confirm company settings display correctly on dashboard
 
 ### System Health Indicators
-- ✅ **All Users Access:** Admin panel accessible to authorized users
-- ✅ **Data Integrity:** No accidental data loss
-- ✅ **Role Consistency:** Code and database roles match
-- ✅ **UI Functionality:** All features working as expected
-- ✅ **Production Ready:** System safe for commercial use
+- [ ] **All Users Access:** Admin panel accessible to authorized users
+- [ ] **Data Integrity:** No accidental data loss
+- [ ] **Role Consistency:** Code and database roles match
+- [ ] **UI Functionality:** All features working as expected
+- [ ] **Production acceptance:** Verify owner acceptance criteria before any production-ready claim.
 
 ---
 
@@ -579,11 +579,11 @@ ON CONFLICT (company_name) DO UPDATE SET
 - [ ] Confirm company settings display correctly on dashboard
 
 ### System Health Indicators
-- ✅ **All Users Access:** Admin panel accessible to authorized users
-- ✅ **Data Integrity:** No accidental data loss
-- ✅ **Role Consistency:** Code and database roles match
-- ✅ **UI Functionality:** All features working as expected
-- ✅ **Production Ready:** System safe for commercial use
+- [ ] **All Users Access:** Admin panel accessible to authorized users
+- [ ] **Data Integrity:** No accidental data loss
+- [ ] **Role Consistency:** Code and database roles match
+- [ ] **UI Functionality:** All features working as expected
+- [ ] **Production acceptance:** Verify owner acceptance criteria before any production-ready claim.
 
 ---
 

@@ -58,6 +58,7 @@ export default function MembersPage() {
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [userGroups, setUserGroups] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
 
   const refreshUsers = async () => {
     try {
@@ -166,6 +167,26 @@ export default function MembersPage() {
     } catch (error) {
       console.error("Error saving groups:", error);
       showToast("ไม่สามารถอัปเดตกลุ่มได้", "error");
+    }
+  };
+
+  const deleteUser = async (user: User) => {
+    if (!window.confirm(`ลบสมาชิก ${user.name} (${user.email}) ใช่หรือไม่?`)) return;
+
+    setDeletingUserId(user.id);
+    try {
+      const response = await fetch(`/api/users/${user.id}`, { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP ${response.status}`);
+      }
+      showToast("ลบสมาชิกสำเร็จ", "success");
+      await refreshUsers();
+    } catch (err) {
+      console.error("Error deleting member:", err);
+      showToast(err instanceof Error ? err.message : "ไม่สามารถลบสมาชิกได้", "error");
+    } finally {
+      setDeletingUserId(null);
     }
   };
 
@@ -282,7 +303,13 @@ export default function MembersPage() {
                                  <Link href={`/admin/members/edit/${user.id}`} className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
                                     <Edit size={16} />
                                  </Link>
-                                 <button className="p-2 text-gray-400 hover:text-red-500 transition-colors">
+                                 <button
+                                   type="button"
+                                   onClick={() => deleteUser(user)}
+                                   disabled={deletingUserId === user.id}
+                                   aria-label={`ลบสมาชิก ${user.name}`}
+                                   className="p-2 text-gray-400 hover:text-red-500 disabled:opacity-50 transition-colors"
+                                 >
                                     <Trash2 size={16} />
                                  </button>
                               </div>

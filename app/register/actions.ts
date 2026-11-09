@@ -3,6 +3,10 @@
 
 import pool from "@/lib/db";
 import bcrypt from "bcryptjs";
+import {
+  getRegistrationPluginPack,
+  isRegistrationBusinessType,
+} from "@/lib/registration-business-types.mjs";
 
 export async function registerUser(formData: FormData) {
   const name = formData.get("name") as string;
@@ -11,7 +15,16 @@ export async function registerUser(formData: FormData) {
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirmPassword") as string;
   const companyName = (formData.get("companyName") as string)?.trim() || null;
-  const businessType = (formData.get("businessType") as string)?.trim() || "general";
+  const rawBusinessType = formData.get("businessType");
+  if (rawBusinessType !== null && typeof rawBusinessType !== "string") {
+    return { error: "กรุณาเลือกประเภทธุรกิจที่ถูกต้อง" };
+  }
+  const submittedBusinessType = rawBusinessType?.trim() || "general";
+
+  if (!isRegistrationBusinessType(submittedBusinessType)) {
+    return { error: "กรุณาเลือกประเภทธุรกิจที่ถูกต้อง" };
+  }
+  const businessType = submittedBusinessType;
 
   if (!name || !normalizedEmail || !password) {
     return { error: "กรุณากรอกข้อมูลให้ครบทุกช่อง" };
@@ -82,13 +95,7 @@ export async function registerUser(formData: FormData) {
     try {
       const { listPluginPacks } = await import("@/lib/plugin-packs");
       const { saveCompanyModuleOverrides } = await import("@/lib/module-config");
-      const packMap: Record<string, string> = {
-        retail: "retail_pos",
-        fnb: "f_and_b",
-        pharmacy: "pharmacy",
-        service: "service_business",
-      };
-      const packId = packMap[businessType];
+      const packId = getRegistrationPluginPack(businessType);
       if (packId) {
         const pack = listPluginPacks().find((p) => p.id === packId);
         if (pack) {

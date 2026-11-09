@@ -30,7 +30,7 @@
 
 ## P1 — Dashboard อ่านข้อมูลข้ามบริษัท (cross-company leak)
 
-**สถานะ:** เปิดอยู่ (ยังไม่เริ่ม)
+**สถานะ:** แก้ใน code แล้ว (query มี company scope แล้ว) — ต้อง sync integration test/harness ก่อนปิดงาน
 
 **ข้อเท็จจริง (ตรวจสอบแล้ว):**
 - `app/page.tsx:38` `getDashboardData()` รัน query โดยไม่มี company filter:
@@ -82,7 +82,7 @@
 
 ## P3 — IDOR หน้าอ่าน/แก้ invoices & expenses ตาม id
 
-**สถานะ:** เปิดอยู่ (quotations ปิดไปแล้วใน WS-3 #4, invoices/expenses ยังเหลือ)
+**สถานะ:** แก้ใน code แล้ว (invoices list + edit/preview/wht50/expenses อิง `company_id` ผ่าน migration + query filter) — รอ sync integration test/harness ก่อนปิดงาน
 
 **ข้อเท็จจริง (ตรวจสอบแล้ว — จุดที่ยัง query โดยไม่ filter company):**
 - `app/invoices/page.tsx:20` — รายการ invoices
@@ -101,7 +101,7 @@
 
 ## P4 — หน้า vouchers list เชื่อม API ที่ไม่มีอยู่ (dead-end)
 
-**สถานะ:** เปิดอยู่ (ไม่ใช่ security leak — fetch 404 ทำให้หน้าแสดงรายการไม่ได้)
+**สถานะ:** แก้แล้ว — สร้าง `app/api/vouchers/route.ts` (GET, session + company filter, เรนด์จาก `getPaymentVouchers`) แล้ว ✅
 
 **ข้อเท็จจริง (ตรวจสอบแล้ว):**
 - `app/vouchers/page.tsx:123` `fetch('/api/vouchers')`

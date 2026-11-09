@@ -34,6 +34,13 @@ type LicenseCheckResult = {
   expiryDate: string | null;
 };
 
+export class CompanyMappingError extends Error {
+  constructor() {
+    super("Authenticated user has no valid company assignment");
+    this.name = "CompanyMappingError";
+  }
+}
+
 async function ensureCompanyLicensingSchema() {
   // Schema is created by migrations (scripts/bootstrap-init-db.mjs). Runtime only verifies it.
   const { rows: schemaRows } = await query(`
@@ -88,11 +95,22 @@ export async function getDefaultCompanyId() {
 }
 
 export async function getUserCompanyId(userId?: string | number | null) {
-  const defaultCompanyId = await ensureCompanyLicensingSchema();
-  if (!userId) return defaultCompanyId;
+  if (!userId) throw new CompanyMappingError();
 
-  const userRes = await query(`SELECT company_id FROM users WHERE id = $1 LIMIT 1`, [userId]);
-  return Number(userRes.rows[0]?.company_id || defaultCompanyId);
+  const userRes = await query(
+    `SELECT u.company_id, c.id AS valid_company_id
+     FROM users u
+     LEFT JOIN companies c ON c.id = u.company_id
+     WHERE u.id = $1
+     LIMIT 1`,
+    [userId]
+  );
+  const row = userRes.rows[0];
+  const companyId = Number(row?.company_id);
+  if (!row || row.company_id == null || !Number.isSafeInteger(companyId) || companyId <= 0 || row.valid_company_id == null) {
+    throw new CompanyMappingError();
+  }
+  return companyId;
 }
 
 export async function checkUserLimit(company_id?: string | number | null): Promise<LicenseCheckResult> {
@@ -167,7 +185,20 @@ export async function auth(): Promise<{ user: UserSession } | null> {
   if (!token) return null;
   const session = await verifyToken(token);
   if (!session) return null;
-  return { user: session };
+  const userResult = await query(
+    "SELECT id, email, name, role FROM users WHERE id = $1 LIMIT 1",
+    [session.id]
+  );
+  const user = userResult.rows[0];
+  if (!user) return null;
+  return {
+    user: {
+      id: String(user.id),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    },
+  };
 }
 
 // Create JWT token

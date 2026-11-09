@@ -12,12 +12,18 @@ import {
   validateOrderPaidData,
   ALLOWED_EVENTS,
 } from "@/lib/bridge-sync-validation.mjs";
+import { hasBridgeServiceToken } from "@/lib/bridge-auth.mjs";
 
 export const dynamic = "force-dynamic";
 
 const bad = (msg: string, status = 400) => NextResponse.json({ success: false, error: msg }, { status });
 
 export async function POST(req: Request) {
+  const configuredToken = process.env.MBS_BRIDGE_TOKEN || "";
+  const isService = hasBridgeServiceToken(req, configuredToken);
+  const session = await auth();
+  if (!isService && !session?.user?.id) return bad("Unauthorized", 401);
+
   let body: any;
   try {
     body = await req.json();
@@ -31,19 +37,12 @@ export async function POST(req: Request) {
 
   const od = validateOrderPaidData(data);
   if (!od.ok) return bad(od.error as string);
-  const authHeader = req.headers.get("authorization") || "";
-  const serviceToken = authHeader.toLowerCase().startsWith("bearer ")
-    ? authHeader.slice(7).trim()
-    : "";
-  const configuredToken = process.env.MBS_BRIDGE_TOKEN || "";
-  const isService = !!configuredToken && !!serviceToken && serviceToken === configuredToken;
 
   let companyId: number;
   if (isService) {
     if (bodyCompanyId) companyId = bodyCompanyId;
     else return bad("company_id is required for service sync");
   } else {
-    const session = await auth();
     if (!session?.user?.id) return bad("Unauthorized", 401);
     companyId = await getUserCompanyId(session.user.id);
   }
@@ -222,7 +221,24 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const hasServiceToken = hasBridgeServiceToken(req, process.env.MBS_BRIDGE_TOKEN);
+  if (!hasServiceToken) {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        {
+          status: 401,
+          headers: {
+            "Cache-Control": "no-store",
+            "WWW-Authenticate": "Bearer",
+          },
+        }
+      );
+    }
+  }
+
   return NextResponse.json({
     success: true,
     endpoint: "/api/bridge/sync",

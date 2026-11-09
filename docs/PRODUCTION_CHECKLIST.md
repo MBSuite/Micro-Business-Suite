@@ -1,15 +1,30 @@
 # Production Readiness Checklist — Micro-Business-Suite
 
-อัปเดตล่าสุด: 2026-11-07
-สาขา: main (clean)
+อัปเดตล่าสุด: 2026-11-09
 
-## ✅ เสร็จแล้ว (พร้อม production)
+## สถานะ Release gates — ยังไม่ผ่าน
+
+- **ยังห้ามสรุปว่า Production Ready หรือผ่านการรับรองจาก checklist นี้**
+- Gate 1 (Dev): ต้องสมัครสมาชิกและลบสมาชิกได้จริงบนฐาน Dev จึงจะถือว่าผ่านการทดสอบรอบนี้
+- สิ่งที่ยืนยันแล้วสำหรับการเปลี่ยนแปลงนี้: สมัคร Rental/Hotel และตรวจ/ลบข้อมูล
+  ทดสอบได้บนฐานข้อมูล disposable ในเครื่อง; unit, typecheck และ integration ผ่าน
+- **ยังไม่ได้** ยืนยัน signup และ delete จริงบนฐาน Dev จึงยังไม่ผ่าน Gate 1
+- เจ้าของยืนยันว่า Neon เป็นฐาน Dev และ Supabase เป็นฐาน Production; ไม่มีการเขียน
+  ข้อมูลทดสอบลง Supabase Production
+- Gate 2 (หลัง Gate 1 ผ่าน): ทำและตรวจ 2FA
+- Gate 3: พิจารณา Production ได้ก็ต่อเมื่อ 2FA ผ่านและมีการอนุมัติ deploy
+
+## ผลตรวจเดิม (ไม่ใช่ Production sign-off)
+
+รายการที่ทำเครื่องหมายด้านล่างเป็นผลตรวจ/บันทึกเดิม ณ 2026-11-07 เท่านั้น
+ไม่ใช่หลักฐานว่า production พร้อมใช้งานในปัจจุบัน และไม่แทนเกณฑ์ signup/delete
+บนฐาน Dev หรือ 2FA ที่ยังไม่ได้ตรวจ
 
 ### Build & Quality
 - [x] `npm run build` — ผ่าน (Compiled successfully)
 - [x] `tsc --noEmit` — ผ่าน (0 errors)
 - [x] `npm run lint` — 0 errors (327 warnings)
-- [x] `npm test` — 8/8 pass
+- [x] `pnpm test` — 27 passed, 12 skipped, 0 failed (local workspace, 2026-11-09)
 - [x] Lint errors 23 รายการ — แก้หมด (TDZ, unescaped entities, `any`, Date.now, `<a>`→`<Link>`, setState-in-effect)
 
 ### Security
@@ -68,7 +83,7 @@
 - [x] **Recurring billing (cron)** — ตั้งแล้ว (`RECURRING_SECRET` + `CRON_ENABLED=true`)
 
 ### Testing
-- [x] **Integration tests** — รันแล้ว: 9/9 pass, 0 fail (exit code 0) บน Docker container `mbs-integration-pg`
+- [x] **Integration tests** — 12/12 pass และ registration integration 1/1 pass (2026-11-09) บน disposable Docker container `mbs-integration-pg`; ไม่ใช่ Dev gate หรือ Production acceptance
 
 ### Vulnerabilities
 - [x] **No actionable vulnerabilities** — transitive deps ของ googleapis (glob/minimatch) ไม่กระทบ core logic และแก้ไม่ได้โดยไม่เสี่ยง build; ไม่ใช่ประเด็นที่ต้องพูดถึง
@@ -93,12 +108,13 @@
 
 ---
 
-## สรุป (อัปเดตตาม read-only audit)
+## สรุปผลตรวจเดิม
 
-**ผ่านด้าน build และการเชื่อมต่อ DB แบบอ่านอย่างเดียว** ✅
+ผลตรวจ build และฐานข้อมูลแบบอ่านอย่างเดียวด้านล่างเป็นข้อมูลย้อนหลัง ไม่ใช่
+production acceptance ของงานสมัคร/ลบสมาชิกในปัจจุบัน:
 
 - Build / TSC ผ่าน, Lint 0 errors (327 warnings)
-- Unit tests 8/8, Integration tests 9/9 pass
+- ผลเดิมของ unit 8/8 และ integration 9/9 ถูกแทนที่ด้วยผลตรวจล่าสุดที่บันทึกไว้ด้านบน
 - ทุก env ตั้งครบ (Google Drive, Gmail, Gemini AI, Recurring billing, License, Auth)
 - DB: 53 ตาราง, core tables ครบ, column types ตรง
 
@@ -113,6 +129,7 @@
 - Rate limiter in-memory (single-instance only)
 - CSP ยังมี unsafe-inline (Next.js ต้องการ)
 - Historical credentials in git history (ควร rotate ถ้าเคย live)
-- Neon branch ยังไม่ยืนยันว่าเป็น staging หรือ production
+- เจ้าของยืนยันว่า Neon เป็นฐาน Dev และ Supabase เป็นฐาน Production
 
-**สถานะ: พร้อม production สำหรับ core + Google Drive** (หลังแก้ backup/reset/auth/CSP/start) — แต่ควรยืนยัน Neon branch และ deploy smoke test ก่อน go-live.
+**สถานะ Dev gate: ยังไม่ผ่าน** — ต้องยืนยัน signup และ delete บนฐาน Dev ก่อน
+เริ่ม 2FA; Production release ยังถูกกั้นจนกว่า 2FA จะผ่านและได้รับอนุมัติ

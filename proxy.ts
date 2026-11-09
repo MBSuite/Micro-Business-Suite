@@ -47,9 +47,16 @@ if (typeof setInterval !== "undefined") {
 const PUBLIC_PATHS = ["/", "/login", "/register", "/api/login", "/api/logout"];
 const PUBLIC_PREFIXES = ["/api/auth"];
 
-// APIs intentionally callable without a session.
-// Everything else under /api/* now requires a valid session-token.
-const PUBLIC_API_EXACT = new Set(["/api/login", "/api/logout", "/api/fx-rate", "/api/health"]);
+// Bridge sync is passed through so its route handler can validate either a
+// service Bearer token or a user session. Other APIs require a session-token.
+const PUBLIC_API_EXACT = new Set([
+  "/api/login",
+  "/api/logout",
+  "/api/register",
+  "/api/fx-rate",
+  "/api/health",
+  "/api/bridge/sync",
+]);
 const PUBLIC_API_PREFIXES = ["/api/auth"];
 
 function isPublicApi(pathname: string): boolean {
@@ -72,6 +79,17 @@ async function verifyToken(token: string) {
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  if (pathname === "/api/register" && req.method === "POST") {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+    const rl = rateLimit(`register:${ip}`, 5, 15 * 60_000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "ส่งคำขอสมัครบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่" },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfter), "Cache-Control": "no-store" } }
+      );
+    }
+  }
 
   // Rate limiting: login endpoint (brute-force protection)
   if (pathname === "/api/login") {

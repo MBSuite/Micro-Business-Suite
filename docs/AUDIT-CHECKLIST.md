@@ -1,5 +1,9 @@
 # AUDIT CHECKLIST — Micro-Business-Suite
 
+> Historical audit (2026-10-23). Any Neon `production` labels in this report are
+> superseded by the owner's confirmation that Neon is Dev and Supabase is Production.
+> Do not use this historical report to identify the current Production database.
+
 **วันที่ตรวจซ้ำ/แก้ไข:** 2026-10-23
 **วิธีตรวจ:** อ่านไฟล์จริงใน repository + `git diff` (ไม่เชื่อรายงาน `AUDIT.md` เพียงอย่างเดียว) แล้วรัน typecheck/test
 **ขอบเขต:** AUDIT.md Findings AUD-01 ถึง AUD-04
@@ -145,7 +149,7 @@
 
 ---
 
-## ผลการรัน bootstrap กับ Neon `neondb` (production) — 2026-10-23
+## ผลการรัน bootstrap กับ Neon `neondb` (ฐาน Dev ตามการยืนยันล่าสุด) — 2026-10-23
 
 - คำสั่ง: `node scripts/bootstrap-init-db.mjs` (เวอร์ชันที่ปรับให้เหมาะกับ DB ที่มีอยู่แล้ว)
 - ผล: **25 ok, 1 skipped (backup.sql), 0 failed / 26 total**
@@ -177,4 +181,3 @@
 
 - รอบที่ 1 (2026-10-23): AUD-01, AUD-04 + AUD-02 5 จุดตามรายงาน + AUD-03
 - รอบที่ 2 (2026-10-23): runtime DDL นอกขอบเขต AUD-02 อีก 6 จุด (expenses, register/users, recurring ×2, quotations migrate endpoint, payments/invoices) + เชื่อม tenant-scope migrations ที่ค้างอยู่เข้า bootstrap runner
-

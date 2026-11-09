@@ -79,7 +79,7 @@ async function waitForDb() {
 async function applySchema(client) {
   // รีเซ็ตทุก run: กัน schema เก่า/ข้อมูลเก่าจากรอบที่แล้วแอบค้าง
   await client.query(
-    `DROP TABLE IF EXISTS user_groups, groups, activity_log, payment_vouchers, expenses, quotations, payments, invoice_items, invoices, contacts,
+    `DROP TABLE IF EXISTS integration_webhook_events, integration_connections, user_groups, groups, activity_log, company_module_settings, payment_vouchers, expenses, quotations, payments, invoice_items, invoices, contacts,
        company_settings, users, companies CASCADE`
   );
   const sql = readFileSync(path.join(import.meta.dirname, "schema.sql"), "utf8");
@@ -101,23 +101,38 @@ async function waitForApp() {
 
 function runTests() {
   const isTaxMode = process.argv.includes("--tax");
-  const command = isTaxMode ? "tsx" : "node";
-  const args = isTaxMode
-    ? ["--test", path.join(ROOT, "tests/taxAutomator.test.ts")]
-    : ["--test", path.join(ROOT, "tests/integration-security.test.mjs")];
   const env = {
     ...process.env,
     MBS_TEST_BASE_URL: BASE_URL,
     MBS_TEST_DATABASE_URL: TEST_DB_URL,
     MBS_TEST_JWT_SECRET: JWT_SECRET,
+    MBS_BRIDGE_TOKEN: "integration-bridge-token",
     // productionUrl ที่ test เอาไปเทียบ 'ไม่เท่ากับ' — ใส่ placeholder ที่ไม่เคยใช้จริง
     DATABASE_URL: "postgres://placeholder.invalid/mbs-prod-never-used",
     POSTGRES_URL: undefined,
   };
   delete env.POSTGRES_URL;
 
-  const r = spawnSync("pnpm", ["exec", command, ...args], { stdio: "inherit", env });
-  return r.status ?? 1;
+  const command = isTaxMode ? "tsx" : "node";
+  const args = isTaxMode
+    ? ["--test", path.join(ROOT, "tests/taxAutomator.test.ts")]
+    : ["--test", path.join(ROOT, "tests/integration-security.test.mjs")];
+  const result = spawnSync("pnpm", ["exec", command, ...args], { stdio: "inherit", env });
+  if (result.status !== 0 || isTaxMode) return result.status ?? 1;
+
+  const registrationTest = spawnSync(
+    "pnpm",
+    ["exec", "tsx", "--test", path.join(ROOT, "tests/integration-registration.test.ts")],
+    {
+      stdio: "inherit",
+      env: {
+        ...env,
+        DATABASE_URL: TEST_DB_URL,
+        MBS_RUN_REGISTRATION_INTEGRATION: "1",
+      },
+    }
+  );
+  return registrationTest.status ?? 1;
 }
 
 async function main() {
@@ -158,6 +173,7 @@ async function main() {
       AUTH_SECRET: JWT_SECRET,
       SESSION_MAX_AGE: "3600",
       LICENSE_SALT: "integration-test-license-salt-only",
+      MBS_BRIDGE_TOKEN: "integration-bridge-token",
       PORT: String(APP_PORT),
     };
     // รัน next ผ่าน node โดยตรง: ถ้ารันผ่าน `pnpm exec next` พอ app.kill() ที่ pnpm

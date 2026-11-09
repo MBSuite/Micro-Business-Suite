@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { isAdmin } from "@/lib/permissions";
+import { isAdmin, isSuperAdmin } from "@/lib/permissions";
 
 // GET /api/users - List all users (Admin only)
 export async function GET() {
@@ -18,7 +18,16 @@ export async function GET() {
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
 
-    // Get all users with their group info
+    const userIsSuperAdmin = await isSuperAdmin(session.user.id);
+    const actorResult = await query(
+      "SELECT company_id FROM users WHERE id = $1",
+      [session.user.id]
+    );
+    const companyId = actorResult.rows[0]?.company_id;
+    if (!userIsSuperAdmin && companyId == null) {
+      return NextResponse.json({ error: "Company context required" }, { status: 403 });
+    }
+
     const result = await query(
       `
         SELECT 
@@ -42,9 +51,11 @@ export async function GET() {
         FROM users u
         LEFT JOIN user_groups ug ON u.id = ug.user_id
         LEFT JOIN groups g ON ug.group_id = g.id
+        ${userIsSuperAdmin ? "" : "WHERE u.company_id = $1"}
         GROUP BY u.id
         ORDER BY u.created_at DESC
-      `
+      `,
+      userIsSuperAdmin ? [] : [companyId]
     );
 
     return NextResponse.json({ users: result.rows });

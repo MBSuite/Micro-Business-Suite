@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 
 import { query } from "@/lib/db";
-import { auth } from "@/lib/auth";
+import { auth, getUserCompanyId } from "@/lib/auth";
 import { Receipt, Plus, Search, FileText, ArrowLeft, ArrowRight, Edit, Filter, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import InvoiceRowActions from "./InvoiceRowActions";
@@ -13,18 +13,20 @@ export const dynamic = 'force-dynamic';
 export default async function InvoicesPage({ searchParams }: { searchParams: { search?: string } }) {
    const session = await auth();
    const userRole = session?.user?.role;
+   const companyId = await getUserCompanyId(session?.user?.id);
    const search = (await searchParams)?.search || "";
    let invoices = [];
    try {
       let q = `
       SELECT i.*, c.name as customer_name 
       FROM invoices i 
-      LEFT JOIN contacts c ON i.contact_id = c.id 
+      LEFT JOIN contacts c ON i.contact_id = c.id AND c.company_id = i.company_id 
+      WHERE i.company_id = $1
     `;
-      const params: any[] = [];
+      const params: any[] = [companyId];
 
       if (search) {
-         q += ` WHERE i.invoice_number ILIKE $1 OR c.name ILIKE $1 `;
+         q += ` AND (i.invoice_number ILIKE $2 OR c.name ILIKE $2) `;
          params.push(`%${search}%`);
       }
 

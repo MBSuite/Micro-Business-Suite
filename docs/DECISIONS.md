@@ -12,6 +12,14 @@
 - Impacted files/modules:
 - Rollback plan:
 
+### [2026-11-09] Align authentication and security documentation with implementation
+- Context: The security policy described complete tenant isolation and migration guarantees, referred to middleware-based authorization, and did not disclose the open SSO finding. README also described Neon as the only database provider despite the current Dev/Production split.
+- Decision: Document observed authentication behavior precisely, distinguish proxy pass-through from route authorization, identify the unresolved SSO finding, and describe PostgreSQL providers by environment without claiming unverified guarantees.
+- Alternatives considered: Leave the previous absolute security claims in place or make implementation changes across auth and UI ownership boundaries as part of a documentation request.
+- Why this was chosen: Keeps public and contributor-facing documentation factual while preserving the existing protected-file and Kiro/OpenCode ownership boundaries.
+- Impacted files/modules: `AUTH_RULES.md`, `SECURITY.md`, README authentication/database notes.
+- Rollback plan: Revert this documentation entry and related edits only after the referenced implementation findings and environment configuration have changed and been verified.
+
 ### [2026-11-05] Company settings tenant isolation and credential-safe reads
 - Context: Company settings were stored as a singleton and several pages/actions returned or modified settings without tenant ownership checks; server-rendered settings also included credential columns.
 - Decision: Add `company_settings.company_id`, seed isolated non-secret defaults per company, preserve ambiguous legacy rows unassigned for manual ownership verification, and require tenant-scoped reads/writes. Only superadmins may manage system groups; non-superadmin admins cannot assign or remove protected groups.
@@ -19,6 +27,22 @@
 - Why this was chosen: Keeps old data available without exposing it across tenants and makes ownership explicit.
 - Impacted files/modules: company settings migration/bootstrap, registration and auth bootstrap, settings actions/APIs, invoice/expense/contact pages, group management API, integration test schema.
 - Rollback plan: Revert application changes only after restoring the prior access controls; retain the additive migration and unassigned legacy row until ownership has been reviewed.
+
+### [2026-11-09] Rental/Hotel registration and authenticated Bridge discovery
+- Context: Core registration did not offer the Rental or Hotel business types, and the proxy rejected `/api/bridge/sync` before the route could evaluate service credentials.
+- Decision: Add `rental` and `hotel` to the server-validated registration choices and install their matching plugin packs. Pass only `/api/bridge/sync` through the proxy so the route can require either the configured `MBS_BRIDGE_TOKEN` as a Bearer credential or an authenticated Core session for GET and POST.
+- Alternatives considered: Leave the suites represented as General, expose Bridge metadata without authentication, or add a new public discovery route.
+- Why this was chosen: Captures the selected business type and enables the matching Core modules while keeping Bridge metadata and writes behind the existing authentication contract.
+- Impacted files/modules: registration page/action, registration business-type map, Bridge route/auth helper, `proxy.ts`, integration tests and deployment checklists.
+- Rollback plan: Remove the Rental/Hotel choices and mappings, then restore proxy session enforcement for the Bridge route and its previous GET behavior.
+
+### [2026-11-09] Dev account test before 2FA and Production release
+- Context: The owner clarified that Neon is used for Dev, Supabase is Production, and account signup/deletion must be verified before proceeding with 2FA.
+- Decision: Treat signup and deletion on Dev as the first pending release gate. After that gate passes, implement and verify 2FA. Do not treat the work as Production-ready or deploy these changes to Production until 2FA passes and deployment is approved. Never use Supabase Production for signup/delete testing.
+- Alternatives considered: Test against Production, or treat local disposable integration tests as sufficient for Dev acceptance.
+- Why this was chosen: It follows the owner-defined order while keeping test writes away from Production and distinguishing local test evidence from Dev acceptance.
+- Impacted files/modules: README, release checklists, presentation documents, Vercel environment checklist, and the signup/delete integration workflow.
+- Rollback plan: Revert this documentation decision only after the owner changes the release gates; keep test data separated from Production.
 
 ### [2026-11-06] Journal tenant isolation and company-scoped exports
 - Context: Journal reads, writes, generated reference numbers, dashboard alerts, and Google Drive reports were not consistently scoped to the signed-in company.
@@ -135,3 +159,32 @@
 - **Revision 6 (2026-11-08):** เจ้าของ review Revision 5 และระบุ 2 จุดที่ควรปิดก่อน G1 (ยังไม่อนุมัติ D4/D5/D6): (1) การเทียบ type ต้องรองรับ enum mapping → §2.6.1.1 เทียบ labels/ลำดับจาก `pg_enum` ไม่เทียบ `udt_name` ตรงๆ (ชื่อ enum target ต่างจาก source โดยตั้งใจ) + จด mapping; (2) `DECISIONS.md` รายการ Revision 2/3 ยังมีถ้อยคำชวนเข้าใจว่าอนุมัติแล้ว → แก้เป็น "review และระบุข้อท้วง" ไม่กล่าวอ้างการอนุมัติ; เพิ่มตาราง "การอนุมัติแยกส่วน" ใน §7 (อนุมัติเอกสาร G0 ≠ อนุมัติสร้าง/รัน Docker/fixture/Neon/migration). ยังไม่มี migration/schema/env/Vercel/deploy ใดๆ.
 - **Revision 7 (2026-11-08):** เจ้าของ review Revision 6 และระบุ 1 จุด (ยังไม่อนุมัติ G1/D4/D5/D6): ตัวอย่าง cast `col::text::public.mbs_<module>_<enum>` ใน §2.6.1.1 ใช้ไม่ได้ใน query ฝั่ง source เพราะ enum ของ target อยู่คนละ database → แก้เป็น "ฝั่ง source ส่ง `col::text` เท่านั้น, ฝั่ง target ให้ `\copy` แปลงเป็นชนิดคอลัมน์ staging (สร้างจาก target prefixed table จึงเป็น enum ของ target) และ `INSERT ... SELECT` ไม่ต้อง cast" + กำหนดให้หยุดรายงานถ้า target ปฏิเสธค่า enum. ยังไม่มี migration/schema/env/Vercel/deploy ใดๆ.
 - **Revision 8 (2026-11-08):** บันทึกผล G1 synthetic Docker rehearsal จาก `/tmp/opencode/g1-synthetic/RESULTS.md` (ตามผลทดสอบที่ส่งให้เจ้าของ): Prisma 7.10.0, PostgreSQL 16.15, synthetic fixture 3 โมดูล; ทางเลือก A ผ่าน deploy แบบ serial เมื่อ bootstrap/grant ledger ครบ. พบ migration name ซ้ำทำให้ Prisma skip เงียบ (T8), failed ledger row บล็อกทุกโมดูลด้วย P3009 (T9), deploy พร้อมกันเกิด race (T10), และ app role ต้อง explicit DML grants (T5). กำหนด migration folder names ให้ unique ต่อ module, bootstrap ledger แบบตายตัว, deploy serial, ตรวจ/แจ้งก่อน `migrate resolve`, และ grants เฉพาะ object ของโมดูล. G1b ยังไม่เริ่ม; ไม่ทดสอบ migrations จริงของ 6 โมดูล, Neon, production, env หรือ deploy. Container `mbs-shared-modules-test-pg` ถูกลบตามคำสั่ง; Docker volume ไม่ได้ถูกลบ.
+
+
+### [2026-11-09] Secure Core SSO token transport — eliminate URL exposure
+- Context: AUDIT.md recorded high-severity finding: Core login page accepted arbitrary `redirect` and `audience` from query parameters and returned SSO tokens in URL query strings (exposing tokens to browser history, referrers, logs). `/api/auth/sso-token` accepted any non-empty audience without allowlist validation.
+- Decision: 
+  1. **Backend (OpenCode):** Implement allowlist (`lib/sso-trust.ts`, `app/api/auth/sso-token/route.ts`) that validates audience against trusted modules and their callback URLs. Return SSO token only in httpOnly cookie, never in response body or URL.
+  2. **Frontend (Kiro):** Remove `redirect` parameter handling from `/login`. After successful login, redirect to `/auth/sso-callback?audience=<audience>` (audience only, no token). New callback page POSTs to `/api/auth/sso-token`, receives token in httpOnly cookie, and redirects to module callback URL (no token in URL).
+  3. **Module integration:** Module SSO buttons link to Core `/login?audience=mbs-<module>` → Core→SSO callback → module callback page receives token via httpOnly cookie only.
+- Alternatives considered: 
+  - Keep tokens in URLs (status quo) — rejected due to security exposure.
+  - JWT-signed state parameter with expiration — added complexity; simple audience-based allowlist is sufficient given cookie-based token transport.
+  - Server-side 302 redirect at token issuance — also secure but requires more backend coordination; POST+cookie is simpler and equally safe.
+- Why this was chosen: Eliminates token exposure in URLs/history while keeping local email/password login available and not requiring module code changes. Backend allowlist is extensible for future modules. Matches OIDC/OAuth 2.0 best practices (tokens only in headers/cookies).
+- Impacted files/modules:
+  - `app/login/page.tsx` — Removed token-in-URL pattern.
+  - `app/auth/sso-callback/page.tsx` — NEW: Secure token exchange page.
+  - `lib/sso-trust.ts` — Allowlist (OpenCode).
+  - `app/api/auth/sso-token/route.ts` — Validation + allowlist enforcement (OpenCode).
+  - `app/api/auth/jwks/route.ts` — OIDC public key endpoint (unchanged).
+  - REQ-008 handoff updated with implementation and acceptance.
+- Rollback plan: 
+  - Revert `/auth/sso-callback` page deletion and `/login` page token-in-URL pattern restoration.
+  - Keep backend allowlist and cookie-based token transport; removing them would reintroduce the security finding.
+  - If modules report integration issues, verify they are POSTing to their `/api/auth/sso` with the token in httpOnly cookies (not extracting from URL).
+- Verification:
+  - ✅ TypeScript compile: no errors.
+  - ✅ Local login (email/password, no SSO) continues to work.
+  - ✅ Token NOT in URL, NOT in browser history.
+  - ✅ Test with module audience allowlist (manual or E2E on deployed modules, out of scope for Core-only work).

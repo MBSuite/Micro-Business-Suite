@@ -1,11 +1,13 @@
 # Capability Audit — Micro-Business-Suite (MBS)
 
-> ตรวจสอบจริงจาก codebase + DB schema (prod Neon) ณ 2026-11-05
+> Historical snapshot from 2026-11-05. Its original `prod Neon` label is superseded
+> by the owner's confirmation that Neon is Dev and Supabase is Production. This
+> document does not establish the current Production database.
 > หลัก: ห้ามเดา — ทุกข้ออ้างอิงไฟล์/ตาราง/คอลัมน์จริง
 
 ## 1. สรุปภาพรวมระบบปัจจุบัน
 
-MBS เป็นระบบบัญชี/ภาษีสำหรับ SME บน Next.js 16 + PostgreSQL (Neon) แบบ multi-tenant (company_id)
+MBS เป็นระบบบัญชี/ภาษีสำหรับ SME บน Next.js 16 + PostgreSQL แบบ multi-tenant (company_id)
 พร้อมระบบ license (perpetual/subscription) และ module toggle ต่อ company ผ่าน `company_module_settings`.
 
 โมดูลที่มีอยู่แล้ว (MODULE_REGISTRY): quotations, invoices, recurring, receipts, expenses, payroll,

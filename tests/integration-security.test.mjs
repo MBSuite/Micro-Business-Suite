@@ -9,6 +9,7 @@ const productionUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 const enabled = Boolean(baseUrl && databaseUrl && jwtSecret);
 
 let client;
+let defaultUserIds = {};
 
 function skipUnlessConfigured(t) {
   if (!enabled) {
@@ -24,7 +25,7 @@ function assertNotProductionDatabase() {
   assert.notEqual(databaseUrl, productionUrl, "MBS_TEST_DATABASE_URL must not equal DATABASE_URL or POSTGRES_URL");
 }
 
-async function tokenFor(role, id = "security-test-user") {
+async function tokenFor(role, id = String(defaultUserIds[role] || "1")) {
   const { SignJWT } = await import("jose");
   return new SignJWT({
     id,
@@ -59,9 +60,31 @@ before(async () => {
   assertNotProductionDatabase();
   client = new Client({ connectionString: databaseUrl });
   await client.connect();
+  const fixture = `security-session-${Date.now()}`;
+  const company = await client.query(
+    "INSERT INTO companies (name) VALUES ($1) RETURNING id",
+    [fixture],
+  );
+  for (const role of ["user", "admin", "superadmin"]) {
+    const user = await client.query(
+      `INSERT INTO users (name, email, password, role, status, company_id)
+       VALUES ($1, $2, $3, $4, 'active', $5)
+       RETURNING id`,
+      [`Security ${role}`, `${fixture}-${role}@security-test.invalid`, "not-a-password", role, company.rows[0].id],
+    );
+    defaultUserIds[role] = user.rows[0].id;
+  }
+  defaultUserIds.companyId = company.rows[0].id;
 });
 
 after(async () => {
+  if (client && defaultUserIds.companyId) {
+    await client.query(
+      "DELETE FROM users WHERE company_id = $1",
+      [defaultUserIds.companyId],
+    );
+    await client.query("DELETE FROM companies WHERE id = $1", [defaultUserIds.companyId]);
+  }
   await client?.end();
 });
 
@@ -83,6 +106,7 @@ test("protected routes reject requests without a token", async (t) => {
     ["/api/google-drive/disconnect", "POST"],
     ["/api/import", "POST"],
     ["/api/admin/backup", "GET"],
+    ["/api/users/1", "DELETE"],
     ["/api/db_schema", "GET"],
   ];
 
@@ -93,6 +117,34 @@ test("protected routes reject requests without a token", async (t) => {
       headers: method === "POST" ? { "Content-Type": "application/json" } : undefined,
     });
   }
+});
+
+test("Bridge metadata requires a session or service Bearer token", async (t) => {
+  if (!skipUnlessConfigured(t)) return;
+
+  await expectStatus("/api/bridge/sync", 401);
+
+  const serviceResponse = await request("/api/bridge/sync", {
+    headers: { Authorization: "Bearer integration-bridge-token" },
+  });
+  assert.equal(serviceResponse.status, 200);
+  const serviceBody = await serviceResponse.json();
+  assert.deepEqual(serviceBody.allowed_events.sort(), ["order.paid", "payment.received"]);
+
+  const sessionResponse = await request("/api/bridge/sync", {
+    token: await tokenFor("user"),
+  });
+  assert.equal(sessionResponse.status, 200);
+});
+
+test("registration page offers Rental and Hotel business types", async (t) => {
+  if (!skipUnlessConfigured(t)) return;
+
+  const response = await request("/register");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /value="rental"/);
+  assert.match(html, /value="hotel"/);
 });
 
 test("regular users cannot access admin actions", async (t) => {
@@ -116,6 +168,127 @@ test("superadmin can reach non-destructive admin backup on test database", async
   const response = await request("/api/admin/backup?format=json", { token });
   assert.equal(response.status, 200, `superadmin backup should return 200, got ${response.status}`);
   assert.match(response.headers.get("content-type") || "", /application\/json/);
+});
+
+test("legacy webhook requires an idempotency key and creates an invoice only once", async (t) => {
+  if (!skipUnlessConfigured(t)) return;
+  const companyId = defaultUserIds.companyId;
+  const prefix = `WH${Date.now()}-`;
+  await client.query(
+    `INSERT INTO company_settings (company_id, name, invoice_prefix)
+     VALUES ($1, 'Webhook test', $2)
+     ON CONFLICT (company_id) WHERE company_id IS NOT NULL
+     DO UPDATE SET invoice_prefix = EXCLUDED.invoice_prefix`,
+    [companyId, prefix],
+  );
+  const token = await tokenFor("user");
+  const payload = {
+    provider: "integration-test",
+    event: "order",
+    order: { items: [{ description: "Test item", qty: 2, price: 10 }] },
+  };
+  const missingKeyResponse = await request("/api/integrations/webhook", {
+    method: "POST",
+    token,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  assert.equal(missingKeyResponse.status, 400);
+
+  const key = `webhook-test-${Date.now()}`;
+  const send = () => request("/api/integrations/webhook", {
+    method: "POST",
+    token,
+    headers: { "Content-Type": "application/json", "Idempotency-Key": key },
+    body: JSON.stringify(payload),
+  });
+  const responses = await Promise.all([send(), send()]);
+  assert.deepEqual(responses.map((response) => response.status), [200, 200]);
+  const results = await Promise.all(responses.map((response) => response.json()));
+  assert.equal(results[0].invoiceId, results[1].invoiceId);
+  assert.equal(results.filter((result) => result.duplicate === true).length, 1);
+  const invoices = await client.query(
+    "SELECT id FROM invoices WHERE company_id = $1 AND invoice_number LIKE $2",
+    [companyId, `${prefix}%`],
+  );
+  assert.equal(invoices.rowCount, 1);
+});
+
+test("legacy webhook rejects users without a valid company mapping", async (t) => {
+  if (!skipUnlessConfigured(t)) return;
+  const fixture = `unmapped-user-${Date.now()}`;
+  const user = await client.query(
+    `INSERT INTO users (name, email, password, role, status, company_id)
+     VALUES ($1, $2, 'unused', 'user', 'active', NULL)
+     RETURNING id`,
+    [fixture, `${fixture}@security-test.invalid`],
+  );
+  try {
+    const response = await request("/api/integrations/webhook", {
+      method: "POST",
+      token: await tokenFor("user", String(user.rows[0].id)),
+      headers: { "Content-Type": "application/json", "Idempotency-Key": fixture },
+      body: JSON.stringify({ provider: "integration-test", event: "order" }),
+    });
+    assert.equal(response.status, 403);
+  } finally {
+    await client.query("DELETE FROM users WHERE id = $1", [user.rows[0].id]);
+  }
+});
+
+test("admin can delete a company member and deleted sessions are invalid", async (t) => {
+  if (!skipUnlessConfigured(t)) return;
+  const fixture = `member_delete_${Date.now()}`;
+  const company = await client.query(
+    "INSERT INTO companies (name) VALUES ($1) RETURNING id",
+    [fixture],
+  );
+  const admin = await client.query(
+    `INSERT INTO users (name, email, password, role, status, company_id)
+     VALUES ($1, $2, $3, 'admin', 'active', $4) RETURNING id`,
+    ["Member Delete Admin", `${fixture}-admin@security-test.invalid`, "unused", company.rows[0].id],
+  );
+  const member = await client.query(
+    `INSERT INTO users (name, email, password, role, status, company_id)
+     VALUES ($1, $2, $3, 'user', 'active', $4) RETURNING id`,
+    ["Member Delete Target", `${fixture}-member@security-test.invalid`, "unused", company.rows[0].id],
+  );
+  await client.query(
+    "INSERT INTO user_groups (user_id, group_id) VALUES ($1, 3)",
+    [member.rows[0].id],
+  );
+
+  try {
+    const token = await tokenFor("admin", String(admin.rows[0].id));
+    const response = await request(`/api/users/${member.rows[0].id}`, {
+      method: "DELETE",
+      token,
+    });
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), {
+      success: true,
+      deletedUserId: member.rows[0].id,
+    });
+
+    const deletedUser = await client.query(
+      "SELECT id FROM users WHERE id = $1",
+      [member.rows[0].id],
+    );
+    assert.equal(deletedUser.rowCount, 0);
+    const deletedGroups = await client.query(
+      "SELECT id FROM user_groups WHERE user_id = $1",
+      [member.rows[0].id],
+    );
+    assert.equal(deletedGroups.rowCount, 0);
+
+    const deletedSessionToken = await tokenFor("user", String(member.rows[0].id));
+    await expectStatus("/api/bridge/sync", 401, { token: deletedSessionToken });
+  } finally {
+    await client.query("DELETE FROM users WHERE id = ANY($1::int[])", [
+      [admin.rows[0].id, member.rows[0].id],
+    ]);
+    await client.query("DELETE FROM companies WHERE id = $1", [company.rows[0].id]);
+  }
 });
 
 test("internal diagnostics: db_schema OK for superadmin; production-only routes stay blocked", async (t) => {

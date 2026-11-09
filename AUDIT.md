@@ -16,6 +16,15 @@ Core มี integration tests สำหรับตรวจ authorization แ�
 | กลาง | Legacy integrations webhook สร้าง invoice จาก payload โดยไม่เห็น idempotency key หรือการตรวจ event ซ้ำใน route; การส่งซ้ำที่ผ่าน auth อาจสร้างรายการซ้ำ | [app/api/integrations/webhook/route.ts](./app/api/integrations/webhook/route.ts) | กำหนด event ID/idempotency และทดสอบ replay; แยกการใช้งานจาก Bridge endpoint ตามเอกสาร |
 | กลาง | helper ฝั่ง auth ใช้บริษัทแรกเป็นค่า fallback เมื่อไม่พบ company mapping และมีเส้นทางสร้างบริษัทเมื่อไม่พบข้อมูลบริษัท | [lib/auth.ts](./lib/auth.ts) | กำหนดนโยบายสำหรับ user ที่ไม่มี company mapping ให้ชัด และทดสอบกรณีไม่มี/ไม่ถูกต้องแทนการเลือก tenant เริ่มต้นโดยอัตโนมัติ |
 
+## ติดตามผลการตรวจ source (2026-11-09)
+
+ตรวจซ้ำเฉพาะเส้นทางที่ระบุใน findings โดยไม่เชื่อม Production:
+
+- **SSO — ยังเปิดอยู่:** `POST /api/auth/sso-token` ยังรับ audience ที่ไม่ว่างโดยไม่มี allowlist และหน้า login ยังใช้ redirect จาก query string ก่อนส่ง token ใน URL. เปิด handoff สำหรับ UI ของ Core ที่ [AI-HANDOFF/requests/REQ-008.md](./AI-HANDOFF/requests/REQ-008.md); การกำหนด allowlist และตรวจสิทธิ์ฝั่ง server ยังต้องทำแยกในงาน OpenCode.
+- **Legacy webhook — ยังเปิดอยู่:** `/api/integrations/webhook` ยังสร้าง invoice จาก payload โดยไม่มี idempotency check ใน route. `/api/bridge/sync` มี idempotency contract/log แยกต่างหาก จึงไม่ถือว่าแก้ replay ของ webhook นี้แล้ว.
+- **Company fallback — ยังเปิดอยู่:** `getUserCompanyId` ยังคืน company แรกเมื่อ user ไม่มี `company_id`; ต้องกำหนดนโยบายและปฏิเสธ mapping ที่หาย/ไม่ถูกต้องอย่างปลอดภัยก่อนถือว่าปิด finding.
+- รอบติดตามนี้เป็นการตรวจ source ใน worktree เท่านั้น ไม่ใช่การทดสอบ runtime หรือ Production และไม่ได้แก้ source code.
+
 ## ผลการตรวจ
 
 - `pnpm test`: ผ่าน 23 tests, ล้มเหลว 0; ข้าม 9 integration security tests เพราะไม่มี `MBS_TEST_BASE_URL`, `MBS_TEST_DATABASE_URL`, `MBS_TEST_JWT_SECRET`

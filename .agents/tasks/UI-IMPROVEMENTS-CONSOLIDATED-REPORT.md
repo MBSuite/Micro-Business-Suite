@@ -6,6 +6,22 @@
 **Auditor:** Kiro (UI/Frontend)  
 **Status:** Audit complete; recommendations ready for implementation  
 
+## Current Source Review (2026-11-09)
+
+The pending-work summary below is historical. A follow-up source review found that several listed UI changes are already present in the module repositories. Source presence does not verify a live SSO flow or production deployment.
+
+| Work item | Current source evidence | Current status |
+|---|---|---|
+| FNB REQ-02 appearance selection | Settings page exposes four menu background choices, saves the selected ID through `/api/settings`, and the customer menu loads the saved setting. | Implemented in source; save-and-render flow still needs runtime verification. |
+| FNB SSO UI | Login has local email/password and Core SSO controls; callback posts the token and shows loading/error/retry states. | UI exists in source; end-to-end SSO remains unverified. |
+| Retail SSO audit fixes | Login uses `NEXT_PUBLIC_APP_URL` with an origin fallback; callback defines a response type and redirect constant. | The noted fixes are already present in source; build/browser verification is not recorded here. |
+| Service SSO UI | Login has local email/password and Core SSO controls; callback posts the token and shows loading/error/retry states. | UI exists in source; standalone-mode behavior and end-to-end SSO remain unverified. |
+| Rental SSO UI | Login has local email/password and Core SSO controls; callback posts the token and shows loading/error/retry states. | UI exists in source; standalone-mode behavior and end-to-end SSO remain unverified. |
+| Hotel SSO UI | Login has local email/password and Core SSO controls; callback posts the token and displays loading/error/retry states. | UI exists in source; end-to-end SSO remains unverified. |
+| Pharmacy SSO UI | Login has local email/password and Core SSO controls; callback posts the token and displays loading/error/retry states. | UI exists in source; end-to-end SSO remains unverified. |
+
+The Retail, Service, Rental, Hotel, and Pharmacy login pages reviewed show SSO controls unconditionally; the documented requirement to hide SSO when `MBS_HUB_URL` is unset is not evidenced in those pages. Keep the affected handoffs open until standalone behavior is implemented or the requirement is explicitly withdrawn, and until the SSO flow is tested in an approved environment.
+
 ---
 
 ## Executive Summary
@@ -679,4 +695,3 @@ Before signing off on each module:
 **Report Generated:** 2026-11-08  
 **Auditor:** Kiro  
 **Verified Against:** AI-HANDOFF.md, AGENTS.md, REQ documents  
-

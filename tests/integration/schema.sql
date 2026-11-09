@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS companies (
     trial_end TIMESTAMP WITH TIME ZONE,
     license_key TEXT,
     customer_name VARCHAR(255),
+    business_type VARCHAR(50) NOT NULL DEFAULT 'general',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -107,6 +108,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS company_settings_company_id_key
     ON company_settings(company_id)
     WHERE company_id IS NOT NULL;
 
+CREATE TABLE IF NOT EXISTS company_module_settings (
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    module_id VARCHAR(100) NOT NULL,
+    is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_by INTEGER,
+    PRIMARY KEY (company_id, module_id)
+);
+
 CREATE TABLE IF NOT EXISTS contacts (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255),
@@ -126,6 +136,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     net_amount DECIMAL(15,2) NOT NULL,
     vat_amount DECIMAL(15,2) DEFAULT 0,
     total_amount DECIMAL(15,2) DEFAULT 0,
+    discount_amount DECIMAL(15,2) DEFAULT 0,
     status VARCHAR(20) DEFAULT 'sent',
     quotation_id INTEGER,
     company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL,
@@ -187,6 +198,27 @@ CREATE TABLE IF NOT EXISTS payment_vouchers (
     status VARCHAR(20) DEFAULT 'pending',
     company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS integration_connections (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    provider VARCHAR(50) NOT NULL,
+    status VARCHAR(20) DEFAULT 'disconnected',
+    last_sync_at TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS integration_webhook_events (
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    provider VARCHAR(50) NOT NULL,
+    event_id VARCHAR(255) NOT NULL,
+    event_name VARCHAR(100) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'processing',
+    result JSONB,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (company_id, provider, event_id)
 );
 
 -- Master tables ภายใต้ tenant scope (สอดคล้องกับ migrations/add_company_tenant_scope_master_tables.sql)

@@ -7,6 +7,7 @@ import { UserPlus, Lock, Mail, User, AlertCircle, ArrowLeft, CheckCircle, Databa
 import Link from "next/link";
 import { registerUser } from "./actions";
 import { checkAndInitUsersTable } from "./db-init";
+import { REGISTRATION_BUSINESS_TYPES } from "@/lib/registration-business-types.mjs";
 
 export default function RegisterPage() {
   const [error, setError] = useState("");
@@ -117,11 +118,9 @@ export default function RegisterPage() {
                 <div className="space-y-1">
                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Business Type (ประเภทธุรกิจ)</label>
                    <select name="businessType" required className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium">
-                     <option value="general">ทั่วไป (General)</option>
-                     <option value="retail">ร้านค้าปลีก (Retail)</option>
-                     <option value="fnb">ร้านอาหาร/คาเฟ่ (F&B)</option>
-                     <option value="pharmacy">ร้านขายยา (Pharmacy)</option>
-                     <option value="service">ธุรกิจบริการ (Service)</option>
+                     {REGISTRATION_BUSINESS_TYPES.map(({ value, label }) => (
+                       <option key={value} value={value}>{label}</option>
+                     ))}
                    </select>
                 </div>
 
