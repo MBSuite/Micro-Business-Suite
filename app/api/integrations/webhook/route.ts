@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import pool, { query } from "@/lib/db";
+import pool from "@/lib/db";
 import { auth, CompanyMappingError, getUserCompanyId } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
       );
       const prefix = settings[0]?.invoice_prefix || "INV";
 
-      await client.query("SELECT pg_advisory_xact_lock($1::int, hashtext($2))", [companyId, provider]);
+      await client.query("SELECT pg_advisory_xact_lock($1::bigint)", [companyId]);
       const { rows: last } = await client.query(
         `SELECT invoice_number FROM invoices
          WHERE company_id = $2 AND invoice_number LIKE $1

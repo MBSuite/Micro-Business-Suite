@@ -84,6 +84,12 @@ async function applySchema(client) {
   );
   const sql = readFileSync(path.join(import.meta.dirname, "schema.sql"), "utf8");
   await client.query(sql);
+  const webhookMigration = readFileSync(
+    path.join(ROOT, "migrations/add_integration_webhook_idempotency.sql"),
+    "utf8"
+  );
+  await client.query(webhookMigration);
+  await client.query(webhookMigration);
 }
 
 async function waitForApp() {

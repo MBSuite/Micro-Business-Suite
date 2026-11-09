@@ -10,7 +10,7 @@ import pool from "../lib/db";
 const databaseUrl = process.env.MBS_TEST_DATABASE_URL;
 const parsedDatabaseUrl = databaseUrl ? new URL(databaseUrl) : null;
 
-test("Rental and Hotel registration create isolated trial tenants with their packs", async () => {
+test("Rental and Hotel signup can log in and render their company dashboard", async () => {
   assert.equal(process.env.MBS_RUN_REGISTRATION_INTEGRATION, "1");
   assert.ok(parsedDatabaseUrl, "MBS_TEST_DATABASE_URL is required");
   assert.equal(process.env.DATABASE_URL, databaseUrl, "registration must use the isolated test database");
@@ -88,6 +88,38 @@ test("Rental and Hotel registration create isolated trial tenants with their pac
         );
         assert.deepEqual(moduleResult.rows.map((row) => row.module_id), expectedModules);
 
+        const loginResponse: Response = await fetch(`${process.env.MBS_TEST_BASE_URL}/api/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password: "test-password-only" }),
+        });
+        assert.equal(loginResponse.status, 200, `${businessType} account should log in`);
+        assert.deepEqual(await loginResponse.json(), {
+          success: true,
+          user: {
+            id: userResult.rows[0].id,
+            email,
+            name,
+            role: "user",
+          },
+        });
+        const sessionCookie = loginResponse.headers.get("set-cookie")?.split(";")[0];
+        assert.ok(
+          sessionCookie && /^session-token=.+$/.test(sessionCookie),
+          "login should set a session cookie",
+        );
+
+        const dashboardResponse: Response = await fetch(`${process.env.MBS_TEST_BASE_URL}/`, {
+          headers: { Cookie: sessionCookie },
+          redirect: "manual",
+        });
+        assert.equal(dashboardResponse.status, 200, `${businessType} account should see the dashboard`);
+        const dashboardHtml = await dashboardResponse.text();
+        assert.ok(
+          dashboardHtml.includes(name),
+          `${businessType} dashboard should display the newly registered company name`,
+        );
+
         const deleteResponse: Response = await fetch(
           `${process.env.MBS_TEST_BASE_URL}/api/users/${userResult.rows[0].id}`,
           {
@@ -139,7 +171,7 @@ test("module signup API creates each module account in the Core database", async
   const createdCompanyNames: string[] = [];
 
   try {
-    for (const [origin, businessType] of cases) {
+    for (const [index, [origin, businessType]] of cases.entries()) {
       const suffix = randomUUID();
       const companyName = `Module Signup ${businessType} ${suffix}`;
       const email = `module-${businessType}-${suffix}@registration-test.invalid`;
@@ -149,6 +181,7 @@ test("module signup API creates each module account in the Core database", async
         method: "POST",
         headers: {
           Origin: origin,
+          "X-Forwarded-For": `198.51.100.${index + 1}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -179,6 +212,7 @@ test("module signup API creates each module account in the Core database", async
       method: "POST",
       headers: {
         Origin: "https://malicious.example",
+        "X-Forwarded-For": "198.51.100.10",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

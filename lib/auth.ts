@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { query } from "./db";
 import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
