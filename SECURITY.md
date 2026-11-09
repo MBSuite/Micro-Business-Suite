@@ -27,7 +27,8 @@ These are implementation requirements and observed controls, not a guarantee tha
 - Do not return secrets such as OAuth tokens or RD API keys to the browser; expose only non-secret status indicators where appropriate.
 - `proxy.ts` applies session and role-based route checks. API handlers must also enforce authorization for their operations; proxy pass-through/public paths do not grant permission.
 - Migration scripts should be reviewed and tested on an isolated disposable database before any production change; do not assume every migration has been proven idempotent.
-- SSO has an open high-severity finding in [AUDIT.md](./AUDIT.md) and must not be represented as production-ready until remediated and verified.
+- There is no cross-site login or SSO. Each app (Core and the six modules) authenticates its own users with the custom `jose` JWT and issues its own session cookie; no token is shared across app domains.
+- The shared database (Neon for Dev, Supabase for Production) stores each app's users under its own table prefix. The legacy `core_user_id` columns remain for historical data but are no longer used by any flow.
 
 ## Out of Scope
 - Vulnerabilities in third-party dependencies (report upstream; we track via `npm audit`).

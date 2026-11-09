@@ -9,7 +9,7 @@
 >
 > **Revision 2 (2026-11-08):** ปรับตามข้อท้วง 5 ประเด็น — (1) การรวมฐานข้อมูล (2) shared identity/users กับ Core (3) tenant scope ของ `store_settings`/`prescription_items` (4) ขอบเขตสิทธิ์ migrator/ownership (5) rollback การ remap company ID
 >
-> **Revision 3 (2026-11-08):** ปรับตามข้อท้วงรอบ 2 — (1) แยกจังหวะ read-only inventory ออกจาก Vercel env ตาม HANDOFF §13 step 7 (2) เพิ่ม runbook data consolidation + ปัญหา `_prisma_migrations` ร่วม (3) แยกคำถามที่ขวาง Docker กับที่ขวาง Neon/Production (4) ยืนยัน namespace = public + prefix ตาม HANDOFF (ตัด schema-per-module ออกจากตัวเลือก) (5) ระบุสัญญา SSO (issuer/audience/claims/revocation/rotation) (6) บังคับ inventory key จริงก่อน backfill `store_settings`
+> **Revision 3 (2026-11-08):** ปรับตามข้อท้วงรอบ 2 — (1) แยกจังหวะ read-only inventory ออกจาก Vercel env ตาม HANDOFF §13 step 7 (2) เพิ่ม runbook data consolidation + ปัญหา `_prisma_migrations` ร่วม (3) แยกคำถามที่ขวาง Docker กับที่ขวาง Neon/Production (4) ยืนยัน namespace = public + prefix ตาม HANDOFF (ตัด schema-per-module ออกจากตัวเลือก) (5) ระบุสัญญา SSO (issuer/audience/claims/revocation/rotation) — ภายหลังถูกถอดออก 2026-11-09 (6) บังคับ inventory key จริงก่อน backfill `store_settings`
 >
 > **Revision 4 (2026-11-08):** ปรับตามข้อท้วงรอบ 3 — (1) เขียนวิธี staging ที่รันได้จริง (`pg_dump --data-only` ไม่สร้างตาราง/ไม่ย้าย schema) (2) เลือกเส้นทาง rename vs import ตามชนิด source ให้ชัด (3) ระบุสิทธิ์ของ `_prisma_migrations` ledger ต่อทางเลือก A/B/C (4) ระบุว่า Neon branch สืบทอดข้อมูลจาก parent — ต้องใช้ parent ว่าง/project ใหม่
 >
@@ -354,49 +354,23 @@ COMMIT;
 - เก็บ rollback SQL ไว้ในโฟลเดอร์ migration/แผน (ยังไม่รัน)
 - ตรวจว่า restore ได้จริงใน Docker/Neon branch ก่อนใช้ production
 
-### 3.6 บัญชีผู้ใช้ร่วมกับ Core (Shared Identity) — ปิดข้อท้วงข้อ 2
+### 3.6 บัญชีผู้ใช้และ Auth — ไม่มี SSO (ปิดข้อท้วงข้อ 2)
 
-**ข้อกำหนดเดิม (`docs/HANDOFF.md` §2/§4/§9):** Shared Core มี Auth (JWT SSO) ร่วมกัน และใช้ shared token + tenant isolation
+**สถานะที่เจ้าของยืนยัน (2026-11-09):** ระบบ **ไม่ใช้ SSO** และไม่มี cross-site login. Core และโมดูลทั้งหกใช้ฐานข้อมูล PostgreSQL ชุดเดียวกัน (Neon = Dev, Supabase = Production) แต่แต่ละแอปล็อกอินและออก session cookie ของตัวเอง
 
 **ข้อเท็จจริงปัจจุบัน:**
 
-- แต่ละ module มีตาราง `users` ของตัวเอง (unprefixed) + `SESSION_SECRET` ของตัวเอง
+- แต่ละ module มีตาราง `users` ที่มี prefix ของตัวเองใน shared DB + `SESSION_SECRET` ของตัวเอง
 - `lib/auth/session.ts` เซ็น JWT แบบ **HS256 ด้วย secret ต่อ module**, cookie ชื่อ `session`, payload มี `userId`, `role`, `companyId`
-- `lib/auth/rbac.ts` อ่าน role จาก **แถว `users` ใน DB ของ module ตัวเอง** ตาม `session.userId`
-- Core มีระบบ auth/ผู้ใช้ของตัวเอง (`users` ใน Core DB)
+- `lib/auth/rbac.ts` อ่าน role จากแถว `users` ในตารางของ module ตัวเองตาม `session.userId`
+- Core มีระบบ auth/ผู้ใช้ของตัวเอง
+- คอลัมน์ `core_user_id` ในตาราง users ของ module ยังคงอยู่เป็นข้อมูลเดิม แต่ไม่มี flow ใดอ่าน/เขียนแล้ว
 
-**ทางเลือกที่ต้องตัดสิน (เจ้าของเลือก 1 ข้อ):**
+**ผลต่อแผน shared DB:**
 
-| ทางเลือก | วิธี | ข้อดี | ข้อเสีย |
-|---|---|---|---|
-| **A. Core เป็น Identity Provider (แนะนำ)** | Core ออก **asymmetric JWT (RS256/EdDSA)**; module ตรวจด้วย public key (JWKS), **ไม่แชร์ `users` ข้าม DB**; module เก็บ profile บางส่วน keyed ด้วย `core_user_id` | ตรงกับ HANDOFF JWT SSO; module ไม่ต้องมี secret ร่วม; ไม่ต้องรวมตาราง `users`; standalone ยังใช้ local auth ได้ | ต้องแก้ `session.ts`/`rbac.ts` ทุก module + สร้าง JWKS endpoint ที่ Core + migration เพิ่ม `core_user_id` ใน module |
-| **B. Shared `users` table เดียว** | ทุก module อ่าน/เขียนตาราง `mbs_core_users` เดียวใน shared DB | ง่ายเชิงข้อมูล | ขัดหลัก least-privilege (module ต้องเข้าถึงตาราง Core), ผูก DB แข็ง, เสี่ยงแก้ข้อมูลผู้ใช้ข้ามผลิตภัณฑ์ |
-| **C. คง auth แยกต่อ module (ไม่ SSO)** | แต่ละ module มี `users` + secret ของตัวเอง (สภาพปัจจุบัน) | ไม่ต้องแก้โค้ด | **ไม่ตรงข้อกำหนด HANDOFF**; ผู้ใช้ต้องมีบัญชีแยกทุกแอป |
-
-**ข้อเสนอของแผนนี้ (A):**
-
-1. Core ออก token แบบ asymmetric; module ตรวจด้วย public key (JWKS URL ของ Core) — ไม่มี shared secret
-2. Module เก็บ mapping `core_user_id` → role ภายใน module (ตาราง `mbs_<module>_users` ยังมีอยู่ แต่ **ไม่ใช่แหล่ง identity หลัก**; ใช้เก็บ role/profile ต่อ module)
-3. Standalone mode (ไม่ตั้ง `MBS_HUB_URL`) ยังใช้ local auth เดิมได้ — ไม่บังคับ SSO
-4. **ไม่สร้างแถวผู้ใช้ร่วมใน Core DB** สำหรับ module และ **ไม่ให้ module อ่านตาราง `users` ของ Core**
-
-**ข้อเท็จจริงที่ต้องยอมรับก่อนเลือก (ตอบข้อท้วงข้อ 5):** asymmetric JWT SSO **ไม่เท่ากับ** การใช้ username/password ชุดเดียวกัน — SSO หมายถึง "ล็อกอินครั้งเดียวได้ session หลายแอป" แต่ถ้าเจ้าของต้องการ "บัญชี/รหัสเดียวใช้ได้ทุกแอป" ต้องมี identity store กลาง (Core) และมีขั้นตอน provision/ผูกบัญชีแยกต่างหาก
-
-**สัญญา SSO ที่ต้องกำหนดก่อนแก้ auth (ถ้าเลือก A):**
-
-| หัวข้อ | ต้องระบุ |
-|---|---|
-| Issuer (`iss`) | ค่าคงที่ของ Core เช่น `https://micro-business-suite.vercel.app` |
-| Audience (`aud`) | ระบุต่อ module เช่น `mbs-service`, `mbs-retail` (module ต้องตรวจ `aud` ตรงตัวเอง) |
-| Claims | `sub` (= `core_user_id`), `company_id`, `role` (role ภายใน module), `iat`, `exp`, `jti` |
-| Role mapping | role ใน token เป็นของ module นั้น หรือ Core ส่ง role กลางแล้ว module map เอง — **ต้องเลือกและทดสอบ** |
-| Session flow | Core login → ออก token → module ตั้ง cookie ของตัวเอง (httpOnly/secure/sameSite) หรือใช้ shared cookie domain — ต้องเลือก |
-| Revocation | ต้องมีทางเพิกถอน (short exp + refresh, หรือ denylist `jti`) — ระบุวิธี |
-| Key rotation | JWKS ต้องรองรับ `kid` หลายตัว + rotation โดยไม่ทำให้ session ทั้งหมดหลุด |
-| Clock skew | กำหนด tolerance (เช่น 60 วินาที) |
-| Standalone | ไม่ตั้ง `MBS_HUB_URL` → ใช้ local auth + `SESSION_SECRET` เดิม |
-
-> **สถานะ:** ยังเป็นข้อเสนอ ต้องให้เจ้าของเลือก A/B/C **และยืนยันเจตนา** (SSO session อย่างเดียว หรือต้องการบัญชี/รหัสชุดเดียวทุกแอป) ก่อน implement; แผนนี้ **ไม่รวม** การแก้ auth จริง (เป็นงานแยกหลังอนุมัติ)
+1. ไม่ต้องรวมตาราง `users`, ไม่ต้องสร้าง JWKS/token exchange และไม่ต้องแก้ `session.ts`/`rbac.ts` เพื่อ SSO
+2. งานที่เหลือคือ tenant isolation (`company_id`), สิทธิ์ DB ตาม §4 และการทดสอบ login ของแต่ละแอป
+3. ห้ามเพิ่ม SSO/token ข้ามแอปกลับเข้ามาโดยไม่ได้รับคำสั่งจากเจ้าของ
 
 ### 3.7 Tenant scope ที่ยังขาด — ปิดข้อท้วงข้อ 3
 
@@ -615,13 +589,9 @@ CREATE TABLE mbs_<module>_company_remap_log (
 | P6 | ยืนยัน `store_settings` key inventory (§3.7) ก่อนออกแบบ backfill |
 | P7 | ยืนยัน rollback = snapshot เป็นหลัก + journal table (§5.4) |
 
-### 6.4 ต้องตอบก่อนแก้ auth (ไม่ขวาง DB rehearsal)
+### 6.4 Auth — ยืนยันแล้ว (ไม่มีคำถามค้าง)
 
-| # | คำถาม |
-|---|---|
-| A1 | Shared identity: A (Core เป็น IdP) / B (shared `users` table) / C (คง auth แยก) |
-| A2 | เจตนาจริง: ต้องการ **SSO session อย่างเดียว** หรือ **บัญชี/รหัสชุดเดียวใช้ได้ทุกแอป** (§3.6) |
-| A3 | ถ้า A: อนุมัติสัญญา issuer/audience/claims/role mapping/session flow/revocation/key rotation ตาม §3.6 |
+เจ้าของยืนยัน 2026-11-09: ใช้ **auth แยกต่อแอป ไม่มี SSO** และไม่มี shared token ข้ามโดเมน งาน auth ที่เหลือคือ tenant isolation และการทดสอบ login/สิทธิ์ของแต่ละแอปเท่านั้น
 
 ---
 
@@ -648,4 +618,4 @@ CREATE TABLE mbs_<module>_company_remap_log (
 
 **หมายเหตุ:** G1/G1b/G2 ใช้ fixture/empty DB เท่านั้น; **ห้ามถือว่า Neon branch ว่าง** — ลำดับแนะนำคือ project ใหม่/parent ว่าง, รองลงมาคือ DB ใหม่ใน branch disposable, และ `DROP SCHEMA public CASCADE` เป็นทางเลือกสุดท้ายเฉพาะ branch ที่ยืนยัน disposable + มี backup; G3 เป็น read-only metadata inspection แยกจาก Vercel env change โดยสิ้นเชิง (HANDOFF §13 step 7: "Do not request Vercel access before these acceptance criteria pass")
 
-> **งาน implement ที่ยังไม่เริ่ม:** `.env.example` (เลิก `MBS_COMPANY_ID=1`), `prisma.config.ts` (`DIRECT_URL`), schema prefix และ migration names ที่ unique ต่อ module — ต้องผ่าน G1b แยกก่อน G2; SSO — ทุกอย่างต้องอนุมัติตามลำดับ
+> **งาน implement ที่ยังไม่เริ่ม:** `.env.example` (เลิก `MBS_COMPANY_ID=1`), `prisma.config.ts` (`DIRECT_URL`), schema prefix และ migration names ที่ unique ต่อ module — ต้องผ่าน G1b แยกก่อน G2; SSO ถูกถอดออกแล้ว (ดู §3.6) ไม่มีงาน SSO ค้างในแผนนี้

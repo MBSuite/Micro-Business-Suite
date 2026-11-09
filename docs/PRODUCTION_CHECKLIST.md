@@ -6,9 +6,12 @@
 
 - **ยังห้ามสรุปว่า Production Ready หรือผ่านการรับรองจาก checklist นี้**
 - Gate 1 (Dev): ต้องสมัครสมาชิกและลบสมาชิกได้จริงบนฐาน Dev จึงจะถือว่าผ่านการทดสอบรอบนี้
-- สิ่งที่ยืนยันแล้วสำหรับการเปลี่ยนแปลงนี้: สมัคร Rental/Hotel และตรวจ/ลบข้อมูล
-  ทดสอบได้บนฐานข้อมูล disposable ในเครื่อง; unit, typecheck และ integration ผ่าน
+- สิ่งที่ยืนยันแล้วบนฐาน disposable ในเครื่อง: สมัคร Rental/Hotel → login ด้วยบัญชีใหม่
+  → หน้า dashboard ตอบ 200 และแสดงชื่อบริษัท → ลบสมาชิกสำเร็จ
+- ผลทดสอบนี้ไม่ใช่การยืนยันบนฐาน Dev; Gate 1 ยังไม่ผ่าน
 - **ยังไม่ได้** ยืนยัน signup และ delete จริงบนฐาน Dev จึงยังไม่ผ่าน Gate 1
+- SSO ข้ามแอปถูกถอดออกจาก source ทั้ง Core และ 6 modules แล้ว; ระบบใช้การล็อกอินแยกต่อแอป
+  และไม่มี release gate ด้าน SSO อีก (คอลัมน์ `core_user_id` เดิมคงไว้โดยไม่ลบ)
 - เจ้าของยืนยันว่า Neon เป็นฐาน Dev และ Supabase เป็นฐาน Production; ไม่มีการเขียน
   ข้อมูลทดสอบลง Supabase Production
 - Gate 2 (หลัง Gate 1 ผ่าน): ทำและตรวจ 2FA
@@ -24,7 +27,7 @@
 - [x] `npm run build` — ผ่าน (Compiled successfully)
 - [x] `tsc --noEmit` — ผ่าน (0 errors)
 - [x] `npm run lint` — 0 errors (327 warnings)
-- [x] `pnpm test` — 27 passed, 12 skipped, 0 failed (local workspace, 2026-11-09)
+- [x] `pnpm test` — 31 passed, 15 skipped, 0 failed (local workspace; integration tests skipped by default)
 - [x] Lint errors 23 รายการ — แก้หมด (TDZ, unescaped entities, `any`, Date.now, `<a>`→`<Link>`, setState-in-effect)
 
 ### Security
@@ -41,6 +44,7 @@
 - [x] Migrations apply บน Neon — 53 tables
 - [x] Column types ตรง (expenses, invoices, payment_vouchers) — `check:column-types` 3/3
 - [x] Company settings + tenant scope migrations applied
+- [ ] `migrations/add_integration_webhook_idempotency.sql` — validated on disposable local PostgreSQL; target environment migration not applied
 - [x] Bootstrap runner idempotent (`scripts/bootstrap-init-db.mjs`)
 
 ### Performance
@@ -83,11 +87,13 @@
 - [x] **Recurring billing (cron)** — ตั้งแล้ว (`RECURRING_SECRET` + `CRON_ENABLED=true`)
 
 ### Testing
-- [x] **Integration tests** — 12/12 pass และ registration integration 1/1 pass (2026-11-09) บน disposable Docker container `mbs-integration-pg`; ไม่ใช่ Dev gate หรือ Production acceptance
+- [x] **Integration tests** — security 14/14 และ registration 2/2 pass on disposable Docker container `mbs-integration-pg` (2026-11-09); registration verifies signup → login → dashboard HTTP 200 with the new company name → member deletion; not Dev gate or Production acceptance
+- [x] **Unit tests** — `npm test`: 44 passed, 14 skipped, 0 failed (includes 13 tax-automator tests); integration cases skip unless `MBS_TEST_*` is set
+- [x] **Typecheck / lint** — `tsc --noEmit` 0 errors; `eslint` 0 errors, 331 warnings
 
 ### Vulnerabilities
-- [x] **No actionable vulnerabilities** — transitive deps ของ googleapis (glob/minimatch) ไม่กระทบ core logic และแก้ไม่ได้โดยไม่เสี่ยง build; ไม่ใช่ประเด็นที่ต้องพูดถึง
-  - แก้ได้เมื่อ googleapis release version ใหม่ที่ patch แล้ว
+- [x] ไม่มี SSO หรือ cross-site token exchange ใน source — ถอด endpoint/callback/JWKS/allowlist ออกแล้ว; ไม่มี checklist ด้าน SSO ค้าง
+- [x] Legacy webhook idempotency and missing-company fail-closed behavior verified on the disposable local integration database.
 
 ### Cold Start (Neon)
 - [ ] **Neon scale-to-zero** — ถ้าช้าหลัง deploy:

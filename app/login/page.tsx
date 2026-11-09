@@ -1,19 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 "use client";
 
-import { useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { LogIn, Lock, Mail, ShieldCheck, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
-function LoginPageInner() {
+export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const audience = searchParams.get("audience") || "";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,16 +31,6 @@ function LoginPageInner() {
       if (!res.ok) {
         setError(data.error || "เข้าสู่ระบบไม่สำเร็จ");
       } else {
-        // If SSO callback was requested, redirect to SSO callback page
-        // (token will be fetched server-side, not exposed in URL)
-        if (audience) {
-          const ssoCallbackUrl = new URL("/auth/sso-callback", window.location.origin);
-          ssoCallbackUrl.searchParams.set("audience", audience);
-          console.log("[LOGIN] Redirecting to SSO callback...");
-          window.location.href = ssoCallbackUrl.toString();
-          return;
-        }
-
         console.log("[LOGIN] Redirecting to /");
         window.location.href = "/";
       }
@@ -154,14 +140,5 @@ function LoginPageInner() {
         </div>
       </div>
     </main>
-  );
-}
-
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">กำลังโหลด...</div>}>
-      <LoginPageInner />
-    </Suspense>
   );
 }

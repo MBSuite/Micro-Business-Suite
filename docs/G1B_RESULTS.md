@@ -2,7 +2,7 @@
 
 Date: 2026-11-08
 Scope: Real prefixed migrations of all 6 modules deployed serially on a shared PostgreSQL database (Docker), proving the shared-DB deploy mechanism end-to-end.
-Not in scope: Neon, production data, Vercel env, deploy, auth/SSO, data import.
+Not in scope: Neon, production data, Vercel env, deploy, auth, data import.
 
 ## Environment
 - Container: `mbs-g1b-pg` (disposable, `postgres:16-alpine`, PG 16.15) — removed after rehearsal
@@ -42,7 +42,7 @@ Not in scope: Neon, production data, Vercel env, deploy, auth/SSO, data import.
 - Neon behaviour (pooled vs direct, advisory lock, branch) → G2.
 - Production PostgreSQL version → G3.
 - Data import / enum compatibility / store_settings tenant scope → G3/G4.
-- Auth/SSO → separate approval (§6.4).
+- Auth (per-app login, no SSO) → separate approval (§6.4).
 
 ## Cleanup
 - Container `mbs-g1b-pg` removed; anonymous volumes removed.

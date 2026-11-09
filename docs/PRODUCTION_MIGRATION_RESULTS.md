@@ -33,7 +33,7 @@ Scope: Create module-prefixed tables + roles + grants on the shared production D
 - Rotate role passwords: rotated to Vercel env vars (DATABASE_URL/DIRECT_URL); `/tmp` password file deleted; test keys (G2_DIRECT_URL) removed from `.env.local`.
 
 ## Pending (dedicated pass)
-- Auth/SSO (§3.6/§6.4): Option A implemented (Core JWKS + SSO token + module SSO endpoint + wiring). End-to-end test on deployed apps pending.
+- Auth (§3.6/§6.4): SSO ถูกถอดออกทั้งหมดตามคำสั่งเจ้าของ — Core และ 6 modules ล็อกอินแยกกันบนฐานข้อมูลร่วม ไม่มี token ข้ามแอป; คอลัมน์ `core_user_id` เดิมคงไว้โดยไม่ลบ
 - Data import from old module DBs: production module tables were empty at migration time; nothing to import.
 
 ## Status

@@ -1,39 +1,35 @@
 # Source Audit — Micro-Business-Suite (Core)
 
-**วันที่ตรวจ:** 2026-11-08  
-**ขอบเขต:** static review ของ source, เอกสาร, scripts และ local automated checks  
-**ผลทดสอบ Production:** ไม่ได้ทดสอบและไม่สามารถยืนยันสถานะ Production จากการตรวจนี้ได้
+**วันที่อัปเดต:** 2026-11-09
+**ขอบเขต:** source review และ automated checks บนฐาน PostgreSQL แบบ disposable
+**ผลทดสอบ Dev/Production:** ไม่ได้ทดสอบบน Dev หรือ Production และไม่สามารถยืนยันการทำงานของสอง environment นี้ได้
 
 ## สรุป
 
-Core มี integration tests สำหรับตรวจ authorization และ tenant boundaries แต่การทดสอบเหล่านั้นต้องใช้ test URL, database และ JWT test secret ซึ่งไม่ได้ตั้งค่าใน session นี้ จึงถูก skip ตาม safety guard ของ test เอง ไม่ได้ทดสอบ SSO/API แบบ end-to-end
+Core ไม่มีระบบ SSO ข้ามแอป: endpoint ออก token/JWKS, callback และ allowlist ถูกถอดออกจาก source แล้ว และหน้า login รับเฉพาะอีเมล/รหัสผ่านของ Core เอง ส่วน webhook replay และ company fallback ได้รับการแก้ใน source และทดสอบบนฐาน disposable แล้ว แต่ Dev signup/delete, 2FA และ Production acceptance ยังไม่ผ่านการยืนยัน
 
-## ประเด็นที่พบ
+## Findings และสถานะปัจจุบัน
 
-| ระดับ | ประเด็น | หลักฐานจาก source | ข้อเสนอแนะ |
-|---|---|---|---|
-| สูง | API ออก SSO token รับ audience จาก request โดยตรวจเพียงว่ามีค่า และลงลายเซ็นตามค่านั้น ขณะที่หน้า login รับ redirect จาก URL แล้วแนบ token ใน query string | [app/api/auth/sso-token/route.ts](./app/api/auth/sso-token/route.ts), [app/login/page.tsx](./app/login/page.tsx) | จำกัด audience ด้วย allowlist ที่ฝั่ง Core และ callback ด้วยรายชื่อ URL ของโมดูล; เพิ่ม test ปฏิเสธ audience/callback ที่ไม่รู้จัก |
-| กลาง | Legacy integrations webhook สร้าง invoice จาก payload โดยไม่เห็น idempotency key หรือการตรวจ event ซ้ำใน route; การส่งซ้ำที่ผ่าน auth อาจสร้างรายการซ้ำ | [app/api/integrations/webhook/route.ts](./app/api/integrations/webhook/route.ts) | กำหนด event ID/idempotency และทดสอบ replay; แยกการใช้งานจาก Bridge endpoint ตามเอกสาร |
-| กลาง | helper ฝั่ง auth ใช้บริษัทแรกเป็นค่า fallback เมื่อไม่พบ company mapping และมีเส้นทางสร้างบริษัทเมื่อไม่พบข้อมูลบริษัท | [lib/auth.ts](./lib/auth.ts) | กำหนดนโยบายสำหรับ user ที่ไม่มี company mapping ให้ชัด และทดสอบกรณีไม่มี/ไม่ถูกต้องแทนการเลือก tenant เริ่มต้นโดยอัตโนมัติ |
+| ประเด็นเดิม | สถานะ source ปัจจุบัน | หลักฐาน/ข้อจำกัดที่ยังเหลือ |
+|---|---|---|
+| SSO ข้ามแอป (Core → module) | ถอดออกจาก source ทั้งหมด: ลบ `app/api/auth/sso-token`, `app/api/auth/jwks`, `app/auth/sso-callback`, `lib/sso-trust` และหน้า `/login` ไม่รับ `audience`/`redirect` แล้ว | คงคอลัมน์ `core_user_id` ที่มีอยู่ในฐานข้อมูลโดยไม่ลบ; ระบบไม่มีการล็อกอินข้ามเว็บ และไม่ได้ออกแบบให้ทำได้ |
+| Legacy webhook สร้างข้อมูลซ้ำเมื่อ replay | แก้และทดสอบบนฐาน disposable แล้ว: บังคับ idempotency key และบันทึก event/result กับ invoice ใน transaction เดียว | migration `migrations/add_integration_webhook_idempotency.sql` ยังไม่ได้ apply บน environment เป้าหมาย |
+| Auth เลือกบริษัทแรกเมื่อ company mapping หาย | แก้และทดสอบบนฐาน disposable แล้ว: ปฏิเสธ mapping ที่หายหรือไม่ถูกต้อง แทนการเลือก tenant เริ่มต้น | ตรวจและจัด mapping ผู้ใช้จริงด้วยข้อมูลที่เจ้าของอนุมัติก่อน rollout; ห้ามเดา tenant |
 
 ## ติดตามผลการตรวจ source (2026-11-09)
 
 ตรวจซ้ำเฉพาะเส้นทางที่ระบุใน findings โดยไม่เชื่อม Production:
 
-- **SSO — ยังเปิดอยู่:** `POST /api/auth/sso-token` ยังรับ audience ที่ไม่ว่างโดยไม่มี allowlist และหน้า login ยังใช้ redirect จาก query string ก่อนส่ง token ใน URL. เปิด handoff สำหรับ UI ของ Core ที่ [AI-HANDOFF/requests/REQ-008.md](./AI-HANDOFF/requests/REQ-008.md); การกำหนด allowlist และตรวจสิทธิ์ฝั่ง server ยังต้องทำแยกในงาน OpenCode.
-- **Legacy webhook — ยังเปิดอยู่:** `/api/integrations/webhook` ยังสร้าง invoice จาก payload โดยไม่มี idempotency check ใน route. `/api/bridge/sync` มี idempotency contract/log แยกต่างหาก จึงไม่ถือว่าแก้ replay ของ webhook นี้แล้ว.
-- **Company fallback — ยังเปิดอยู่:** `getUserCompanyId` ยังคืน company แรกเมื่อ user ไม่มี `company_id`; ต้องกำหนดนโยบายและปฏิเสธ mapping ที่หาย/ไม่ถูกต้องอย่างปลอดภัยก่อนถือว่าปิด finding.
-- รอบติดตามนี้เป็นการตรวจ source ใน worktree เท่านั้น ไม่ใช่การทดสอบ runtime หรือ Production และไม่ได้แก้ source code.
-
-## ผลการตรวจ
-
-- `pnpm test`: ผ่าน 23 tests, ล้มเหลว 0; ข้าม 9 integration security tests เพราะไม่มี `MBS_TEST_BASE_URL`, `MBS_TEST_DATABASE_URL`, `MBS_TEST_JWT_SECRET`
-- `pnpm lint`: จบโดยไม่มี lint errors แต่มี 335 warnings
-- `pnpm build`: Next.js compile สำเร็จ
-- ไม่อ่านค่า secret จาก `.env*`, ไม่เชื่อมฐานข้อมูล, ไม่ล็อกอิน และไม่เรียก Production
+- **SSO — removed:** ไม่มี token exchange, JWKS, callback หรือ allowlist ของ Core→module ใน source; ทุกแอปเข้าสู่ระบบด้วยบัญชีของตนเองบนฐานข้อมูลร่วมกัน ไม่มี cross-site login
+- **Legacy webhook — source fix verified locally:** `/api/integrations/webhook` requires an idempotency key and writes the event/result and invoice in one transaction. Duplicate concurrent delivery creates one invoice in the disposable integration test. The additive migration `migrations/add_integration_webhook_idempotency.sql` must be applied on each target environment before the endpoint is used.
+- **Company fallback — source fix verified locally:** `getUserCompanyId` now rejects missing or invalid company mapping rather than returning the first company. The webhook integration test confirms an unmapped user receives `403`. Review/backfill unmapped real users with owner-approved mapping before rollout; do not infer their tenant.
+- Verification on 2026-11-09: disposable integration harness passed security 14/14 and registration 2/2. Registration coverage creates trial tenants, logs in with each new account, requests `/`, verifies HTTP 200 and the new company name in dashboard HTML, then verifies member deletion. `npm test` passed 44 tests (13 of them tax-automator unit tests) with 14 integration cases skipped by the safety guard; `tsc --noEmit` reported 0 errors; `eslint` reported 0 errors and 331 warnings. This is local disposable-database evidence, not Dev or Production acceptance.
+- All integration writes ran against named disposable local PostgreSQL container `mbs-integration-pg`. `.env.local` targets Neon Dev, but was moved aside by the harness and restored; no Neon or Production data was written. Local signup/delete acceptance is not the owner-required Dev acceptance and does not establish Production readiness.
 
 ## ข้อจำกัดและสิ่งที่ยังไม่ยืนยัน
 
-- ไม่มี E2E run; การเปิดใช้งาน integration tests ต้องยืนยัน disposable test database และ local/test app ก่อน ห้ามใช้ Production
-- ไม่ได้ตรวจ runtime configuration, Vercel logs หรือผล SSO/API จริง
-- พบไฟล์งานเดิมที่ยังไม่ commit/untracked ใน worktree ก่อนเพิ่มรายงานนี้; ไม่ได้แก้ไขหรือลบไฟล์เหล่านั้น
+- `npm test` โดยไม่มี test environment ข้าม integration cases ตาม safety guard; dedicated disposable harness รันผ่าน security 14/14 และ registration 2/2
+- Local signup/delete test ไม่เท่ากับ Gate 1: signup และ delete จริงบน Dev ยังไม่ได้ยืนยัน
+- ตาม `docs/DECISIONS.md`, เริ่ม 2FA หลัง Dev signup/delete ผ่านเท่านั้น; 2FA ยังไม่ได้ทำ/ทดสอบ
+- ไม่ได้ตรวจ runtime configuration, Vercel logs, Dev acceptance หรือ Production
+- Production deploy/migration/testing ยังไม่ได้ทำ; ไม่มีการเขียนหรือเปลี่ยนข้อมูล Production ในการตรวจครั้งนี้

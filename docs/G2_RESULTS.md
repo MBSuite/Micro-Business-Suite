@@ -3,7 +3,7 @@
 Date: 2026-11-08
 Target: `G2_DIRECT_URL` (`ep-young-king-a1n3x2ud`, Neon, direct/non-pooled) — disposable rehearsal DB, separate from production (`ep-delicate-base-b31rx7ol`).
 Scope: Deploy all 6 modules' prefixed migrations on Neon; verify Neon-specific behaviour (PG version, pooled vs direct, advisory lock) and app-role isolation.
-Not in scope: production data, Vercel env, deploy, auth/SSO, data import.
+Not in scope: production data, Vercel env, deploy, auth, data import.
 
 ## Environment
 - Neon project: `ep-young-king-a1n3x2ud` (ap-southeast-1), DB `neondb`
@@ -37,7 +37,7 @@ Not in scope: production data, Vercel env, deploy, auth/SSO, data import.
 ## Not proven by G2 (requires later gates)
 - Production source inventory / row counts / company mapping → G3
 - Env change + deploy + data import → G4
-- Auth/SSO → separate approval (§6.4)
+- Auth (per-app login, no SSO) → separate approval (§6.4)
 - Concurrent deploy race / failed-migration recovery on Neon (covered by G1 T9/T10 on Docker; behaviour expected identical)
 
 ## Cleanup

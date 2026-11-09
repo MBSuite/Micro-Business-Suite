@@ -13,8 +13,8 @@
 - Rollback plan:
 
 ### [2026-11-09] Align authentication and security documentation with implementation
-- Context: The security policy described complete tenant isolation and migration guarantees, referred to middleware-based authorization, and did not disclose the open SSO finding. README also described Neon as the only database provider despite the current Dev/Production split.
-- Decision: Document observed authentication behavior precisely, distinguish proxy pass-through from route authorization, identify the unresolved SSO finding, and describe PostgreSQL providers by environment without claiming unverified guarantees.
+- Context: The security policy described complete tenant isolation and migration guarantees, referred to middleware-based authorization, and did not reflect that the cross-site SSO experiment had been removed. README also described Neon as the only database provider despite the current Dev/Production split.
+- Decision: Document observed authentication behavior precisely, distinguish proxy pass-through from route authorization, state that each app authenticates its own users (no SSO), and describe PostgreSQL providers by environment without claiming unverified guarantees.
 - Alternatives considered: Leave the previous absolute security claims in place or make implementation changes across auth and UI ownership boundaries as part of a documentation request.
 - Why this was chosen: Keeps public and contributor-facing documentation factual while preserving the existing protected-file and Kiro/OpenCode ownership boundaries.
 - Impacted files/modules: `AUTH_RULES.md`, `SECURITY.md`, README authentication/database notes.
@@ -120,11 +120,11 @@
 - Context: HANDOFF.md section 9 ระบุ 3 คำถามที่ต้องยืนยันก่อนเริ่ม Phase 3 (Bridge/Sync). ผู้ใช้ยืนยันทั้ง 3 ข้อใน session นี้.
 - Decision:
   1. Sync endpoint: **สร้าง `/api/bridge/sync` ใหม่** (loose coupling, versioning, idempotency, batch sync, retry) — ไม่แตะ `/api/integrations/webhook` เดิม (legacy e-commerce/delivery)
-  2. Auth: **JWT เดียวกัน (SSO)** ผ่าน MBS Core — Suite ใช้ shared token
-  3. Tenant: **multi-tenant `company_id` เดียวกัน** ระหว่าง MBS Core + Suites (tenant isolation ผ่าน RLS/filter) — ไม่แยก DB ต่อ company
-- Alternatives considered: ใช้ `/api/integrations/webhook` ที่มีอยู่; แยก auth ต่อ Suite; แยก database ต่อ company.
+  2. Auth: **แต่ละแอปล็อกอินและออก session ของตัวเอง — ไม่มี SSO/shared token** (บันทึก 2026-11-09: SSO ถูกถอดออกทั้งหมด)
+  3. Tenant: **multi-tenant `company_id` เดียวกัน** ระหว่าง MBS Core + Suites (tenant isolation ผ่าน RLS/filter) — ใช้ PostgreSQL ชุดเดียว ไม่แยก DB ต่อ company
+- Alternatives considered: ใช้ `/api/integrations/webhook` ที่มีอยู่; ใช้ SSO ข้ามแอป (ถูกถอดออกภายหลัง); แยก database ต่อ company.
 - Why this was chosen: ลด coupling, ใช้ auth/tenant model ที่มีอยู่แล้ว, ไม่เพิ่ม infra; สอดคล้องกับ constraint "ไม่เปลี่ยนแปลง MBS Core" (Bridge เป็น plugin/module layer).
-- Impacted files/modules: `app/api/bridge/sync` (ใหม่), `lib/auth.ts` (อ่าน shared JWT, ไม่แก้ core), `lib/db.ts` (tenant filter), `lib/module-registry.ts`, `lib/plugin-packs.ts`, Suite standalone apps (Micro-Menu-Online เป็น priority).
+- Impacted files/modules: `app/api/bridge/sync` (ใหม่), `lib/auth.ts` (ตรวจ session ของแอปเอง), `lib/db.ts` (tenant filter), `lib/module-registry.ts`, `lib/plugin-packs.ts`, Suite standalone apps (Micro-Menu-Online เป็น priority).
 - Rollback plan: revert commit ของ bridge route + plugin layer; endpoint ใหม่เป็น additive ไม่แตะ core/webhook เดิม, จึง rollback ได้โดยไม่กระทบ MBS Core.
 
 ### [2026-11-07] ข้อมูลสำรวจ (exploration findings)
@@ -160,31 +160,17 @@
 - **Revision 7 (2026-11-08):** เจ้าของ review Revision 6 และระบุ 1 จุด (ยังไม่อนุมัติ G1/D4/D5/D6): ตัวอย่าง cast `col::text::public.mbs_<module>_<enum>` ใน §2.6.1.1 ใช้ไม่ได้ใน query ฝั่ง source เพราะ enum ของ target อยู่คนละ database → แก้เป็น "ฝั่ง source ส่ง `col::text` เท่านั้น, ฝั่ง target ให้ `\copy` แปลงเป็นชนิดคอลัมน์ staging (สร้างจาก target prefixed table จึงเป็น enum ของ target) และ `INSERT ... SELECT` ไม่ต้อง cast" + กำหนดให้หยุดรายงานถ้า target ปฏิเสธค่า enum. ยังไม่มี migration/schema/env/Vercel/deploy ใดๆ.
 - **Revision 8 (2026-11-08):** บันทึกผล G1 synthetic Docker rehearsal จาก `/tmp/opencode/g1-synthetic/RESULTS.md` (ตามผลทดสอบที่ส่งให้เจ้าของ): Prisma 7.10.0, PostgreSQL 16.15, synthetic fixture 3 โมดูล; ทางเลือก A ผ่าน deploy แบบ serial เมื่อ bootstrap/grant ledger ครบ. พบ migration name ซ้ำทำให้ Prisma skip เงียบ (T8), failed ledger row บล็อกทุกโมดูลด้วย P3009 (T9), deploy พร้อมกันเกิด race (T10), และ app role ต้อง explicit DML grants (T5). กำหนด migration folder names ให้ unique ต่อ module, bootstrap ledger แบบตายตัว, deploy serial, ตรวจ/แจ้งก่อน `migrate resolve`, และ grants เฉพาะ object ของโมดูล. G1b ยังไม่เริ่ม; ไม่ทดสอบ migrations จริงของ 6 โมดูล, Neon, production, env หรือ deploy. Container `mbs-shared-modules-test-pg` ถูกลบตามคำสั่ง; Docker volume ไม่ได้ถูกลบ.
 
+### [2026-11-09] Single shared database, Core as HQ, and removal of cross-site SSO
 
-### [2026-11-09] Secure Core SSO token transport — eliminate URL exposure
-- Context: AUDIT.md recorded high-severity finding: Core login page accepted arbitrary `redirect` and `audience` from query parameters and returned SSO tokens in URL query strings (exposing tokens to browser history, referrers, logs). `/api/auth/sso-token` accepted any non-empty audience without allowlist validation.
-- Decision: 
-  1. **Backend (OpenCode):** Implement allowlist (`lib/sso-trust.ts`, `app/api/auth/sso-token/route.ts`) that validates audience against trusted modules and their callback URLs. Return SSO token only in httpOnly cookie, never in response body or URL.
-  2. **Frontend (Kiro):** Remove `redirect` parameter handling from `/login`. After successful login, redirect to `/auth/sso-callback?audience=<audience>` (audience only, no token). New callback page POSTs to `/api/auth/sso-token`, receives token in httpOnly cookie, and redirects to module callback URL (no token in URL).
-  3. **Module integration:** Module SSO buttons link to Core `/login?audience=mbs-<module>` → Core→SSO callback → module callback page receives token via httpOnly cookie only.
-- Alternatives considered: 
-  - Keep tokens in URLs (status quo) — rejected due to security exposure.
-  - JWT-signed state parameter with expiration — added complexity; simple audience-based allowlist is sufficient given cookie-based token transport.
-  - Server-side 302 redirect at token issuance — also secure but requires more backend coordination; POST+cookie is simpler and equally safe.
-- Why this was chosen: Eliminates token exposure in URLs/history while keeping local email/password login available and not requiring module code changes. Backend allowlist is extensible for future modules. Matches OIDC/OAuth 2.0 best practices (tokens only in headers/cookies).
-- Impacted files/modules:
-  - `app/login/page.tsx` — Removed token-in-URL pattern.
-  - `app/auth/sso-callback/page.tsx` — NEW: Secure token exchange page.
-  - `lib/sso-trust.ts` — Allowlist (OpenCode).
-  - `app/api/auth/sso-token/route.ts` — Validation + allowlist enforcement (OpenCode).
-  - `app/api/auth/jwks/route.ts` — OIDC public key endpoint (unchanged).
-  - REQ-008 handoff updated with implementation and acceptance.
-- Rollback plan: 
-  - Revert `/auth/sso-callback` page deletion and `/login` page token-in-URL pattern restoration.
-  - Keep backend allowlist and cookie-based token transport; removing them would reintroduce the security finding.
-  - If modules report integration issues, verify they are POSTing to their `/api/auth/sso` with the token in httpOnly cookies (not extracting from URL).
-- Verification:
-  - ✅ TypeScript compile: no errors.
-  - ✅ Local login (email/password, no SSO) continues to work.
-  - ✅ Token NOT in URL, NOT in browser history.
-  - ✅ Test with module audience allowlist (manual or E2E on deployed modules, out of scope for Core-only work).
+- Context: The owner clarified the product model: all seven apps are standalone but share one PostgreSQL database (Neon for Dev, Supabase for Production). Core acts as the company headquarters (accounting, tax, stock overview, HR/payroll, company-level reporting), while the six modules act as branch/operational systems. The earlier SSO experiment was never a product requirement and its Core-to-module token transport could not work across unrelated app domains.
+- Decision:
+  1. **One shared database.** Core and all six modules connect to the same PostgreSQL database. Each app owns and accesses only its own prefixed tables. Cross-app integration goes through the authenticated API/Bridge contract with source IDs and idempotency keys.
+  2. **Core = HQ, modules = branches.** A customer with branches buys Core plus the modules it needs; modules post daily revenue and payment events to Core so Core can consolidate accounting, tax, and branch reporting. An SME without branches can buy a single module and run it standalone.
+  3. **No SSO.** Remove every cross-site login artifact from Core and the six modules: token endpoint, JWKS endpoint, SSO callback page, SSO verifier library, allowlist, environment variables, UI entry points, and tests. Each app authenticates its own users and issues its own session cookie.
+  4. **Do not drop existing columns.** The `core_user_id` columns and their migrations stay in the database as historical data; no application flow reads or writes them.
+- Alternatives considered: Keep cross-site SSO with a new module-facing exchange contract (rejected: not requested, technically broken across domains, and adds attack surface); keep per-module secrets and only fix the transport (rejected: still a cross-site login the owner does not want); drop the shared database and give each module its own DB (rejected: the owner explicitly chose one database).
+- Why this was chosen: It matches the real product shape (HQ vs branch) and removes an unrequested authentication mechanism that could not deliver a usable token across app domains.
+- Impacted files/modules: Core `app/login/page.tsx`, `app/api/auth/*`, `lib/sso-trust.ts`, `tests/*`, docs; module `app/api/auth/sso`, `app/auth/sso-callback`, `lib/auth/sso.ts`, module login pages, `.env.example`, module README/AUDIT docs.
+- Rollback plan: Do not restore SSO by re-adding the removed code. If a future product decision reintroduces cross-app identity, design a verified module-side exchange contract with owner approval and end-to-end tests first.
+
+- Verification (2026-11-09): `tsc --noEmit` 0 errors; `npm test` 44 passed / 14 skipped / 0 failed (includes 13 tax-automator tests); `eslint` 0 errors / 331 warnings; disposable integration harness security 14/14 and registration 2/2. These are local disposable-database results, not Dev or Production acceptance.

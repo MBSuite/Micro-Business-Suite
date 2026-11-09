@@ -40,8 +40,12 @@
 6. หน้าเว็บที่ไม่มี session หรือ token ไม่ถูกต้อง → redirect ไป `/login`; API ที่ไม่มี session ตอบ `401` แบบ JSON
 7. Logout → POST `/api/logout` เพื่อลบ cookie
 
-### ⚠️ SSO STATUS
-SSO ยังมีข้อค้นพบระดับสูงใน [AUDIT.md](./AUDIT.md): ฝั่งออก token ยังไม่จำกัด audience ด้วย allowlist และหน้า login ยังรับ redirect จาก URL ก่อนส่ง token กลับไป ห้ามถือว่า SSO ข้ามแอปพร้อมใช้งานอย่างปลอดภัยหรือผ่าน production acceptance จนกว่าจะแก้และทดสอบครบ
+### 🚫 NO CROSS-SITE LOGIN (NO SSO)
+ระบบนี้ **ไม่มี SSO** และไม่มีการล็อกอินข้ามเว็บระหว่าง Core กับโมดูล:
+- Core, Service, Retail, Rental, Pharmacy, Hotel และ F&B ต่างมีหน้า login/register และออก session cookie ของตัวเอง
+- ทุกแอปใช้ฐานข้อมูลร่วมกัน (Neon สำหรับ Dev, Supabase สำหรับ Production) แต่การยืนยันตัวตนแยกกันต่อแอป ไม่มีการส่ง token ข้ามโดเมน
+- คอลัมน์ `core_user_id` ที่มีอยู่ในฐานข้อมูลถูกเก็บไว้เป็นข้อมูลเดิม แต่ไม่มี flow ใดใช้งานแล้ว
+- ห้ามเพิ่ม SSO, token exchange, JWKS หรือ callback ข้ามแอปกลับเข้ามาโดยไม่ได้รับคำสั่งจากเจ้าของ
 
 ### 📝 CLIENT COMPONENT PATTERN
 ```tsx

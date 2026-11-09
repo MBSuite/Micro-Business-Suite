@@ -41,7 +41,7 @@ MBSuite = **Platform รวม Software บริหารจัดการอ�
 | **Retail Suite** | ร้านค้า/ค้าส่ง | POS, สต็อก, บาร์โค้ด, โปรโมชั่น |
 | **Pharmacy Suite** | ร้านขายยา | ใบสั่งยา, สต็อกยา, หมดอายุ |
 
-**ทุก Suite มีร่วมกัน (Shared Core):** การคิดเงิน, บันทึก รายรับ-รายจ่าย, ใบ paying, Auth (JWT SSO), Tenant (company_id), License
+**ทุก Suite มีร่วมกัน (Shared Core):** การคิดเงิน, บันทึก รายรับ-รายจ่าย, ใบ paying, Tenant (company_id), License และฐานข้อมูล PostgreSQL ชุดเดียว (Neon = Dev, Supabase = Production) — ส่วน Auth เป็นของแต่ละแอป ไม่มี SSO ข้ามแอป
 
 ---
 
@@ -51,10 +51,10 @@ MBSuite = **Platform รวม Software บริหารจัดการอ�
 |---|---|---|
 | Suite → MBS Core | รายรับ/รายจ่าย/ใบ paying/รายละเอียด | REST API + Webhook (sync finance events) |
 | MBS Core → Suite | ผังบัญชี, ชื่อ/ราคาสินค้า (optional) | REST API (read-only) |
-| Shared | Auth (JWT SSO), Tenant (company_id), License | Shared token + tenant isolation |
+| Shared | Database, Tenant (company_id), License | Shared PostgreSQL; each app has its own session/auth. No cross-site token. |
 
 ### Sync Method (อนุมัติแล้ว)
-- **REST API + Webhook** (loose coupling, ไม่ shared DB โดยตรง)
+- **REST API + Webhook** (loose coupling; shared database แต่แต่ละแอปไม่แตะตารางของกันโดยตรง)
 - Suite ส่ง finance event → MBS Core API → สร้าง journal entry / invoice / expense
 
 ### Bridge API — เปรียบเทียบ
@@ -72,7 +72,7 @@ MBSuite = **Platform รวม Software บริหารจัดการอ�
 
 แต่ละ Suite ที่สร้างเพิ่มต้อง:
 1. **Standalone** — รัน/deploy แยกได้ (Vercel/Docker)
-2. **Auth** — ใช้ JWT เดียวกัน (SSO) ผ่าน MBS Core
+2. **Auth** — ล็อกอินและออก session ของแอปเอง; ไม่มี SSO หรือ token ข้ามแอป
 3. **Tenant isolation** — `company_id` บนทุกตาราง
 4. **Sync** — ส่งข้อมูลการเงินไป MBS Core ผ่าน Bridge API
 5. **Offline-capable** (optional) — ใช้ offline แล้ว sync ภายหลัง
@@ -196,8 +196,8 @@ MBSuite = **Platform รวม Software บริหารจัดการอ�
 ## 9. คำถามที่ต้องยืนยัน (สำหรับ session ถัดไป)
 
 1. **Sync method:** REST API + Webhook (อนุมัติแล้ว) — ใช้ `/api/bridge/sync` ใหม่ หรือ `/api/integrations/webhook` ที่มีอยู่?
-2. **Auth:** JWT เดียวกัน (SSO) หรือแยก auth ต่อ Suite?
-3. **Tenant / Database:** เจ้าของเลือกให้ Core และทั้ง 6 modules ใช้ฐานข้อมูลเดียวกันเพื่อหลีกเลี่ยงการ provision Neon DB เพิ่ม; **ยังห้ามตั้งค่า `DATABASE_URL` ของ modules ให้ชี้ Core DB จนกว่าจะออกแบบและอนุมัติ schema/table namespace กับ migration plan ก่อน**
+2. **Auth:** แต่ละแอปล็อกอินเอง (ไม่มี SSO) — ยืนยันแล้ว
+3. **Tenant / Database:** เจ้าของยืนยันให้ Core และทั้ง 6 modules ใช้ฐานข้อมูล PostgreSQL ชุดเดียวกัน (Neon = Dev, Supabase = Production); ทุกแอปเข้าถึงเฉพาะตาราง prefix ของตัวเองและเชื่อมกันผ่าน API/Bridge — ก่อนเปลี่ยน schema/migration ให้ปฏิบัติตาม §13
 4. **Marketplace:** สร้างใน MBSuite.Dev (landing) — อนุมัติแล้ว
 5. **Priority Suite:** Micro-Menu-Online ก่อน — อนุมัติแล้ว
 

@@ -3,8 +3,15 @@
 ## Stack
 
 - App: Next.js (App Router) + TypeScript
-- Database: PostgreSQL (Neon)
-- Auth: JWT (jose) + bcryptjs, httpOnly cookie, role-based (superadmin/admin/user)
+- Database: PostgreSQL — Neon for Dev, Supabase for Production; Core and all six modules share one database and each app accesses only its own prefixed tables
+- Auth: JWT (jose) + bcryptjs, httpOnly cookie, role-based (superadmin/admin/user) — per app; no cross-site login or SSO
+
+## Product Topology
+
+- **Core = HQ:** company, invoices, central accounting, tax, stock overview, HR/payroll, and branch-level reporting.
+- **Modules = branches/operations:** Service, Retail, Rental, Pharmacy, Hotel, and F&B record their own operational data.
+- A customer with branches buys Core + module; the module posts daily revenue/payment events to Core through the authenticated Bridge API. An SME without branches can run a module standalone.
+- Sharing one database does not permit one app to read or write another app's tables directly; integration goes through the API/Bridge contract with source IDs and idempotency keys.
 
 ## Core Modules
 
