@@ -62,12 +62,16 @@ export default function BridgeLinkManagementPage() {
       const data = await res.json();
       if (!res.ok) {
         let message = data?.error || "สร้างรหัสลิงก์ไม่สำเร็จ";
-        if (data?.code === "RATE_LIMITED") {
+        if (data?.error_code === "RATE_LIMITED") {
           message = "สร้างรหัสลิงก์บ่อยเกินไป ลองใหม่ภายหลัง";
-        } else if (data?.code === "TENANT_MISMATCH") {
+        } else if (data?.error_code === "TENANT_MISMATCH") {
           message = "ไม่มี Core company สำหรับโมดูลนี้";
-        } else if (data?.code === "LINK_TABLE_MISSING") {
+        } else if (data?.error_code === "LINK_TABLE_MISSING") {
           message = "ไม่พบตารางการเชื่อมต่อ";
+        } else if (res.status === 401) {
+          message = "ไม่ได้รับอนุญาต (401)";
+        } else if (res.status === 403) {
+          message = "ห้ามเข้าถึง (403)";
         }
         throw new Error(message);
       }
@@ -100,8 +104,11 @@ export default function BridgeLinkManagementPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ module, shop_code: shopCode }),
       });
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json();
+        if (data?.error_code === "LINK_NOT_FOUND") {
+          throw new Error("ยกเลิกไปแล้ว");
+        }
         throw new Error(data?.error || "ยกเลิกลิงก์ไม่สำเร็จ");
       }
       await loadData();
@@ -258,8 +265,8 @@ export default function BridgeLinkManagementPage() {
                           <td className="py-3 px-3">
                             <span
                               className={`text-xs font-bold px-2 py-1 rounded ${shop.status === "active"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-slate-100 text-slate-700"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-slate-100 text-slate-700"
                                 }`}
                             >
                               {shop.status === "active" ? "ใช้งาน" : "ไม่ใช้งาน"}
