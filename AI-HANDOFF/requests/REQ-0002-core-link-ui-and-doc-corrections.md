@@ -91,6 +91,8 @@ Commits verified: `c0e00d1` (Core), `ae5f5b6` (Service), `f0e6fb3` (Retail), `86
 
 Fix these in the same pass. P0 is not accepted until they are correct.
 
+**Update 19:06 — corrections accepted.** `ca4b18c` (Core: template now `# REQ-<number>-<slug>: Example title`; link wording now "No admin UI yet"), `e774ee9` (Rental), `c57cd59` (Service) fix all four items. Re-checked: no `/api/bridge/sync` left in module docs, no invented routes. The documentation half of P0 is accepted. The "report the real status of every related request" half is still missing — all 8 requests remain `ready-for-kiro` with an empty `Handoff result`.
+
 ## P1 authorization (approved — do not ask again)
 
 P1 is already authorized by this work order. Start now.
