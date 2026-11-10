@@ -113,10 +113,37 @@ A delivery is accepted only when the report contains the commit hash, changed fi
 
 A status-only report is rejected and does not change the request status. If the next report contains no code artifact, the request stays `ready-for-kiro` and OpenCode reports it to the owner as not started. OpenCode will not send further reminders for the same item.
 
+## P1 artifact review — Core admin page (OpenCode, 2026-11-10 19:05)
+
+An untracked file appeared during review. OpenCode did not create it and did not edit it:
+
+- `app/admin/bridge-link-management/page.tsx` — 10,878 bytes, mtime `2026-11-10 19:04`, not committed.
+- No request status changed; `AI-HANDOFF.md` still lists the admin link UI as not implemented.
+
+`npx tsc --noEmit` (Core) passes. `npx eslint app/admin/bridge-link-management/page.tsx` fails with 4 errors and 1 warning:
+
+- `50:17`, `75:17`, `97:17` — `@typescript-eslint/no-explicit-any`
+- `58:5` — `react-hooks/set-state-in-effect`
+- `4:25` — unused import `RefreshCw`
+
+The screen does not work against the implemented API:
+
+| Call made by the page | Implemented route | Actual result |
+|---|---|---|
+| `GET /api/bridge/link/code?status=pending` | `app/api/bridge/link/code/route.ts` has `POST` only | 405; because it runs inside `Promise.all`, the whole page fails to load and shows `โหลดข้อมูลไม่สำเร็จ` |
+| reads `links[].linkId`, `shopCode`, `coreCompanyId`, `moduleId`, `linkedAt` | `GET /api/bridge/link/list` returns `module`, `shop_code`, `shop_name`, `owner_email`, `company_id`, `company_name`, `status`, `linked_at`, `revoked_at` | every column except `status` renders `undefined`; `key` and the revoke target are `undefined`. There is no `linkId` in the API |
+| `POST /api/bridge/link/code` with `{}` | requires `{ module, company_id? }` | 400 `MODULE_INVALID`; the page has no module selector |
+| `POST /api/bridge/link/revoke` with `{ linkId }` | requires `{ module, shop_code, reason? }` | 400 `MODULE_INVALID`; revoke can never succeed |
+| no navigation entry | — | reachable only by typing the URL |
+
+The page also assumes an endpoint that lists link codes. No such endpoint exists, and `bridge_link_codes` stores only the code hash. Do not invent that endpoint from the UI; if a listing is genuinely needed, raise a contract request to OpenCode first.
+
+Result: not accepted. Status stays `ready-for-kiro`.
+
 ## Owner plan / questions
 
 - Which repositories contain the UI work, if any? Provide the branch names or paths.
-- If the UI is not started, set the related requests to `blocked` with the reason instead of leaving them `ready-for-kiro` after reporting completion.
+- Record the real state in the request itself: `in-progress` while working, `ready-for-opencode` only with artifacts, `blocked` only with a named external blocker and owner.
 
 ## Handoff result
 
