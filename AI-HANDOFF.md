@@ -29,7 +29,7 @@ Either agent may create a request in `AI-HANDOFF/requests/` and assign it to the
 ## Request template
 
 ```md
-# REQ-0001-core-link: Example title
+# REQ-<number>-<slug>: Example title
 
 - Status: draft
 - Requester: Kiro | OpenCode
@@ -77,7 +77,7 @@ For system/API work, document request/response shape, authorization, validation,
 
 **Core linking (Bridge):**
 - Module shop linking: modules use `POST /api/core-link` to send a shop code and receive a Core company ID. Core has no `/api/core-link` endpoint.
-- Core module registry: admin views and links shops via `/api/bridge/link/*` (code, status, claim, revoke, list).
+- Core module registry: link API at `/api/bridge/link/*` (code, status, claim, revoke, list). No admin UI yet.
 - Bridge sync: `POST /api/bridge/sync` accepts `order.paid` and `payment.received` events from all modules (generic).
 - Outbox backlog: shops queued as `awaiting_link` until linked; after linking, retry sends queued events to Core.
 - See [docs/HANDOFF.md](./docs/HANDOFF.md) for shared-database schema contract and table-prefix isolation.
