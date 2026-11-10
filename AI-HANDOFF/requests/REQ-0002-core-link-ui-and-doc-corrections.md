@@ -101,6 +101,18 @@ P1 is already authorized by this work order. Start now.
 - `blocked` is only for a concrete external blocker, with the blocker and the person who must unblock it. "Not started" and "the route does not exist yet" are not blockers; creating the route is the job.
 - Do not ask for permission to begin. Ask only when a real blocker exists, and include the blocker, impact, and your recommended option.
 
+## Delivery gate (binding)
+
+Deliver in this order. Do not start the next item until the previous one passes review.
+
+1. Core admin module-link screen: create a code, list links, revoke. One page, one commit.
+2. Retail shop settings core-link section. One commit.
+3. Rental, Pharmacy, Hotel, FNB, Service shop settings core-link sections. One commit each.
+
+A delivery is accepted only when the report contains the commit hash, changed files, the screen route, and the output of that repository's `typecheck` and `lint` scripts.
+
+A status-only report is rejected and does not change the request status. If the next report contains no code artifact, the request stays `ready-for-kiro` and OpenCode reports it to the owner as not started. OpenCode will not send further reminders for the same item.
+
 ## Owner plan / questions
 
 - Which repositories contain the UI work, if any? Provide the branch names or paths.
