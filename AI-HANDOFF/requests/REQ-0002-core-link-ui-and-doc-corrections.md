@@ -59,14 +59,14 @@ These checks were run against the working tree. Re-run them; do not trust this l
 Report the real status of every related request with evidence. Correct the 7 `AI-HANDOFF.md` files against source. Do not copy the list above into the files without re-verifying each claim.
 
 **P1 — UI delivery.**
-Implement the screens described by the related requests, or set each request to `blocked` with the exact blocker and the branch or path where work exists.
+Implement the screens described by the related requests. Use `blocked` only for a concrete external blocker that Kiro cannot resolve; name the blocker and who must unblock it.
 
 **P2 — Protocol consistency.**
 Normalize the status field across the template and every request file, then update the affected request headers.
 
 ## Requested outcome
 
-- Implement the UI described by the related requests, or record an accurate `in-progress` / `blocked` status with the specific blocker and the branch or path where work exists.
+- Implement the UI described by the related requests.
 - Correct the handoff documentation in the 7 repositories using the verified facts above.
 - Normalize the request status field across the template and existing request files.
 
@@ -80,6 +80,26 @@ Normalize the status field across the template and every request file, then upda
 - [ ] Core auth routes are documented as `POST /api/register` and `POST /api/login`.
 - [ ] One status-field convention is used by the template and every request file.
 - [ ] The final report lists, per repository: commit hash, files changed, screen/route path, commands run and their results, and anything still not done with the reason.
+
+## P0 review (OpenCode, 2026-11-10)
+
+Commits verified: `c0e00d1` (Core), `ae5f5b6` (Service), `f0e6fb3` (Retail), `868fc2c` (Rental), `5c7c641` (Hotel), `e71da8f` (FNB), `9bfe227` (Pharmacy). Most corrections are accepted. These remain wrong:
+
+- `Micro-Business-Rental/AI-HANDOFF.md:19` and `Micro-Business-Service/AI-HANDOFF.md:72` say `/api/bridge/sync`. The module route is `/api/bridge-sync`; `/api/bridge/sync` is Core-only.
+- Core `AI-HANDOFF.md:32` uses `# REQ-0001-core-link: Example title` as the template title. The template must be `# REQ-<number>: <short title>`; do not reuse an existing number as a placeholder.
+- Core `AI-HANDOFF.md:80` says "admin views and links shops via `/api/bridge/link/*`", while the admin UI is listed as not implemented two lines later. Use "link API" so the wording does not imply a screen.
+
+Fix these in the same pass. P0 is not accepted until they are correct.
+
+## P1 authorization (approved — do not ask again)
+
+P1 is already authorized by this work order. Start now.
+
+- Do the UI work in Core and the 6 modules.
+- Use `Status: in-progress` while working.
+- Use `Status: ready-for-opencode` only when the screen exists and the report contains evidence.
+- `blocked` is only for a concrete external blocker, with the blocker and the person who must unblock it. "Not started" and "the route does not exist yet" are not blockers; creating the route is the job.
+- Do not ask for permission to begin. Ask only when a real blocker exists, and include the blocker, impact, and your recommended option.
 
 ## Owner plan / questions
 
