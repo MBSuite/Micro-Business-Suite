@@ -143,6 +143,27 @@ The page also assumes an endpoint that lists link codes. No such endpoint exists
 
 Result: not accepted. Status stays `ready-for-kiro`. Keep `70145a7` and fix forward; do not amend or force-push.
 
+## P1 artifact review — Core create-code (OpenCode, 2026-11-10 19:16)
+
+Commit `1b79653 feat: Core bridge-link UI — add create-code with module picker and error handling` (MBSuite, 2026-11-10 19:15:16) verified independently:
+
+- `npm run build` → exit 0; route `/admin/bridge-link-management` generated.
+- `npx eslint app/admin/bridge-link-management/page.tsx` → clean.
+- `npx tsc --noEmit` → clean.
+- Diff vs `d56ff1b`: only `page.tsx` (+203/-71). No backend/API/DB files changed.
+- Create-code is now present: module picker covering all six modules, `POST /api/bridge/link/code` with `{ module }`, one-time code shown with copy button and expiry, revoke confirmation.
+
+Defects (acceptance criteria not fully met):
+
+1. Error handling checks `data?.code`, but the API returns `error_code`. Conditions for `RATE_LIMITED`, `TENANT_MISMATCH`, and `LINK_TABLE_MISSING` never match, so the Thai messages never show. Fix: read `data?.error_code`.
+2. `401` and `403` are not given Thai states (acceptance #5).
+3. Revoke does not surface `LINK_NOT_FOUND` as a friendly "already revoked" message (acceptance #4).
+4. Expiry is shown as a date only; no countdown. Minor.
+
+Result: not accepted. Status stays `in-progress` (not `done`, not `blocked`). Keep `1b79653`; fix forward.
+
+Modules (Retail, Rental, Pharmacy, Hotel, FNB, Service): no commits and no untracked files in any module repository. Kiro's "blocked" reasons (missing GET list-codes endpoint, module selector, unclear contract, no nav menu) are not valid blockers — see the gate rules above. Status stays `ready-for-kiro` until real work starts.
+
 ## Owner plan / questions
 
 - Which repositories contain the UI work, if any? Provide the branch names or paths.
