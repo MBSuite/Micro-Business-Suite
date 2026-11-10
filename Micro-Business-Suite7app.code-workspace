@@ -1,0 +1,34 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../Micro-Business-Service"
+		},
+		{
+			"path": "../Micro-Business-Retail"
+		},
+		{
+			"path": "../Micro-Business-Rental"
+		},
+		{
+			"path": "../Micro-Business-Hotel"
+		},
+		{
+			"path": "../Micro-Business-FNB"
+		},
+		{
+			"path": "../Micro-Business-Pharmacy"
+		},
+		{
+			"path": "../MBSuite.Dev"
+		}
+	],
+	"settings": {
+		"chat.agent.enabled": false,
+		"chat.tools.terminal.enableAutoApprove": false,
+		"chat.tools.terminal.autoApprove": {},
+		"chat.tools.urls.autoApprove": {}
+	}
+}
