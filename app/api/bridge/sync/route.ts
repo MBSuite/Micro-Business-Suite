@@ -47,19 +47,26 @@ export async function POST(req: Request) {
     companyId = await getUserCompanyId(session.user.id);
   }
 
-  // Idempotency check
+  // Idempotency check. A previously *failed* attempt must be retryable, so its
+  // log row is cleared and the event is processed again. Only a successful sync
+  // short-circuits with the stored result.
   try {
     const { rows: existing } = await query(
       `SELECT id, status, result FROM bridge_sync_log WHERE idempotency_key = $1 LIMIT 1`,
       [idempotencyKey]
     );
-    if (existing.length > 0) {
+    if (existing.length > 0 && existing[0].status === "success") {
       return NextResponse.json({
-        success: existing[0].status === "success",
+        success: true,
         idempotent: true,
         sync_id: existing[0].id,
         result: existing[0].result,
       });
+    }
+    if (existing.length > 0) {
+      await query(`DELETE FROM bridge_sync_log WHERE idempotency_key = $1 AND status <> 'success'`, [
+        idempotencyKey,
+      ]);
     }
   } catch (e: any) {
     // Table may not exist yet

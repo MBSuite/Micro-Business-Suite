@@ -48,7 +48,8 @@ const PUBLIC_PATHS = ["/", "/login", "/register", "/api/login", "/api/logout"];
 const PUBLIC_PREFIXES = ["/api/auth"];
 
 // Bridge sync is passed through so its route handler can validate either a
-// service Bearer token or a user session. Other APIs require a session-token.
+// service Bearer token or a user session. Link claim/revoke/status are
+// service-token endpoints; their handlers enforce auth themselves.
 const PUBLIC_API_EXACT = new Set([
   "/api/login",
   "/api/logout",
@@ -56,6 +57,9 @@ const PUBLIC_API_EXACT = new Set([
   "/api/fx-rate",
   "/api/health",
   "/api/bridge/sync",
+  "/api/bridge/link/claim",
+  "/api/bridge/link/revoke",
+  "/api/bridge/link/status",
 ]);
 const PUBLIC_API_PREFIXES = ["/api/auth"];
 

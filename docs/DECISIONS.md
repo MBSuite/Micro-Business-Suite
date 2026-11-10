@@ -174,3 +174,18 @@
 - Rollback plan: Do not restore SSO by re-adding the removed code. If a future product decision reintroduces cross-app identity, design a verified module-side exchange contract with owner approval and end-to-end tests first.
 
 - Verification (2026-11-09): `tsc --noEmit` 0 errors; `npm test` 44 passed / 14 skipped / 0 failed (includes 13 tax-automator tests); `eslint` 0 errors / 331 warnings; disposable integration harness security 14/14 and registration 2/2. These are local disposable-database results, not Dev or Production acceptance.
+
+### [2026-11-10] Optional Core linking for standalone module shops (ADR-0006 implemented)
+
+- Context: the six module apps already self-register their own shops and run standalone. A shop that wants Core to consolidate finance must link later, without any app reading another app's tables. Core previously had only `POST /api/bridge/sync`, which trusts the sender's `company_id` and has no proof that the shop belongs to that company.
+- Decision: implement the owner-approved ADR-0006 flow as an additive v1 contract.
+  1. A Core admin creates a single-use link code (8 characters, 15-minute TTL, SHA-256 at rest) bound to `(module, core_company_id)`.
+  2. A module admin enters the code; the module calls `POST /api/bridge/link/claim` with the shared Bridge token and its own `shop_code`/`shop_name`.
+  3. Core stores the mapping in `module_links` with partial unique active indexes on `(module, shop_code)` and `(module, core_company_id)`. One Core company may link to several different modules, but only one shop per module in v1.
+  4. Only after Core confirms does the module write `shops.core_company_id`; the module then replays its `awaiting_link` outbox in `created_at` order with the original idempotency keys.
+  5. Revocation keeps history (`status = revoked`) and can be requested by the module or by a Core admin. A revoked shop returns to `awaiting_link` behavior for new events.
+- Security boundary: the link code proves control of both sides; the service token only authorizes the service. Browser sessions may create codes/revoke for their own company; claim and status are service-token only. `company_id` validation on the existing `POST /api/bridge/sync` is intentionally not tightened in v1 to avoid breaking current senders.
+- Failure handling: a previously failed `bridge_sync_log` row is cleared so the same idempotency key can be retried; modules treat Core `success: false` as a failure even when HTTP status is 200.
+- Verification: Core link acceptance 39/39 on disposable PostgreSQL 16 (`mbs-core-link-pg`, port 5445); Retail → Core end-to-end 30/30 (self-register, queue an unlinked paid order, create code, claim, replay to `bridge_sync_log`/invoice/journal, revoke, re-link); `node --test tests/module-link-validation.test.mjs` 10/10; `tsc --noEmit` and targeted ESLint clean. Module-side APIs rolled to all six modules with matching typecheck/ESLint. These are disposable-database results, not production acceptance.
+- Rollback: the migration only adds tables; leaving it in place is safe. To disable linking, stop creating codes and revoke active rows. Do not drop `module_links` before confirming no module holds a `core_company_id`.
+- Status / approval boundary: implementation only. Production migration, deployment, and any env change still require explicit owner approval.
