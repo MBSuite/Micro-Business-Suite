@@ -34,7 +34,35 @@ Documentation errors introduced in the latest handoff edits:
 - Core `AI-HANDOFF.md:79` and module handoff files list `/staff/bridge-sync-status` and `/staff/core-link-settings`. Neither route exists.
 - Core `AI-HANDOFF.md:83` and `:114` describe ADR-0006 as Bridge intake/event validation. `docs/DECISIONS.md:178` records ADR-0006 as optional Core linking for standalone module shops.
 - Core `AI-HANDOFF.md:96-101` says `REQ-0001-x-...` through `REQ-0004-x-...` live in Core's requests directory. Only `REQ-0001-module-link-admin-ui.md` exists.
+- Core `AI-HANDOFF.md:70` names `POST /api/auth/register` and `POST /api/auth/login`. The implemented routes are `POST /api/register` and `POST /api/login`; `app/api/auth/` contains only `session`.
 - The request template now uses `Request status:` and `Review status:`, but the existing request files still use `- Status:`. Pick one convention and normalize the template and files.
+
+## Engineering verification (OpenCode, 2026-11-10)
+
+These checks were run against the working tree. Re-run them; do not trust this list without verifying it.
+
+| Check | Result |
+|---|---|
+| `git log -1` and `git show --stat` in all 7 repos | latest commits touch documentation files only |
+| `test -d app/staff/core-link-settings` (6 modules) | absent |
+| `test -d app/staff/bridge-sync-status` (6 modules) | absent |
+| `test -f app/api/core-link/route.ts` (6 modules) | present with `GET` and `POST` |
+| `ls app/api/bridge` (Core) | `link`, `sync` only |
+| `ls app/api/core-link` (Core) | absent |
+| `ls app/api/login app/api/register` (Core) | both exist with `POST` |
+| `grep -r "core-link-settings"` in `.ts`/`.tsx` | no matches; only `.md` files |
+| related request headers | 7 requests `ready-for-kiro`, `Handoff result` empty |
+
+## Work order
+
+**P0 — Truth and documentation (do first).**
+Report the real status of every related request with evidence. Correct the 7 `AI-HANDOFF.md` files against source. Do not copy the list above into the files without re-verifying each claim.
+
+**P1 — UI delivery.**
+Implement the screens described by the related requests, or set each request to `blocked` with the exact blocker and the branch or path where work exists.
+
+**P2 — Protocol consistency.**
+Normalize the status field across the template and every request file, then update the affected request headers.
 
 ## Requested outcome
 
@@ -49,7 +77,9 @@ Documentation errors introduced in the latest handoff edits:
 - [ ] All 7 `AI-HANDOFF.md` files reference only routes that exist: `POST /api/bridge/sync` (Core), `GET/POST /api/core-link` (modules only), and real staff paths.
 - [ ] ADR-0006 is described consistently with `docs/DECISIONS.md:178` (optional Core linking).
 - [ ] Cross-repository rules describe files that actually exist; no invented `REQ-*-x-*` entries.
+- [ ] Core auth routes are documented as `POST /api/register` and `POST /api/login`.
 - [ ] One status-field convention is used by the template and every request file.
+- [ ] The final report lists, per repository: commit hash, files changed, screen/route path, commands run and their results, and anything still not done with the reason.
 
 ## Owner plan / questions
 
