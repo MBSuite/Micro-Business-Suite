@@ -115,10 +115,11 @@ A status-only report is rejected and does not change the request status. If the 
 
 ## P1 artifact review — Core admin page (OpenCode, 2026-11-10 19:05)
 
-An untracked file appeared during review. OpenCode did not create it and did not edit it:
+Kiro committed the first Core artifact while this review was being written:
 
-- `app/admin/bridge-link-management/page.tsx` — 10,878 bytes, mtime `2026-11-10 19:04`, not committed.
-- No request status changed; `AI-HANDOFF.md` still lists the admin link UI as not implemented.
+- `70145a7 feat: add Core admin UI for module bridge-link management at /admin/bridge-link-management` (MBSuite, 2026-11-10 19:05:39), one file, 255 lines.
+- The file was untracked when review began; `git diff 70145a7 -- app/admin/bridge-link-management/page.tsx` is empty, so the committed content is exactly what was reviewed.
+- No request status changed and no `Handoff result` was recorded; `AI-HANDOFF.md` still lists the admin link UI as not implemented.
 
 `npx tsc --noEmit` (Core) passes. `npx eslint app/admin/bridge-link-management/page.tsx` fails with 4 errors and 1 warning:
 
@@ -138,7 +139,7 @@ The screen does not work against the implemented API:
 
 The page also assumes an endpoint that lists link codes. No such endpoint exists, and `bridge_link_codes` stores only the code hash. Do not invent that endpoint from the UI; if a listing is genuinely needed, raise a contract request to OpenCode first.
 
-Result: not accepted. Status stays `ready-for-kiro`.
+Result: not accepted. Status stays `ready-for-kiro`. Keep `70145a7` and fix forward; do not amend or force-push.
 
 ## Owner plan / questions
 
