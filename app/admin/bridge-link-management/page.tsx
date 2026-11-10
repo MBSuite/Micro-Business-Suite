@@ -1,101 +1,69 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Link2, Trash2, RefreshCw, Plus } from "lucide-react";
+import { Link2, Trash2 } from "lucide-react";
 
 type LinkedShop = {
-  linkId: string;
-  shopCode: string;
-  coreCompanyId: string;
-  moduleId: string;
-  linkedAt: string;
+  module: string;
+  shop_code: string;
+  shop_name: string;
+  company_id: string;
+  company_name: string;
   status: "active" | "inactive";
-};
-
-type LinkCode = {
-  code: string;
-  createdAt: string;
-  expiresAt: string;
-  claimedBy?: string;
-  status: "pending" | "claimed";
+  linked_at: string;
 };
 
 export default function BridgeLinkManagementPage() {
   const [loading, setLoading] = useState(true);
   const [linkedShops, setLinkedShops] = useState<LinkedShop[]>([]);
-  const [availableCodes, setAvailableCodes] = useState<LinkCode[]>([]);
-  const [generatingCode, setGeneratingCode] = useState(false);
   const [revoking, setRevoking] = useState<string | null>(null);
   const [error, setError] = useState<string>("");
-  const [tab, setTab] = useState<"linked" | "codes">("linked");
 
   const loadData = async () => {
     setLoading(true);
     setError("");
     try {
-      const [linkedRes, codesRes] = await Promise.all([
-        fetch("/api/bridge/link/list"),
-        fetch("/api/bridge/link/code?status=pending"),
-      ]);
+      const linkedRes = await fetch("/api/bridge/link/list");
 
-      if (!linkedRes.ok || !codesRes.ok) {
+      if (!linkedRes.ok) {
         throw new Error("โหลดข้อมูลไม่สำเร็จ");
       }
 
       const linkedData = await linkedRes.json();
-      const codesData = await codesRes.json();
-
       setLinkedShops(linkedData.links || []);
-      setAvailableCodes(codesData.codes || []);
-    } catch (e: any) {
-      setError(e?.message || "เกิดข้อผิดพลาด");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "เกิดข้อผิดพลาด";
+      setError(message);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    const init = async () => {
+      await loadData();
+    };
+    init();
   }, []);
 
-  const onGenerateCode = async () => {
-    setGeneratingCode(true);
-    setError("");
-    try {
-      const res = await fetch("/api/bridge/link/code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data?.error || "สร้างรหัสลิงก์ไม่สำเร็จ");
-      }
-      await loadData();
-    } catch (e: any) {
-      setError(e?.message || "เกิดข้อผิดพลาด");
-    } finally {
-      setGeneratingCode(false);
-    }
-  };
-
-  const onRevokeLink = async (linkId: string) => {
+  const onRevokeLink = async (module: string, shopCode: string) => {
     if (!confirm("ยืนยันการยกเลิกลิงก์นี้?")) return;
-    setRevoking(linkId);
+    setRevoking(`${module}:${shopCode}`);
     setError("");
     try {
       const res = await fetch("/api/bridge/link/revoke", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ linkId }),
+        body: JSON.stringify({ module, shop_code: shopCode }),
       });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data?.error || "ยกเลิกลิงก์ไม่สำเร็จ");
       }
       await loadData();
-    } catch (e: any) {
-      setError(e?.message || "เกิดข้อผิดพลาด");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "เกิดข้อผิดพลาด";
+      setError(message);
     } finally {
       setRevoking(null);
     }
@@ -109,7 +77,7 @@ export default function BridgeLinkManagementPage() {
             <Link2 className="text-indigo-600" /> จัดการลิงก์โมดูล Core
           </h1>
           <p className="text-slate-500 text-sm mt-2">
-            ดูรายการจังหวะ core-link ระหว่าง Core กับโมดูล และสร้างรหัสลิงก์สำหรับระบบปะตัวอื่น
+            ดูรายการเชื่อมต่อ core-link ระหว่าง Core กับโมดูล และจัดการการเชื่อมต่อ
           </p>
         </div>
 
@@ -119,34 +87,11 @@ export default function BridgeLinkManagementPage() {
           </div>
         )}
 
-        <div className="flex gap-2 border-b border-slate-200">
-          <button
-            onClick={() => setTab("linked")}
-            className={`px-4 py-3 font-bold text-sm border-b-2 transition ${
-              tab === "linked"
-                ? "border-indigo-600 text-indigo-600"
-                : "border-transparent text-slate-500"
-            }`}
-          >
-            โมดูลที่เชื่อมต่อแล้ว ({linkedShops.length})
-          </button>
-          <button
-            onClick={() => setTab("codes")}
-            className={`px-4 py-3 font-bold text-sm border-b-2 transition ${
-              tab === "codes"
-                ? "border-indigo-600 text-indigo-600"
-                : "border-transparent text-slate-500"
-            }`}
-          >
-            รหัสลิงก์ที่พร้อม ({availableCodes.length})
-          </button>
-        </div>
-
         {loading ? (
           <div className="bg-white rounded-2xl border border-slate-100 p-6 text-sm font-bold text-slate-500">
             กำลังโหลด...
           </div>
-        ) : tab === "linked" ? (
+        ) : (
           <div className="bg-white rounded-2xl border border-slate-100 p-6 md:p-8 shadow-sm">
             <h2 className="text-sm font-black uppercase tracking-widest text-slate-500 mb-4">
               โมดูลที่เชื่อมต่อแล้ว
@@ -158,9 +103,11 @@ export default function BridgeLinkManagementPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200">
-                      <th className="text-left font-bold text-slate-600 py-3 px-3">รหัส Shop</th>
-                      <th className="text-left font-bold text-slate-600 py-3 px-3">Core Company ID</th>
                       <th className="text-left font-bold text-slate-600 py-3 px-3">โมดูล</th>
+                      <th className="text-left font-bold text-slate-600 py-3 px-3">Shop Code</th>
+                      <th className="text-left font-bold text-slate-600 py-3 px-3">ชื่อ Shop</th>
+                      <th className="text-left font-bold text-slate-600 py-3 px-3">Core Company ID</th>
+                      <th className="text-left font-bold text-slate-600 py-3 px-3">ชื่อ Company</th>
                       <th className="text-left font-bold text-slate-600 py-3 px-3">สถานะ</th>
                       <th className="text-left font-bold text-slate-600 py-3 px-3">เชื่อมต่อเมื่อ</th>
                       <th className="text-left font-bold text-slate-600 py-3 px-3">การกระทำ</th>
@@ -168,21 +115,27 @@ export default function BridgeLinkManagementPage() {
                   </thead>
                   <tbody>
                     {linkedShops.map((shop) => (
-                      <tr key={shop.linkId} className="border-b border-slate-100 hover:bg-slate-50">
-                        <td className="py-3 px-3 font-mono text-slate-800">{shop.shopCode}</td>
-                        <td className="py-3 px-3 font-mono text-slate-800">{shop.coreCompanyId}</td>
-                        <td className="py-3 px-3 text-slate-700">{shop.moduleId}</td>
+                      <tr
+                        key={`${shop.module}:${shop.shop_code}`}
+                        className="border-b border-slate-100 hover:bg-slate-50"
+                      >
+                        <td className="py-3 px-3 font-mono text-slate-800 text-xs">{shop.module}</td>
+                        <td className="py-3 px-3 font-mono text-slate-800">{shop.shop_code}</td>
+                        <td className="py-3 px-3 text-slate-700">{shop.shop_name}</td>
+                        <td className="py-3 px-3 font-mono text-slate-700">{shop.company_id}</td>
+                        <td className="py-3 px-3 text-slate-700">{shop.company_name}</td>
                         <td className="py-3 px-3">
-                          <span className={`text-xs font-bold px-2 py-1 rounded ${
-                            shop.status === "active"
+                          <span
+                            className={`text-xs font-bold px-2 py-1 rounded ${shop.status === "active"
                               ? "bg-green-100 text-green-700"
                               : "bg-slate-100 text-slate-700"
-                          }`}>
+                              }`}
+                          >
                             {shop.status === "active" ? "ใช้งาน" : "ไม่ใช้งาน"}
                           </span>
                         </td>
-                        <td className="py-3 px-3 text-slate-500 text-xs">
-                          {new Date(shop.linkedAt).toLocaleDateString("th-TH", {
+                        <td className="py-3 px-3 text-slate-500 text-xs whitespace-nowrap">
+                          {new Date(shop.linked_at).toLocaleDateString("th-TH", {
                             year: "numeric",
                             month: "short",
                             day: "numeric",
@@ -192,8 +145,8 @@ export default function BridgeLinkManagementPage() {
                         </td>
                         <td className="py-3 px-3">
                           <button
-                            onClick={() => onRevokeLink(shop.linkId)}
-                            disabled={revoking === shop.linkId}
+                            onClick={() => onRevokeLink(shop.module, shop.shop_code)}
+                            disabled={revoking === `${shop.module}:${shop.shop_code}`}
                             className="text-rose-600 hover:text-rose-700 font-bold text-sm disabled:opacity-50 flex items-center gap-1"
                           >
                             <Trash2 size={14} /> ยกเลิก
@@ -203,48 +156,6 @@ export default function BridgeLinkManagementPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl border border-slate-100 p-6 md:p-8 shadow-sm space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-sm font-black uppercase tracking-widest text-slate-500">
-                รหัสลิงก์ที่พร้อมใช้งาน
-              </h2>
-              <button
-                onClick={onGenerateCode}
-                disabled={generatingCode}
-                className="h-10 px-4 rounded-lg bg-indigo-600 text-white text-sm font-bold flex items-center gap-2 disabled:opacity-50"
-              >
-                <Plus size={14} /> {generatingCode ? "กำลังสร้าง..." : "สร้างรหัสใหม่"}
-              </button>
-            </div>
-            {availableCodes.length === 0 ? (
-              <p className="text-slate-500 text-sm">ไม่มีรหัสลิงก์ที่พร้อม</p>
-            ) : (
-              <div className="grid gap-3">
-                {availableCodes.map((code) => (
-                  <div
-                    key={code.code}
-                    className="border border-slate-200 rounded-lg p-4 flex justify-between items-center bg-slate-50"
-                  >
-                    <div>
-                      <div className="font-mono font-bold text-lg text-slate-800">{code.code}</div>
-                      <div className="text-xs text-slate-500 mt-1">
-                        สร้าง {new Date(code.createdAt).toLocaleDateString("th-TH")} | หมดอายุ{" "}
-                        {new Date(code.expiresAt).toLocaleDateString("th-TH")}
-                      </div>
-                    </div>
-                    <span className={`text-xs font-bold px-2 py-1 rounded ${
-                      code.status === "pending"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-green-100 text-green-700"
-                    }`}>
-                      {code.status === "pending" ? "รอการใช้งาน" : "ใช้แล้ว"}
-                    </span>
-                  </div>
-                ))}
               </div>
             )}
           </div>
