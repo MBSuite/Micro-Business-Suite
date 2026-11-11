@@ -54,6 +54,24 @@ Use these as test identities without asking the owner again unless the records a
 - Before shared-database work in Core or any module, follow the concrete table-prefix, DB-role, migration, and env-variable implementation contract in [docs/HANDOFF.md](./docs/HANDOFF.md). The contract does not authorize Production env changes, migrations, data movement, or deployment.
 - `tests/integration/run.mjs` resets tables in the named `mbs-integration-pg` container. Never point it at Neon or a database containing data to retain; use only a disposable isolated test database.
 
+## Module migration runbook
+
+- Canonical procedure: [docs/MODULE_MIGRATION_RUNBOOK.md](./docs/MODULE_MIGRATION_RUNBOOK.md).
+- Ownership invariant: every `mbs_<module>_*` table is owned by `mbs_<module>_migrator`. Run DDL as that role (`SET LOCAL ROLE`), never as the database owner.
+- A failed migration is not a migration to resolve: stop, capture the exact error, inspect partial DDL, report to the owner. Never run `prisma migrate resolve` on your own.
+- A newly created table needs an explicit `GRANT ... TO mbs_<module>_app`. Migrations do not inherit the database owner's default privileges.
+
+## Owner standing authorization (2026-11-11)
+
+Pre-approved by the owner — these do not require a new approval each time:
+
+- Read-only inspection of any environment: health endpoints, `pg_catalog` queries, `prisma migrate status`.
+- Applying module migrations to the **Dev** database (Neon) as the module migrator role, following the runbook above.
+- Disposable local Docker / Neon test databases, including resetting them for tests.
+- Fixing a defect directly when the fix is small and verifiable, instead of adding another report round.
+
+Still require explicit owner approval every time: Supabase (Production) migrations or data changes, Vercel / environment-variable changes, deploy, `git push`, and any irreversible destructive operation (drop table/schema, truncate, delete data, force push). These guardrails kept the 2026-11-11 migration incident on Dev and non-destructive; do not remove them.
+
 ## Deployed URLs
 
 - **Micro-Business-Suite** (`/home/neon13/workspace/services/next/00-MAIN-WEB/Micro-Business-Suite`) = https://micro-business-suite.vercel.app/ — โปรแกรม (production app)
