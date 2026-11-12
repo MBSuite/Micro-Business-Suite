@@ -28,6 +28,7 @@
     "check:knowledge": "node scripts/verify-knowledge-sync.mjs",
     "check:consistency": "node scripts/weekly-consistency-audit.mjs",
     "check:column-types": "node scripts/check-column-types.mjs",
+    "audit:company-mappings": "node scripts/audit-company-mappings.mjs",
     "license:issue": "node scripts/issue-license.mjs",
     "license:quick": "node scripts/issue-license-quick.mjs",
     "test:integration": "node tests/integration/run.mjs",
