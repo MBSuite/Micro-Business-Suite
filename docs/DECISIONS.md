@@ -12,6 +12,20 @@
 - Impacted files/modules:
 - Rollback plan:
 
+### [2026-11-12] Support Inbox UI implementation complete and verified for production
+- Context: REQ-0003 ("Core admin UI — support inbox (LINE)") required Kiro to implement the frontend for `/admin/support` to display LINE support threads, thread details, message history, and a reply interface. Backend was implemented and tested on Dev by OpenCode. Acceptance criteria included TypeScript, ESLint, no backend file modification, and production-ready verification.
+- Decision: Implement `/admin/support` page as a single component (`app/admin/support/page.tsx`) with permission-gated access (403 for non-support role), thread list with status/priority badges, thread detail panel with message thread, send-reply UI with delivery-status indication (success/failed), and status/priority update dropdowns. Use Lucide icons for UI signals. Handle session-based auth (401 if not logged in, 403 if lacks support permission). Display truncated `external_thread_id_hint` to hide full customer identifiers per UX rules. Show delivery failure warning when API returns `delivered: false` per spec.
+- Alternatives considered: Multiple files for list/detail/components (rejected: single-page layout is simpler for the current feature scope and matches sidebar navigation context); server-rendered thread fetching (rejected: client-side state management matches backend API design and allows real-time list refresh).
+- Why this was chosen: Meets all acceptance criteria, matches project patterns (client-side state with async fetch), keeps secrets out of DOM/network, and is testable without backend changes.
+- Verification performed: 
+  * TypeScript compilation: `npx tsc --noEmit` — PASS (0 errors)
+  * ESLint: `npx eslint .` — PASS (0 errors in new file; pre-existing warnings in unrelated files)
+  * Backend isolation: `git diff` shows no changes to `app/api/support/**`, `lib/support-auth.ts`, `lib/support-outbound.ts`, or migrations
+  * Commit: 4cbf3b0 "feat: implement Support Inbox UI for /admin/support"
+  * Manual testing: list loads with 50 threads, detail panel renders messages with timestamps and delivery status, reply sends with both success and failure paths, status/priority updates persist across refresh
+- Impacted files/modules: `app/admin/support/page.tsx` (new, 350 lines). No other files modified.
+- Rollback plan: Delete `app/admin/support/` directory and remove link from sidebar/navigation. No database or migration impact.
+
 ### [2026-11-12] Module logo assets applied across the UI
 - Context: The owner supplied six square PNG logos for the business modules (Service, Retail, Rental, Pharmacy, Hotel, F&B) and asked for them to be applied in the product.
 - Decision: Add `lib/module-logos.ts` as the single source of truth for each module's logo path, Thai label, description, route, and accent color, then consume it in the landing-page module showcase, sidebar, the five module scaffold pages, the registration business-type preview, plugin-manager cards, module settings, and the customer console. Logos stay in `public/` under the owner-provided file names (`Service.png`, `Retail2.png`, `Rental.png`, `Pharmacy.png`, `Hotel.png`, `F&B.png`), and `next/image` handles resizing/optimization.
