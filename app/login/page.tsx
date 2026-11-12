@@ -10,6 +10,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingToken, setPendingToken] = useState("");
+  const [twoFactorCode, setTwoFactorCode] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,7 +20,6 @@ export default function LoginPage() {
 
     try {
       const cleanEmail = email.trim();
-      console.log("[LOGIN] Calling custom API...");
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -26,16 +27,41 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
-      console.log("[LOGIN] API response:", data);
 
-      if (!res.ok) {
+      if (!res.ok && !data?.requires2FA) {
         setError(data.error || "เข้าสู่ระบบไม่สำเร็จ");
+      } else if (data?.requires2FA && data?.pendingToken) {
+        setPendingToken(data.pendingToken);
+        setError("");
       } else {
-        console.log("[LOGIN] Redirecting to /");
         window.location.href = "/";
       }
     } catch (err: any) {
-      console.error("[LOGIN] Exception:", err);
+      setError("เกิดข้อผิดพลาด: " + ((err as Error).message || "กรุณาลองใหม่"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTwoFactor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/2fa/verify-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pendingToken, code: twoFactorCode }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "รหัส 2FA ไม่ถูกต้อง");
+      } else {
+        window.location.href = "/";
+      }
+    } catch (err: any) {
       setError("เกิดข้อผิดพลาด: " + ((err as Error).message || "กรุณาลองใหม่"));
     } finally {
       setIsLoading(false);
@@ -77,6 +103,31 @@ export default function LoginPage() {
             </div>
           )}
 
+          {pendingToken ? (
+            <form onSubmit={handleTwoFactor} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">2FA Code</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  required
+                  value={twoFactorCode}
+                  onChange={(e) => setTwoFactorCode(e.target.value)}
+                  disabled={isLoading}
+                  className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="123456"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-black rounded shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-sm disabled:cursor-not-allowed"
+              >
+                {isLoading ? "กำลังประมวลผล..." : "ยืนยัน 2FA"}
+              </button>
+            </form>
+          ) : (
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
               <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">Email</label>
@@ -127,6 +178,7 @@ export default function LoginPage() {
               {isLoading ? "กำลังประมวลผล..." : "เข้าสู่ระบบ"}
             </button>
           </form>
+          )}
 
           <div className="mt-10 pt-6 border-t border-gray-100 text-center">
             <p className="text-xs text-gray-400 font-medium">

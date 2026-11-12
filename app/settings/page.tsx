@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { query } from "@/lib/db";
 import SettingsClient from "@/components/SettingsClient";
+import TwoFactorSettings from "@/components/TwoFactorSettings";
 import { auth, getUserCompanyId } from "@/lib/auth";
 import { isAdmin } from "@/lib/permissions";
 import { redirect } from "next/navigation";
@@ -47,6 +48,7 @@ export default async function SettingsPage() {
         </div>
 
         <SettingsClient initialData={company} />
+        <TwoFactorSettings />
 
         <div className="text-center text-gray-400 text-xs font-medium pb-8 border-t border-gray-200 pt-6 mt-12">
            Powered by Microtronic © 2026 Microtronic Co., Ltd.

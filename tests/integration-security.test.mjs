@@ -1,4 +1,5 @@
 import { test, before, after } from "node:test";
+import { createHmac } from "node:crypto";
 import assert from "node:assert/strict";
 import { Client } from "pg";
 
@@ -496,6 +497,108 @@ test("company API scopes data and omits bank and OAuth credentials", async (t) =
     assert.ok(!settingsBody.includes(`${fixture}_refresh`));
   } finally {
     await client.query("DELETE FROM users WHERE id = $1", [user.rows[0].id]);
+    await client.query("DELETE FROM companies WHERE id = $1", [company.rows[0].id]);
+  }
+});
+function base32DecodeForTotp(input) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = 0;
+  let value = 0;
+  const output = [];
+  for (const char of input.toUpperCase().replace(/=+$/g, "").replace(/\s+/g, "")) {
+    const index = alphabet.indexOf(char);
+    if (index < 0) throw new Error("invalid base32");
+    value = (value << 5) | index;
+    bits += 5;
+    if (bits >= 8) {
+      output.push((value >>> (bits - 8)) & 255);
+      bits -= 8;
+    }
+  }
+  return Buffer.from(output);
+}
+
+function totpForTest(secret, timeMs = Date.now()) {
+  const counter = BigInt(Math.floor(timeMs / 1000 / 30));
+  const counterBuffer = Buffer.alloc(8);
+  let remaining = counter;
+  for (let i = 7; i >= 0; i--) {
+    counterBuffer[i] = Number(remaining & BigInt(255));
+    remaining >>= BigInt(8);
+  }
+  const hmac = createHmac("sha1", base32DecodeForTotp(secret)).update(counterBuffer).digest();
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const binary =
+    ((hmac[offset] & 0x7f) << 24) |
+    ((hmac[offset + 1] & 0xff) << 16) |
+    ((hmac[offset + 2] & 0xff) << 8) |
+    (hmac[offset + 3] & 0xff);
+  return String(binary % 1000000).padStart(6, "0");
+}
+
+test("two-factor authentication can be enrolled and used for login", async (t) => {
+  if (!skipUnlessConfigured(t)) return;
+  const fixture = `twofa_${Date.now()}`;
+  const company = await client.query(
+    "INSERT INTO companies (name) VALUES ($1) RETURNING id",
+    [fixture],
+  );
+  const user = await client.query(
+    `INSERT INTO users (name, email, password, role, status, company_id)
+     VALUES ($1, $2, $3, 'user', 'active', $4) RETURNING id`,
+    ["2FA Test User", `${fixture}@security-test.invalid`, "$2b$10$/XAEkKyJGBD5WDPMF.ahDe1MdRvZ0YqwRAyQxMCrh2Q2KbKWn2hjS", company.rows[0].id],
+  );
+  const userId = user.rows[0].id;
+  const email = `${fixture}@security-test.invalid`;
+
+  try {
+    const loginResponse = await fetch(new URL("/api/login", baseUrl), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password: "password123" }),
+    });
+    assert.equal(loginResponse.status, 200);
+    const loginCookie = loginResponse.headers.get("set-cookie")?.split(";")[0];
+    assert.ok(loginCookie);
+
+    const setupResponse = await fetch(new URL("/api/auth/2fa/setup", baseUrl), {
+      method: "POST",
+      headers: { Cookie: loginCookie },
+    });
+    assert.equal(setupResponse.status, 200);
+    const setupBody = await setupResponse.json();
+    assert.ok(setupBody.secret);
+    assert.ok(setupBody.otpauthUri);
+
+    const enableResponse = await fetch(new URL("/api/auth/2fa/enable", baseUrl), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: loginCookie },
+      body: JSON.stringify({ code: totpForTest(setupBody.secret) }),
+    });
+    assert.equal(enableResponse.status, 200);
+    const enableBody = await enableResponse.json();
+    assert.equal(enableBody.recoveryCodes.length, 10);
+
+    const secondLoginResponse = await fetch(new URL("/api/login", baseUrl), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password: "password123" }),
+    });
+    assert.equal(secondLoginResponse.status, 200);
+    const secondLoginBody = await secondLoginResponse.json();
+    assert.equal(secondLoginBody.requires2FA, true);
+    assert.ok(secondLoginBody.pendingToken);
+
+    const verifyResponse = await fetch(new URL("/api/auth/2fa/verify-login", baseUrl), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pendingToken: secondLoginBody.pendingToken, code: totpForTest(setupBody.secret) }),
+    });
+    assert.equal(verifyResponse.status, 200);
+    assert.ok(verifyResponse.headers.get("set-cookie")?.includes("session-token="));
+  } finally {
+    await client.query("DELETE FROM user_recovery_codes WHERE user_id = $1", [userId]);
+    await client.query("DELETE FROM users WHERE id = $1", [userId]);
     await client.query("DELETE FROM companies WHERE id = $1", [company.rows[0].id]);
   }
 });

@@ -28,6 +28,7 @@ const FILES = [
   "migrations/add_companies_table.sql",
   "migrations/add_users_company_id_column.sql",
   "migrations/add_users_company_id_backfill.sql",
+  "migrations/add_user_two_factor.sql",
   "migrations/add_company_settings_table.sql",
   "migrations/add_company_settings_tenant_scope.sql",
   "migrations/add_company_module_settings_table.sql",

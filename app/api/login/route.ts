@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 import { SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { createTwoFactorPendingToken } from "@/lib/two-factor";
+import { checkRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 
 // Enforce JWT secret: MUST be set in environment, no fallback allowed
 function getJWTSecret(): Uint8Array {
@@ -20,6 +22,16 @@ function getJWTSecret(): Uint8Array {
 const SECRET = getJWTSecret();
 
 export async function POST(req: Request) {
+  const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const clientKey = forwarded || req.headers.get("x-real-ip") || "unknown";
+  const rate = checkRateLimit(`login:${clientKey}`, 20, 60_000);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "Too many login attempts. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(Math.ceil((rate.resetAt - Date.now()) / 1000)), ...rateLimitHeaders(rate) } },
+    );
+  }
+
   try {
     const body = await req.json();
     const email = typeof body?.email === "string" ? body.email.trim() : "";
@@ -33,7 +45,7 @@ export async function POST(req: Request) {
 
     // Query user with email normalization to handle case differences and accidental whitespace.
     const res = await query(
-      "SELECT id, email, password, name, role, status FROM users WHERE LOWER(email) = LOWER($1)",
+      "SELECT id, email, password, name, role, status, totp_enabled FROM users WHERE LOWER(email) = LOWER($1)",
       [normalizedEmail]
     );
 
@@ -52,6 +64,15 @@ export async function POST(req: Request) {
 
     if (!match) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    }
+
+    if (user.totp_enabled) {
+      const pendingToken = await createTwoFactorPendingToken(user.id, user.email);
+      return NextResponse.json({
+        success: false,
+        requires2FA: true,
+        pendingToken,
+      });
     }
 
     // Create JWT
