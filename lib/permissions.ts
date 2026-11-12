@@ -25,6 +25,7 @@ export const MODULES = [
   'calendar',
   'settings',
   'member_management',
+  'support',
   'permissions',
   'groups',
 ] as const;

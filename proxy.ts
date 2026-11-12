@@ -60,6 +60,9 @@ const PUBLIC_API_EXACT = new Set([
   "/api/bridge/link/claim",
   "/api/bridge/link/revoke",
   "/api/bridge/link/status",
+  // LINE Messaging API webhook — cannot present a session cookie. Authenticity is
+  // enforced inside the route with the x-line-signature HMAC (channel secret).
+  "/api/support/line/webhook",
 ]);
 const PUBLIC_API_PREFIXES = ["/api/auth"];
 
