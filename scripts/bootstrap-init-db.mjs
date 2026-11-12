@@ -50,6 +50,7 @@ const FILES = [
   "migrations/add_bridge_sync_log.sql",
   "migrations/add_integration_webhook_idempotency.sql",
   "migrations/add_support_tables.sql",
+  "migrations/add_support_group_and_permissions.sql",
   // migrations/fix_column_types_date_timestamp.sql is intentionally NOT run by the
   // bootstrap runner: it changes existing column types and requires manual review.
   // Verify current types first with: node scripts/check-column-types.mjs

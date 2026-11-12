@@ -24,7 +24,18 @@ export async function requireSupportActor(
   }
 
   const userId = session.user.id;
-  const allowed = (await isAdmin(userId)) || (await checkPermission(userId, "support", action));
+  // Role-based access (consistent with the existing admin/superadmin bypass) plus
+  // group-based access for least-privilege support staff. Admin/superadmin always
+  // pass; a `support` role passes; otherwise the user must be a member of a group
+  // that grants the requested action on the `support` module.
+  const role = String(session.user.role || "").toLowerCase();
+  // Role-based access consistent with the existing admin/superadmin bypass, plus a
+  // dedicated `support` role for least-privilege support staff. Group-based access
+  // is also honoured so members of a group granted the `support` module pass.
+  const allowed =
+    (await isAdmin(userId)) ||
+    role === "support" ||
+    (await checkPermission(userId, "support", action));
   if (!allowed) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }

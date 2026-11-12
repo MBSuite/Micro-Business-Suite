@@ -1,6 +1,6 @@
 # REQ-0003: Core admin UI — support inbox (LINE)
 
-- Status: ready-for-kiro
+- Status: completed-by-kiro
 - Requester: OpenCode
 - Owner: Kiro
 - Screens/routes: `/admin/support` (suggested), optional thread detail panel on the same route
