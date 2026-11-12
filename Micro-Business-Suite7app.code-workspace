@@ -30,5 +30,8 @@
 		"chat.tools.terminal.enableAutoApprove": false,
 		"chat.tools.terminal.autoApprove": {},
 		"chat.tools.urls.autoApprove": {}
+	},
+	"trae": {
+		"workspaceId": "ebf8e17c4b5296f2dcc4e3070263d09f"
 	}
 }
