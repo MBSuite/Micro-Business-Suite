@@ -3,7 +3,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { Package, Download, Trash2, CheckCircle2, Puzzle } from "lucide-react";
+import { getModuleBrand } from "@/lib/module-logos";
 
 type Pack = {
   id: string; name: string; description: string; targetCustomers: string[];
@@ -58,12 +60,27 @@ export default function AdminPluginsPage() {
           <div className="bg-white rounded-2xl border border-slate-100 p-6 text-sm font-bold text-slate-500">กำลังโหลด...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {packs.map((p) => (
+            {packs.map((p) => {
+              const brand = getModuleBrand(p.id);
+              return (
               <div key={p.id} className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm space-y-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-black" style={{ backgroundColor: p.color }}>
-                      <Package size={22} />
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden"
+                      style={brand ? { backgroundColor: "#f8fafc", boxShadow: `inset 0 0 0 1px ${p.color}33` } : { backgroundColor: p.color }}
+                    >
+                      {brand ? (
+                        <Image
+                          src={brand.logo}
+                          alt={`โลโก้ ${brand.name}`}
+                          width={40}
+                          height={40}
+                          className="h-10 w-10 object-contain"
+                        />
+                      ) : (
+                        <Package size={22} className="text-white" />
+                      )}
                     </div>
                     <div>
                       <div className="font-bold text-slate-800">{p.name}</div>
@@ -94,7 +111,8 @@ export default function AdminPluginsPage() {
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

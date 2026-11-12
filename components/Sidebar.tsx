@@ -3,6 +3,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Home, 
@@ -37,6 +38,7 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { canAccessAdmin, normalizeRole } from "@/lib/core-standards";
 import { getEnabledModules, MODULE_CATEGORIES, type AppModule } from "@/lib/module-registry";
+import { getModuleBrand } from "@/lib/module-logos";
 
 const iconMap = {
   home: Home,
@@ -223,6 +225,7 @@ export default function Sidebar({
                   const href = item.route || "#";
                   const isActive = pathname === href || (href !== "/" && pathname?.startsWith(href));
                   const Icon = iconMap[item.icon as keyof typeof iconMap] || BookOpen;
+                  const brand = getModuleBrand(item.id);
 
                   return (
                     <Link
@@ -235,7 +238,17 @@ export default function Sidebar({
                           : "hover:bg-white/5 text-slate-400 hover:text-white"
                       )}
                     >
-                      <Icon size={20} className={cn(isActive ? "text-white" : "text-slate-500 group-hover:text-violet-400")} />
+                      {brand ? (
+                        <Image
+                          src={brand.logo}
+                          alt=""
+                          width={24}
+                          height={24}
+                          className="h-5 w-5 shrink-0 object-contain drop-shadow-sm"
+                        />
+                      ) : (
+                        <Icon size={20} className={cn(isActive ? "text-white" : "text-slate-500 group-hover:text-violet-400")} />
+                      )}
                       {(!isCollapsed || isMobileOpen) && <span className="text-sm font-black tracking-tight">{item.label}</span>}
                       {isActive && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-full"></div>}
                       {(isCollapsed && !isMobileOpen) && (

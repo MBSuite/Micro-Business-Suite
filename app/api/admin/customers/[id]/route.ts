@@ -109,6 +109,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         const { saveCompanyModuleOverrides } = await import("@/lib/module-config");
         const packMap: Record<string, string> = {
           retail: "retail_pos", fnb: "f_and_b", pharmacy: "pharmacy", service: "service_business",
+          rental: "rental", hotel: "hotel_booking",
         };
         const packId = packMap[String(body.business_type)];
         if (packId) {

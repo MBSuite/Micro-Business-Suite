@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import LandingFeatures from "@/components/LandingFeatures";
+import ModuleShowcase from "@/components/ModuleShowcase";
 
 export default function LandingPage() {
   return (
@@ -36,6 +37,12 @@ export default function LandingPage() {
             className="hidden rounded-xl px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 sm:inline-flex"
           >
             ฟีเจอร์
+          </Link>
+          <Link
+            href="#modules"
+            className="hidden rounded-xl px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 sm:inline-flex"
+          >
+            โมดูล
           </Link>
           <Link
             href="/login"
@@ -163,6 +170,33 @@ export default function LandingPage() {
           </p>
         </div>
         <LandingFeatures />
+      </section>
+
+      <section
+        id="modules"
+        className="mx-auto max-w-7xl scroll-mt-10 border-t border-slate-100 px-6 py-20 lg:px-10 lg:py-24"
+      >
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-xs font-black uppercase tracking-[0.25em] text-indigo-600">
+            6 Business Modules
+          </p>
+          <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+            เลือกโมดูลให้ตรงกับธุรกิจของคุณ
+          </h2>
+          <p className="mt-4 text-sm leading-7 text-slate-500 sm:text-base">
+            แต่ละโมดูลใช้งาน standalone ได้ หรือเชื่อมกับ Core เพื่อรวมบัญชีและรายงานระดับองค์กร
+          </p>
+        </div>
+        <ModuleShowcase />
+        <div className="mt-10 text-center">
+          <Link
+            href="/register"
+            className="inline-flex h-13 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-7 text-sm font-black text-white shadow-lg shadow-indigo-200 transition hover:-translate-y-0.5 hover:bg-indigo-700"
+          >
+            เลือกโมดูลและเริ่มต้นใช้งาน
+            <ArrowRight size={18} />
+          </Link>
+        </div>
       </section>
 
       <footer className="border-t border-slate-100 bg-slate-50/70">

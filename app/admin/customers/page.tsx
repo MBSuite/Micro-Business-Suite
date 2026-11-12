@@ -2,11 +2,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import {
   Building2, Copy, KeyRound, RefreshCw, PauseCircle, PlayCircle,
   History, Plus, Users, CalendarClock, AlertTriangle, TrendingUp, X,
 } from "lucide-react";
 import { LICENSE_PACKAGES, LICENSE_TIERS } from "@/lib/license-packages";
+import { getModuleBrand } from "@/lib/module-logos";
 
 type Customer = {
   id: number;
@@ -310,7 +312,23 @@ export default function AdminCustomersPage() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-xs font-bold text-slate-500 capitalize">{c.business_type || "general"}</td>
+                        <td className="px-4 py-3 text-xs font-bold text-slate-500 capitalize">
+                          <span className="inline-flex items-center gap-2">
+                            {(() => {
+                              const brand = getModuleBrand(c.business_type);
+                              return brand ? (
+                                <Image
+                                  src={brand.logo}
+                                  alt={`โลโก้ ${brand.name}`}
+                                  width={20}
+                                  height={20}
+                                  className="h-5 w-5 object-contain"
+                                />
+                              ) : null;
+                            })()}
+                            {c.business_type || "general"}
+                          </span>
+                        </td>
                         <td className="px-4 py-3 text-slate-600 font-bold">{c.user_count}/{c.max_users}</td>
                         <td className="px-4 py-3">
                           {c.license_key ? (
@@ -711,7 +729,25 @@ function BusinessTypeControl({ customer, onReload }: { customer: Customer; onRel
           <option value="fnb">ร้านอาหาร/คาเฟ่ (F&B)</option>
           <option value="pharmacy">ร้านขายยา (Pharmacy)</option>
           <option value="service">ธุรกิจบริการ (Service)</option>
+          <option value="rental">ธุรกิจเช่าระยะยาว (Rental)</option>
+          <option value="hotel">ที่พัก/โรงแรม (Hotel)</option>
         </select>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white">
+          {(() => {
+            const brand = getModuleBrand(type);
+            return brand ? (
+              <Image
+                src={brand.logo}
+                alt={`โลโก้ ${brand.name}`}
+                width={26}
+                height={26}
+                className="h-6 w-6 object-contain"
+              />
+            ) : (
+              <Building2 size={16} className="text-slate-300" />
+            );
+          })()}
+        </span>
         <button onClick={save} disabled={busy || type === (customer.business_type || "general")} className="h-9 px-4 bg-indigo-600 text-white rounded-lg text-xs font-black disabled:opacity-50">
           {busy ? "กำลังบันทึก..." : "บันทึก (auto-install pack)"}
         </button>

@@ -2,19 +2,23 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { UserPlus, Lock, Mail, User, AlertCircle, ArrowLeft, CheckCircle, Database, Building2 } from "lucide-react";
 import Link from "next/link";
 import { registerUser } from "./actions";
 import { checkAndInitUsersTable } from "./db-init";
 import { REGISTRATION_BUSINESS_TYPES } from "@/lib/registration-business-types.mjs";
+import { getModuleBrand } from "@/lib/module-logos";
 
 export default function RegisterPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isFixing, setIsFixing] = useState(false);
+  const [businessType, setBusinessType] = useState("general");
   const router = useRouter();
+  const selectedBrand = getModuleBrand(businessType);
 
   async function handleDBFix() {
     setIsFixing(true);
@@ -116,12 +120,37 @@ export default function RegisterPage() {
                </div>
 
                 <div className="space-y-1">
-                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Business Type (ประเภทธุรกิจ)</label>
-                   <select name="businessType" required className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium">
-                     {REGISTRATION_BUSINESS_TYPES.map(({ value, label }) => (
-                       <option key={value} value={value}>{label}</option>
-                     ))}
-                   </select>
+                   <label htmlFor="businessType" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Business Type (ประเภทธุรกิจ)</label>
+                   <div className="flex items-center gap-2">
+                     <select
+                       id="businessType"
+                       name="businessType"
+                       required
+                       value={businessType}
+                       onChange={(event) => setBusinessType(event.target.value)}
+                       className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium"
+                     >
+                       {REGISTRATION_BUSINESS_TYPES.map(({ value, label }) => (
+                         <option key={value} value={value}>{label}</option>
+                       ))}
+                     </select>
+                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded border border-gray-200 bg-white">
+                       {selectedBrand ? (
+                         <Image
+                           src={selectedBrand.logo}
+                           alt={`โลโก้ ${selectedBrand.name}`}
+                           width={32}
+                           height={32}
+                           className="h-8 w-8 object-contain"
+                         />
+                       ) : (
+                         <Building2 size={20} className="text-gray-300" />
+                       )}
+                     </span>
+                   </div>
+                   <p className="ml-1 text-[10px] font-medium text-gray-400">
+                     {selectedBrand ? selectedBrand.description : "โมดูลพื้นฐานสำหรับธุรกิจทั่วไป (ไม่ติดตั้งโมดูลเสริม)"}
+                   </p>
                 </div>
 
                <div className="space-y-1">

@@ -3,7 +3,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ShoppingCart, Plus, Send, Receipt, X, ChefHat } from "lucide-react";
+import Image from "next/image";
+import { Plus, Send, Receipt, X } from "lucide-react";
+import { MODULE_BRAND } from "@/lib/module-logos";
 
 type Table = { id: number; code: string; name: string; seats: number; zone: string; status: string; current_order_id: number | null };
 type OrderItem = { id: number; product_id: number | null; description: string; qty: number; price: number; total: number; kot_sent: boolean };
@@ -118,7 +120,15 @@ export default function FbPage() {
         {/* Table layout */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center gap-3">
-            <span className="p-3 bg-violet-600 rounded-2xl shadow-xl shadow-violet-200"><ChefHat className="text-white w-7 h-7" /></span>
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-xl shadow-violet-200 ring-1 ring-violet-100">
+              <Image
+                src={MODULE_BRAND.f_and_b.logo}
+                alt="โลโก้ร้านอาหาร/คาเฟ่ (F&B)"
+                width={44}
+                height={44}
+                className="h-11 w-11 object-contain"
+              />
+            </span>
             <div>
               <h1 className="text-2xl font-bold text-slate-900">ร้านอาหาร/คาเฟ่ (F&B)</h1>
               <p className="text-[10px] uppercase tracking-[0.3em] text-violet-400">Module: f_and_b — ผังโต๊ะ, KOT, บิล</p>
