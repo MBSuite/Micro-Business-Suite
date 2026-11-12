@@ -99,6 +99,13 @@ Migration: `migrations/add_support_tables.sql` (idempotent, อยู่ใน `
 - `DISCORD_WEBHOOK_URL` เป็น secret: ใครถือก็ยิงข้อความได้
 - ห้ามใช้ `.env.local` ของเครื่อง dev ชี้ production DB สำหรับการทดสอบ write
 
+## Access control (implemented)
+
+- `requireSupportActor` (`lib/support-auth.ts`) อนุญาต: role `admin` / `superadmin` / `support` (bypass) หรือสมาชิกกลุ่มที่ได้รับ permission `support` (read/create/update) ผ่าน `group_permissions`
+- กลุ่ม `Support` (system group) ถูก seed พร้อม permission `support` read/create/update — ผู้ใช้ที่เพิ่มเข้ากลุ่มนี้จะตอบ/อัปเดตเคสได้โดยไม่ต้องเป็น admin
+- `group_permissions` schema ถูกแก้: ลบ column-level UNIQUE ที่ทำให้เก็บหลาย module ต่อกลุ่มไม่ได้, เก็บ composite unique `(group_id, module)` แทน
+- ทุก query ถูก scope ด้วย `company_id` — thread ของบริษัทอื่นตอบ 404
+
 ## Testing
 
 ```bash

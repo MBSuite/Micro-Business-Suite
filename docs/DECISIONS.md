@@ -272,3 +272,16 @@
 - Verification (2026-11-12): 14/14 API checks against disposable `mbs_support_api_test` — 401 without session, 403 without permission, tenant A/B list isolation, masked ids, cross-tenant detail/outbound 404, invalid status 400, empty text 400, outbound stored with `delivery_status=failed` when LINE rejects the test token, PATCH status+priority persisted, detail reflects both messages. Unit tests 16/16. A second E2E regression run kept the webhook suite at 11/11.
 - Rollback: revert the route files and drop the two `support_messages` columns; the tables and inbound webhook keep working without the inbox API.
 - Status: backend implemented and verified locally. No Production migration, deploy, env change, or group-permission seed has been performed; the inbox UI is pending Kiro.
+
+### [2026-11-12] Support access control: dedicated Support group + least-privilege role
+
+- Context: the inbox API initially admitted only admin/superadmin. A support employee should be able to read and answer threads without being a full admin, and the legacy `group_permissions` schema (column-level UNIQUE on `group_id` and on `module`) made multi-module grants impossible.
+- Decision:
+  1. `requireSupportActor` now admits role `admin`/`superadmin`/`support` (bypass) **or** any member of a group granted the `support` module with the requested action.
+  2. `migrations/add_support_group_and_permissions.sql` drops the two legacy column-level UNIQUE constraints, (re)creates the composite `UNIQUE (group_id, module)`, creates the table if missing, and seeds a system `Support` group with `can_create/can_read/can_update` on `support`.
+  3. Least privilege: the Support group gets no delete/export/manage.
+- Consequences: a support employee can be given access by adding them to the `Support` group or by setting `users.role = 'support'`, without granting admin rights. Admin/superadmin behaviour is unchanged.
+- Impacted files: `lib/support-auth.ts`, `migrations/add_support_group_and_permissions.sql`, `scripts/bootstrap-init-db.mjs`, `docs/SUPPORT_CHANNELS.md`.
+- Verification: migration applies cleanly and is idempotent on a disposable database (Support group + 1 permission row after two runs); `tsc --noEmit` and `eslint` clean.
+- Rollback: revert the role check and drop the seeded group/permission row; the composite-constraint change is safe to keep.
+- Status: implemented locally. Production migration pending approval.
