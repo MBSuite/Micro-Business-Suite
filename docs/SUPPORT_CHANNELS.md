@@ -178,11 +178,15 @@ curl -i -X POST http://localhost:3000/api/support/line/webhook \
 - `/admin/support` inbox UI: เสร็จสมบูรณ์ (`app/admin/support/page.tsx`, 468 บรรทัด) ถูก commit + รวมกับ backend (`REQ-0003`, status `completed-by-kiro`)
 - Production: migration + env vars (Core/6 modules) + deploy + smoke test (401/307/200) เรียบร้อย
 - Module Discord env: `DISCORD_WEBHOOK_URL` เพิ่มเข้า Vercel (production+preview) ของทุก module แล้ว deploy module ทั้งหมด (Retail/Service/Rental/Hotel/FNB/Pharmacy) → deploy เรียบร้อย (2026-11-12)
+- LINE ทดสอบจริง (2026-11-12): user ส่งข้อความ "ทดสอบ" → event `01M77KX3GGKE3F8T3EZZHA67RZ` (message/completed) → store ใน `support_messages` + thread + Discord notify ✅
 
 ## งานที่เหลือ (ถ้ายังต้องเช่นกัน)
 
 1. ~~กรอก `DISCORD_WEBHOOK_URL` ต่อโปรเจกต์ module ที่ยังว่าง (Retail/Service/Rental/Hotel/Pharmacy) + deploy module นั้น~~ — **เสร็จแล้ว** (env + deploy ทั้งหมด 6 modules, 2026-11-12)
 2. Discord bot (interactions) สำหรับตอบกลับใน Discord — ถ้าจำเป็น
-3. Seed user จริงเข้ากลุ่ม `Support` / กำหนด retention ข้อความลูกค้า
+3. Seed user จริงเข้ากลุ่ม `Support` / กำหนด retention ข้อความลูกค้า — **ค้าง** (ยังไม่มี user จริงผูก group `Support`; verified 2026-11-12)
+4. Key rotation — **ค้าง** (owner-side; รอ production-ready)
+
+> **หมายเหตุปิดงาน (2026-11-12):** เหลือ 2 งานค้างเท่านั้น คือ **Key rotation** และ **Seed user จริงเข้ากลุ่ม `Support`** — โดย "พี่ฆัง" รู้แล้วและจะมาทำต่อภายหลัง
 
 ## งานถัดไขไม่งั้นจะถือว่างานไม่เสร็จ
