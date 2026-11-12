@@ -177,10 +177,11 @@ curl -i -X POST http://localhost:3000/api/support/line/webhook \
 - LINE webhook: URL `https://micro-business-suite.vercel.app/api/support/line/webhook` ตั้งแล้ว + **Verify ผ่านแล้ว** + ตอบ 200 (empty-events ≈1.1s, message-event ≈5.0s) → signature gate + storage + Discord notify ทำงานร่วมกัน
 - `/admin/support` inbox UI: เสร็จสมบูรณ์ (`app/admin/support/page.tsx`, 468 บรรทัด) ถูก commit + รวมกับ backend (`REQ-0003`, status `completed-by-kiro`)
 - Production: migration + env vars (Core/6 modules) + deploy + smoke test (401/307/200) เรียบร้อย
+- Module Discord env: `DISCORD_WEBHOOK_URL` เพิ่มเข้า Vercel (production+preview) ของทุก module แล้ว deploy module ทั้งหมด (Retail/Service/Rental/Hotel/FNB/Pharmacy) → deploy เรียบร้อย (2026-11-12)
 
 ## งานที่เหลือ (ถ้ายังต้องเช่นกัน)
 
-1. กรอก `DISCORD_WEBHOOK_URL` ต่อโปรเจกต์ module ที่ยังว่าง (Retail/Service/Rental/Hotel/Pharmacy) + deploy module นั้น
+1. ~~กรอก `DISCORD_WEBHOOK_URL` ต่อโปรเจกต์ module ที่ยังว่าง (Retail/Service/Rental/Hotel/Pharmacy) + deploy module นั้น~~ — **เสร็จแล้ว** (env + deploy ทั้งหมด 6 modules, 2026-11-12)
 2. Discord bot (interactions) สำหรับตอบกลับใน Discord — ถ้าจำเป็น
 3. Seed user จริงเข้ากลุ่ม `Support` / กำหนด retention ข้อความลูกค้า
 
