@@ -31,6 +31,11 @@ SUPPORT_TOKEN_ENCRYPTION_KEY=     # openssl rand -base64 32
 
 `SUPPORT_TOKEN_ENCRYPTION_KEY` ใช้เข้ารหัส credential ก่อนเก็บลง DB (AES-256-GCM, prefix `enc:v1:`) — ไม่ได้ขอจาก LINE/Discord/Vercel แต่สร้างเอง
 
+### สถานะ module ทุกตัว (2026-11-12)
+
+- ทุก module (`retail | service | rental | hotel | fnb | pharmacy`) ได้รับ `lib/notify-discord.ts` + `SUPPORT_PRODUCT_KEY`/`SUPPORT_PRODUCT_NAME` + `DISCORD_WEBHOOK_URL` (ใน `.env.local`/`.env` และ Vercel production+preview) และ deploy เรียบร้อยแล้ว
+- หาก module ใดยังไม่มี `DISCORD_WEBHOOK_URL` (กรอกเอง) → notifier log warning + skip + ไม่ error
+
 ## LINE Console setup
 
 1. สร้าง Provider → Messaging API channel
