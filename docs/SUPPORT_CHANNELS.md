@@ -172,9 +172,16 @@ curl -i -X POST http://localhost:3000/api/support/line/webhook \
 
 ห้ามชี้สคริปต์เหล่านี้ไปที่ Neon: มัน `DROP`/`TRUNCATE` ตาราง `support_*`
 
-## งานถัดไป
+## สถานะสุดท้าย (2026-11-12 — ปิดงานระบบ support เรียบร้อยแล้ว)
 
-1. `/admin/support` inbox UI — ส่งต่อ Kiro แล้วที่ `AI-HANDOFF/requests/REQ-0003-support-inbox-ui.md` (backend พร้อม)
-2. seed สิทธิ์ `support` ให้กลุ่มผู้ใช้จริง (ตอนนี้ admin/superadmin ผ่าน, กลุ่มอื่นยังไม่มีสิทธิ์)
-3. UI ตั้งค่า/ตรวจสอบ channel (แสดงสถานะ ไม่แสดง token)
-4. Discord bot (interactions) ถ้าต้องการตอบกลับใน Discord
+- LINE webhook: URL `https://micro-business-suite.vercel.app/api/support/line/webhook` ตั้งแล้ว + **Verify ผ่านแล้ว** + ตอบ 200 (empty-events ≈1.1s, message-event ≈5.0s) → signature gate + storage + Discord notify ทำงานร่วมกัน
+- `/admin/support` inbox UI: เสร็จสมบูรณ์ (`app/admin/support/page.tsx`, 468 บรรทัด) ถูก commit + รวมกับ backend (`REQ-0003`, status `completed-by-kiro`)
+- Production: migration + env vars (Core/6 modules) + deploy + smoke test (401/307/200) เรียบร้อย
+
+## งานที่เหลือ (ถ้ายังต้องเช่นกัน)
+
+1. กรอก `DISCORD_WEBHOOK_URL` ต่อโปรเจกต์ module ที่ยังว่าง (Retail/Service/Rental/Hotel/Pharmacy) + deploy module นั้น
+2. Discord bot (interactions) สำหรับตอบกลับใน Discord — ถ้าจำเป็น
+3. Seed user จริงเข้ากลุ่ม `Support` / กำหนด retention ข้อความลูกค้า
+
+## งานถัดไขไม่งั้นจะถือว่างานไม่เสร็จ

@@ -285,3 +285,9 @@
 - Verification: migration applies cleanly and is idempotent on a disposable database (Support group + 1 permission row after two runs); `tsc --noEmit` and `eslint` clean.
 - Rollback: revert the role check and drop the seeded group/permission row; the composite-constraint change is safe to keep.
 - Status: implemented locally. Production migration pending approval.
+
+### [2026-11-12] Support channels end-to-end final state and documentation refresh
+
+- Context: the support channel work reached a verified end state — LINE webhook live and signature-authenticated, inbox API implemented and tenant-scoped, admin inbox UI delivered and reviewed, production migrated and deployed.
+- Decision: close the support task documentation with the final verification record; operational follow-ups (per-project Discord webhook values, Discord reply bot) remain owner-adjacent and are not blocking the verified scope.
+- Status: production deployment `micro-business-suite-4sm8hpxgw-mbs9-c3cc.vercel.app` ready; LINE verify passed; backend E2E 11/11 (webhook) + 14/14 (inbox) green; secret gate clean.
