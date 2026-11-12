@@ -21,6 +21,8 @@
 - `Micro-Business-Hotel` — จองและบริหารที่พักระยะสั้นแบบรายวัน
 - `Micro-Business-FNB` — สั่งอาหารผ่าน QR, ครัว, ชำระเงิน, สต็อก และต้นทุนร้านอาหาร
 
+โลโก้ของทั้ง 6 โมดูลเก็บไว้ใน `public/` (`Service.png`, `Retail2.png`, `Rental.png`, `Pharmacy.png`, `Hotel.png`, `F&B.png`) และผูกกับ module id / business type / plugin pack ผ่าน `lib/module-logos.ts` — เปลี่ยนโลโก้ให้แก้ที่ไฟล์ mapping นี้เท่านั้น อย่า hardcode path ในหน้า UI
+
 ### ขอบเขตข้อมูลและการเชื่อมต่อ
 
 - **ฐานข้อมูลเดียว:** Core และโมดูลทั้งหกใช้ PostgreSQL ชุดเดียวกัน — Neon สำหรับ Dev และ Supabase สำหรับ Production แต่ละแอปเข้าถึงเฉพาะตารางที่ขึ้น prefix ของตนเอง; ห้ามอ่าน/เขียนตารางของแอปอื่นโดยตรง ให้ส่งข้อมูลผ่าน API/Bridge ที่ยืนยันตัวตน

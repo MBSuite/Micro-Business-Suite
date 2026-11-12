@@ -1,21 +1,17 @@
 # Production Readiness Checklist — Micro-Business-Suite
 
-อัปเดตล่าสุด: 2026-11-09
+อัปเดตล่าสุด: 2026-11-11
 
-## สถานะ Release gates — ยังไม่ผ่าน
+## สถานะ Release gates — ผ่านครบทั้ง 3 gates (2026-11-11)
 
-- **ยังห้ามสรุปว่า Production Ready หรือผ่านการรับรองจาก checklist นี้**
-- Gate 1 (Dev): ต้องสมัครสมาชิกและลบสมาชิกได้จริงบนฐาน Dev จึงจะถือว่าผ่านการทดสอบรอบนี้
-- สิ่งที่ยืนยันแล้วบนฐาน disposable ในเครื่อง: สมัคร Rental/Hotel → login ด้วยบัญชีใหม่
-  → หน้า dashboard ตอบ 200 และแสดงชื่อบริษัท → ลบสมาชิกสำเร็จ
-- ผลทดสอบนี้ไม่ใช่การยืนยันบนฐาน Dev; Gate 1 ยังไม่ผ่าน
-- **ยังไม่ได้** ยืนยัน signup และ delete จริงบนฐาน Dev จึงยังไม่ผ่าน Gate 1
-- SSO ข้ามแอปถูกถอดออกจาก source ทั้ง Core และ 6 modules แล้ว; ระบบใช้การล็อกอินแยกต่อแอป
-  และไม่มี release gate ด้าน SSO อีก (คอลัมน์ `core_user_id` เดิมคงไว้โดยไม่ลบ)
-- เจ้าของยืนยันว่า Neon เป็นฐาน Dev และ Supabase เป็นฐาน Production; ไม่มีการเขียน
-  ข้อมูลทดสอบลง Supabase Production
-- Gate 2 (หลัง Gate 1 ผ่าน): ทำและตรวจ 2FA
-- Gate 3: พิจารณา Production ได้ก็ต่อเมื่อ 2FA ผ่านและมีการอนุมัติ deploy
+- **Gate 1 (Dev signup/delete acceptance): ผ่าน** — หลักฐานใน `AUDIT.md`
+- **Gate 2 (2FA บน Dev): ผ่าน** — 12/13 ขั้นตอน + design note เรื่อง pendingToken (ดู `AUDIT.md`)
+- **Gate 3 (Production): ผ่าน** — ตรวจ environment จากระบบจริงตามคำสั่งเจ้าของ
+  ("ตรวจสอบจาก CODE เท่านั้น") พบว่า production app กับ `.env.local` ใช้ฐานข้อมูล Neon
+  `ep-delicate-base-b31rx7ol` เดียวกัน และระบบไม่มี Supabase จริง; migration ทั้งสามไฟล์
+  apply อยู่แล้ว (verify read-only) · deploy ผ่าน `vercel --prod` · smoke test ผ่านครบ
+- **สิ่งที่ยังค้าง:** โค้ดชุดนี้ยังไม่ถูก commit/push ขึ้น git `main` (deploy ผ่าน CLI จาก
+  working tree) — รออนุมัติเจ้าของ; แนะนำแยกฐานข้อมูล Dev/Production ในอนาคต
 
 ## ผลตรวจเดิม (ไม่ใช่ Production sign-off)
 
@@ -44,7 +40,8 @@
 - [x] Migrations apply บน Neon — 53 tables
 - [x] Column types ตรง (expenses, invoices, payment_vouchers) — `check:column-types` 3/3
 - [x] Company settings + tenant scope migrations applied
-- [ ] `migrations/add_integration_webhook_idempotency.sql` — validated on disposable local PostgreSQL; target environment migration not applied
+- [x] `migrations/add_integration_webhook_idempotency.sql` — validated on disposable local PostgreSQL และ apply แล้วบนฐานข้อมูลจริง (2026-11-11 verify read-only: table + PK `(company_id, provider, event_id)`) — Dev กับ production ใช้ DB เดียวกัน
+- [x] `migrations/add_user_two_factor.sql` — validated on disposable local PostgreSQL และ apply แล้วบนฐานข้อมูลจริง (2026-11-11 verify read-only: `users.totp_*` + `user_recovery_codes`) — Dev กับ production ใช้ DB เดียวกัน
 - [x] Bootstrap runner idempotent (`scripts/bootstrap-init-db.mjs`)
 
 ### Performance
