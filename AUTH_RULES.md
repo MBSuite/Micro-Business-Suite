@@ -69,6 +69,15 @@ const { data: session } = useSession(); // BANNED!
 </button>
 ```
 
+### 🔑 PASSWORD RESET FLOW (2026-11-20)
+1. Login page "ลืมรหัสผ่าน?" → inline forgot form → POST `/api/auth/forgot-password` { email }
+2. API ค้นหา user; ถ้ามี จะสร้าง signed JWT reset token (หมดอายุ 1 ชม) และส่งอีเมลผ่าน Gmail SMTP (GMAIL_FROM / GMAIL_APP_PASSWORD)
+3. ตอบ generic message เสมอ (ไม่เปิดเผยว่าอีเมลมี/ไม่มี)
+4. อีเมลลิงก์ → `/login?reset=<token>` → หน้า reset form → POST `/api/auth/reset-password` { token, password, confirmPassword }
+5. API verify JWT + user → hash password ใหม่ด้วย bcrypt
+- Endpoints อยู่ใต้ `/api/auth/*` จึง public ตาม proxy.ts โดยอัตโนมัติ
+- หน้า `/login` รองรับ query `?reset=<token>` และ mode forgot/reset ภายในหน้าเดียว (ไม่ต้องแก้ proxy.ts)
+
 ---
 **Created**: 2024-04-17
 **Status**: Required project authentication rules; update this document when the implementation contract changes.

@@ -1,21 +1,38 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 "use client";
 
-import { useState } from "react";
-import { LogIn, Lock, Mail, ShieldCheck, AlertCircle } from "lucide-react";
+import { useState, Suspense } from "react";
+import { LogIn, Lock, Mail, ShieldCheck, AlertCircle, ArrowLeft, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const resetToken = searchParams.get("reset") || "";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [pendingToken, setPendingToken] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
 
+  // Mode: "login" | "forgot" | "reset"
+  const [mode, setMode] = useState<"login" | "forgot" | "reset">(resetToken ? "reset" : "login");
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setIsLoading(true);
 
     try {
@@ -68,10 +85,68 @@ export default function LoginPage() {
     }
   };
 
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "ส่งคำขอไม่สำเร็จ");
+      } else {
+        setSuccess(data.message || "หากอีเมลนี้มีในระบบ จะได้รับลิงก์รีเซ็ตรหัสผ่าน");
+      }
+    } catch (err: any) {
+      setError("เกิดข้อผิดพลาด: " + ((err as Error).message || "กรุณาลองใหม่"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // confirmPassword state for reset mode.
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Override handleReset to use confirmPassword state.
+  const handleResetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    if (password !== confirmPassword) {
+      setError("รหัสผ่านไม่ตรงกัน");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: resetToken, password, confirmPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "รีเซ็ตรหัสผ่านไม่สำเร็จ");
+      } else {
+        setSuccess(data.message || "รีเซ็ตรหัสผ่านสำเร็จ");
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 1500);
+      }
+    } catch (err: any) {
+      setError("เกิดข้อผิดพลาด: " + ((err as Error).message || "กรุณาลองใหม่"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-[#f4f6f9] flex items-center justify-center p-6">
       <div className="w-full max-w-md">
-
         {/* Brand Header */}
         <div className="text-center mb-8">
           <img
@@ -82,7 +157,9 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-gray-800 tracking-tight uppercase">
             Micro-Business-Suite
           </h1>
-          <p className="text-gray-500 mt-2 font-medium">เข้าสู่ระบบจัดการบัญชีอัจฉริยะ</p>
+          <p className="text-gray-500 mt-2 font-medium">
+            {mode === "forgot" ? "รีเซ็ตรหัสผ่าน" : mode === "reset" ? "ตั้งรหัสผ่านใหม่" : "เข้าสู่ระบบจัดการบัญชีอัจฉริยะ"}
+          </p>
         </div>
 
         {/* Login Card */}
@@ -97,8 +174,19 @@ export default function LoginPage() {
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded flex gap-3">
               <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold text-red-800 text-sm">เข้าสู่ระบบไม่สำเร็จ</p>
+                <p className="font-bold text-red-800 text-sm">เกิดข้อผิดพลาด</p>
                 <p className="text-red-700 text-xs mt-1">{error}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Success Alert */}
+          {success && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded flex gap-3">
+              <CheckCircle2 size={20} className="text-green-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-green-800 text-sm">สำเร็จ</p>
+                <p className="text-green-700 text-xs mt-1">{success}</p>
               </div>
             </div>
           )}
@@ -127,57 +215,149 @@ export default function LoginPage() {
                 {isLoading ? "กำลังประมวลผล..." : "ยืนยัน 2FA"}
               </button>
             </form>
+          ) : mode === "forgot" ? (
+            <form onSubmit={handleForgot} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">Email</label>
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors" size={20} />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
+                    className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="อีเมล"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-black rounded shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-sm disabled:cursor-not-allowed"
+              >
+                {isLoading ? "กำลังส่ง..." : "ส่งลิงก์รีเซ็ตรหัสผ่าน"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode("login"); setError(""); setSuccess(""); }}
+                className="w-full text-sm text-gray-500 hover:text-blue-600 flex items-center justify-center gap-2"
+                disabled={isLoading}
+              >
+                <ArrowLeft size={16} /> กลับไปหน้าเข้าสู่ระบบ
+              </button>
+            </form>
+          ) : mode === "reset" ? (
+            <form onSubmit={handleResetSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">รหัสผ่านใหม่</label>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors" size={20} />
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                    className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">ยืนยันรหัสผ่านใหม่</label>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors" size={20} />
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={isLoading}
+                    className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-black rounded shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-sm disabled:cursor-not-allowed"
+              >
+                {isLoading ? "กำลังบันทึก..." : "ตั้งรหัสผ่านใหม่"}
+              </button>
+              {!resetToken && (
+                <button
+                  type="button"
+                  onClick={() => { setMode("login"); setError(""); setSuccess(""); }}
+                  className="w-full text-sm text-gray-500 hover:text-blue-600 flex items-center justify-center gap-2"
+                  disabled={isLoading}
+                >
+                  <ArrowLeft size={16} /> กลับไปหน้าเข้าสู่ระบบ
+                </button>
+              )}
+            </form>
           ) : (
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">Email</label>
-              <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors" size={20} />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={isLoading}
-                  className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                  placeholder="อีเมล"
-                />
+            <form onSubmit={handleLogin} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">Email</label>
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors" size={20} />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
+                    className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="อีเมล"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">Password</label>
-              <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors" size={20} />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isLoading}
-                  className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                  placeholder="••••••••"
-                />
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">Password</label>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors" size={20} />
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                    className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="••••••••"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center justify-between text-xs">
-              <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-500 select-none">
-                <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" disabled={isLoading} />
-                จดจำฉัน
-              </label>
-              <button type="button" className="text-blue-600 font-bold hover:underline disabled:opacity-50" disabled={isLoading}>ลืมรหัสผ่าน?</button>
-            </div>
+              <div className="flex items-center justify-between text-xs">
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-500 select-none">
+                  <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" disabled={isLoading} />
+                  จดจำฉัน
+                </label>
+                <button
+                  type="button"
+                  onClick={() => { setMode("forgot"); setError(""); setSuccess(""); }}
+                  className="text-blue-600 font-bold hover:underline disabled:opacity-50"
+                  disabled={isLoading}
+                >
+                  ลืมรหัสผ่าน?
+                </button>
+              </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-black rounded shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-sm disabled:cursor-not-allowed"
-            >
-              <LogIn size={20} />
-              {isLoading ? "กำลังประมวลผล..." : "เข้าสู่ระบบ"}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-black rounded shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-sm disabled:cursor-not-allowed"
+              >
+                <LogIn size={20} />
+                {isLoading ? "กำลังประมวลผล..." : "เข้าสู่ระบบ"}
+              </button>
+            </form>
           )}
 
           <div className="mt-10 pt-6 border-t border-gray-100 text-center">
