@@ -16,13 +16,12 @@ export default function TwoFactorSettings() {
   const [disableCode, setDisableCode] = useState("");
 
   const loadStatus = async () => {
-    setLoading(true);
-    setError("");
     try {
       const res = await fetch("/api/auth/2fa/status");
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load 2FA status");
       setStatus(data);
+      setError("");
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -31,7 +30,25 @@ export default function TwoFactorSettings() {
   };
 
   useEffect(() => {
-    loadStatus();
+    let cancelled = false;
+    fetch("/api/auth/2fa/status")
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to load 2FA status");
+        if (!cancelled) {
+          setStatus(data);
+          setError("");
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setError((err as Error).message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const startSetup = async () => {

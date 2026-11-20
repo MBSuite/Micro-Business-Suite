@@ -16,6 +16,10 @@
 | `GOOGLE_TOKEN_ENCRYPTION_KEY` | ✅ | (มีอยู่แล้ว) |
 | `GEMINI_API_KEY` | ✅ | (มีอยู่แล้ว) |
 | `MBS_LICENSE_KEY` / `LICENSE_SALT` | ✅ | (มีอยู่แล้ว) |
+| `BACKUP_ENCRYPTION_KEY` | ⚪ | AES-256-GCM key สำหรับ `/api/admin/backup` encryption (base64 32-byte); ไม่ต้องตั้งถ้าไม่ใช้ backup encryption |
+| `MBS_2FA_ENCRYPTION_KEY` | ⚪ | AES key สำหรับเก็บ 2FA secret ใน DB (base64 32-byte); จำเป็นถ้าเปิดใช้งาน 2FA |
+| `MIGRATE_ENDPOINT_ENABLED` | ✅ (staging) | env gate ของ `/api/migrate` (default ปิด) |
+| `SYSTEM_AUDIT_ENABLED` | ⚪ | env gate ของ `/system-audit` (default ปิด; ต้องเพิ่ม auth guard ก่อนเปิดจริง) |
 
 ## Micro-Menu-Online (menu online)
 

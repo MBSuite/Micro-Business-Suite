@@ -12,6 +12,7 @@ backup_*.sql
 *.backup.gz
 *.gz
 db_cluster*.backup.gz
+backup-*.sql
 kvswppixjaswjmbevrha.storage.zip
 bug-report.zip
 
