@@ -31,7 +31,7 @@ Use these as test identities without asking the owner again unless the records a
 
 ## Work ownership (updated 2026-11-21)
 
-- Kiro is no longer used. OpenCode implements both backend/system logic and visible UI directly; no agent-to-agent handoff or UI contract is required.
+- Kiro is no longer used. OpenCode is the only agent that edits code and implements both backend/system logic and visible UI directly; no agent-to-agent handoff or UI contract is required. ธาร (Tharn) remains active in **read-only** mode for security review and reporting only — never assign code/config/DB edits to ธาร.
 - Record decisions, outcome and verification in `docs/DECISIONS.md`. Task artifacts, if needed, go under `.agents/tasks/`.
 
 ## กฎการบันทึกรายงาน (Report Destination — ตรงข้อเท็จจริง)
