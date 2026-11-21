@@ -12,6 +12,15 @@
 - Impacted files/modules:
 - Rollback plan:
 
+### [2026-11-22] Owner-approved production migration: tenant-scoped bridge sync idempotency
+
+- Context: `migrations/add_bridge_sync_tenant_scope.sql` was the last migration deliberately held back during the earlier incident because it drops a global UNIQUE constraint. The owner explicitly approved it on 2026-11-22 ("อนุมัติ").
+- Pre-flight read-only checks: `bridge_sync_log` is owned by `neondb_owner` (no module migrator hand-off needed), contains **0 rows** (so no NULL `company_id` and no duplicate `(company_id, idempotency_key)` pairs), and no code path uses `ON CONFLICT (idempotency_key)`; `app/api/bridge/sync/route.ts` already expects tenant scoping and returns 503 with an explicit "run migrations ... first" message when it is missing. Backup taken first: `/tmp/opencode/backup-mbs-prod-bridge-20261121-190013.dump` (527,770 bytes, 1408 TOC entries).
+- Decision: replaced the table-wide `UNIQUE (idempotency_key)` constraint with `CREATE UNIQUE INDEX uq_bridge_sync_log_tenant_idempotency ON bridge_sync_log (company_id, idempotency_key)` inside the migration's own `BEGIN ... COMMIT`; no `company_id` backfill or guessing was performed.
+- Verification: `bridge_sync_log_idempotency_key_key` constraint/index no longer exists; the new tenant-scoped unique index is present; table still has 0 rows. Authenticated smoke: Core `/` **200**, `/settings` **200**, `GET /api/admin/bridge-sync` **200**. Vercel CLI stayed logged out throughout (no external-system login needed).
+- Rollback plan: restore the `pg_dump` above, or re-create `UNIQUE (idempotency_key)` after dropping `uq_bridge_sync_log_tenant_idempotency`; the table was empty, so no data would be lost either way. No rollback was needed.
+- Status: every migration identified in the 2026-11-22 production audit is now applied. No pending production DB migration remains from that audit.
+
 ### [2026-11-22] Owner-approved production migrations: Core `/settings`, Service and Retail dashboards
 
 - Context: the read-only audit above found three production 500s caused by schema drift (code deployed, matching migrations never applied): Core `company_settings.google_drive_account_email` missing (digest `2725032858`), Service `mbs_service_bookings.created_by_id` missing (P2022, digest `2474130159`), Retail `mbs_retail_stock_movements` missing (P2021, digest `4102016927`). The owner approved applying the Core migration, then both module migrations ("ทั้งสองตัว after backup"), and chose the temporary-role fallback path after Vercel CLI refused to expose `DIRECT_URL` secrets (`[SENSITIVE]` placeholders).
