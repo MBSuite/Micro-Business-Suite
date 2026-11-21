@@ -42,6 +42,8 @@
 - [x] Company settings + tenant scope migrations applied
 - [x] `migrations/add_integration_webhook_idempotency.sql` — validated on disposable local PostgreSQL และ apply แล้วบนฐานข้อมูลจริง (2026-11-11 verify read-only: table + PK `(company_id, provider, event_id)`) — Dev กับ production ใช้ DB เดียวกัน
 - [x] `migrations/add_user_two_factor.sql` — validated on disposable local PostgreSQL และ apply แล้วบนฐานข้อมูลจริง (2026-11-11 verify read-only: `users.totp_*` + `user_recovery_codes`) — Dev กับ production ใช้ DB เดียวกัน
+- [x] `migrations/add_password_reset_single_use.sql` — apply บน Production 2026-11-21 หลัง owner อนุมัติ (backup + verify column/table + authenticated smoke test ผ่าน; ดู `docs/DECISIONS.md`)
+- [ ] `migrations/add_bridge_sync_tenant_scope.sql` — ยัง **ไม่ได้ apply** บน Production (ต้อง owner อนุมัติ/backup/rehearsal แยก เพราะมี `DROP CONSTRAINT`)
 - [x] Bootstrap runner idempotent (`scripts/bootstrap-init-db.mjs`)
 
 ### Performance

@@ -11,6 +11,7 @@
 | `DATABASE_URL_UNPOOLED` (optional) | ⚪ | Direct URL ของ environment เป้าหมายสำหรับ migration เท่านั้น; ตรวจ target และขออนุมัติก่อน |
 | `NEXTAUTH_SECRET` หรือ `AUTH_SECRET` | ✅ | JWT secret (มีอยู่แล้ว) |
 | `MBS_BRIDGE_TOKEN` | ✅ | service-to-service token (ต้องตรงกับ Suite) |
+| `MBS_ADMIN_LICENSE_TOKEN` | ✅ ถ้าใช้ bridge | token เฉพาะงาน micro-admin → Core (`/api/bridge/admin-license`) **ห้ามใช้ `MBS_BRIDGE_TOKEN` ซ้ำ** · ตรวจ 2026-11-21: Admin production มีแล้ว / **Core production ยังขาด** → route ตอบ 503 จนกว่าจะตั้งใน Dashboard ด้วยค่าที่เหมือนกัน (ดู `.env.local` หมายเหตุบรรทัด 202–205) |
 | `PRODUCT_MODE` | ✅ | `perpetual` (มีอยู่แล้ว) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | ✅ | (มีอยู่แล้ว) |
 | `GOOGLE_TOKEN_ENCRYPTION_KEY` | ✅ | (มีอยู่แล้ว) |

@@ -29,12 +29,10 @@ Use these as test identities without asking the owner again unless the records a
 
 ---
 
-## AI-to-AI handoff
+## Work ownership (updated 2026-11-21)
 
-- Kiro owns visible UI; OpenCode owns all backend/system logic. Never let Kiro modify backend/system code or OpenCode implement presentation/UI.
-- Coordinate shared-file ownership before edits; no concurrent edits to the same file. Do not assume one fixed sender/receiver direction.
-- Record handoffs, contracts, acceptance criteria, outcome and verification in `docs/DECISIONS.md` and task artifacts under `.agents/tasks/`. Do not create request files outside these locations.
-- For backend-to-UI work, document the contract before UI implementation starts; for UI-to-backend needs, document the user need and the required API/schema change.
+- Kiro is no longer used. OpenCode implements both backend/system logic and visible UI directly; no agent-to-agent handoff or UI contract is required.
+- Record decisions, outcome and verification in `docs/DECISIONS.md`. Task artifacts, if needed, go under `.agents/tasks/`.
 
 ## กฎการบันทึกรายงาน (Report Destination — ตรงข้อเท็จจริง)
 
