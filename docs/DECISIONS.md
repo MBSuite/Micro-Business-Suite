@@ -12,6 +12,21 @@
 - Impacted files/modules:
 - Rollback plan:
 
+### [2026-11-22] Read-only production login audit after the 2026-11-21 deploy
+
+- Context: after the owner pushed and Vercel finished deploying all commits, the owner asked to verify that the remaining production sites can still log in, using credentials stored in each repo's `.env`. All Vercel projects in this account are production, so this round was read-only: no DB, env, deployment or code change was made.
+- Verification (HTTP smoke tests with credentials read from `.env` files; secrets never printed):
+  - All 9 Vercel projects return HTTP 200 at their production root URL.
+  - FNB, Pharmacy, Hotel: `admin@menu.local` + `shopCode=1` → login 200, `/api/auth/me` role=admin, `/staff/dashboard` 200. Without `shopCode` the API correctly answers 400 `SHOP_CODE_REQUIRED`.
+  - Rental: `VERIFY_*` + shop code → login 200, dashboard 200. Retail: `EXAMPLE_*` → login 200. Service: `EXAMPLE_*` → login 200.
+  - Core: the `USER_ADMIN`/`PASS_ADMIN` pair belonging to `CORE_APP` in `Micro-Business-Suite/.env.local` logs in as `admin@mbsuite.app` (200); `audit@mbsuite.dev` also logs in (200). Caution: that file repeats `USER_ADMIN`/`PASS_ADMIN` after each `*_APP` line — reading the last pair gives a false 401.
+  - Admin panel: `audit@mbsuite.dev` → login 200, `/admin/users` 200. `GET /api/admin/users` returns `company_name` for all 6 accounts, confirming commit `538f577` is live. The rendered table is client-side, so the company column is not present in the raw server HTML.
+- Open findings (reported, NOT changed — each needs owner approval, backup and rehearsal before any production migration):
+  1. Retail `/staff/dashboard` → HTTP 500, Prisma P2021: table `mbs_retail_stock_movements` does not exist. `mbs_retail_retail_pos_and_stock` is absent from `_prisma_migrations`; that migration also contains destructive DDL (drops tables/columns, enum rewrites), so it must not be applied casually.
+  2. Service `/staff/dashboard` → HTTP 500, Prisma P2022: column `mbs_service_bookings.created_by_id` does not exist. `mbs_service_add_record_ownership` is absent from `_prisma_migrations`; it adds columns/indexes and performs backfill `UPDATE`s.
+  3. Core `/settings` → HTTP 500, digest `2725032858`: `company_settings.google_drive_account_email` missing. The additive migration `migrations/add_google_drive_account_email.sql` exists but has not been applied.
+- Status: diagnosed only. Vercel login remains active because the owner has not ordered logout. `migrations/add_bridge_sync_tenant_scope.sql` also remains pending from the earlier incident.
+
 ### [2026-11-21] Owner-approved production role change: `audit@mbsuite.dev` → `admin` (micro-admin access)
 - Context: The owner could not enter the `micro-business-admin` dashboard with `audit@mbsuite.dev`. Vercel request logs showed `POST /api/auth/login → 200` followed by `GET /admin → 307 Location: /`, i.e. login succeeded but the `proxy.ts` privileged-role guard bounced the user. Read-only query of the shared production `users` table showed id 13 `audit@mbsuite.dev` with `role='user'`.
 - Decision: With explicit owner approval, change only that row to `role='admin'` (least privilege: `admin` bypasses admin-panel permissions except `licenses.issue_audit`, which stays superadmin-only). Backup was taken first; no code or deployment changed.
