@@ -12,6 +12,12 @@
 - Impacted files/modules:
 - Rollback plan:
 
+### [2026-11-22] Self-registration is the source of real usability signal
+
+- Context: the owner wants friends to sign up for their own accounts rather than share the owner/OpenCode test identity. Unprompted users will use the product in their own way, which reveals friction that a guided demo cannot.
+- Decision: let users self-register; observe their actual usage patterns and feed those findings back into usability improvements. Keep `audit@mbsuite.dev` strictly for owner/OpenCode testing (entry below). No code or DB change is implied by this decision — it is a product principle for future iteration.
+- Guardrail: any usage data collected for improvement should be minimal, without capturing credentials/secrets, with access limited to the owner/OpenCode and users informed about what is collected.
+
 ### [2026-11-22] `audit@mbsuite.dev` is reserved for owner + OpenCode testing
 
 - Context: the owner clarified that the friend who will use the apps has separate accounts already; `audit@mbsuite.dev` must remain a dedicated test identity for the owner and OpenCode.
