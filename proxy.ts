@@ -57,6 +57,9 @@ const PUBLIC_API_EXACT = new Set([
   "/api/fx-rate",
   "/api/health",
   "/api/bridge/sync",
+  // Admin license bridge — ตรวจ service token ใน route handler เอง (MBS_ADMIN_LICENSE_TOKEN)
+  // ห้ามใช้ MBS_BRIDGE_TOKEN ซ้ำ; endpoint นี้ต้องไม่ถูก session guard ของ proxy บล็อก
+  "/api/bridge/admin-license",
   "/api/bridge/link/claim",
   "/api/bridge/link/revoke",
   "/api/bridge/link/status",

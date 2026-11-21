@@ -5,7 +5,7 @@
 // ใช้โดย: Customer Console UI, lib/company-gate.ts, gating ฟีเจอร์
 // =====================================================
 
-export type LicenseTier = "TRIAL" | "STANDARD" | "PROFESSIONAL" | "ENTERPRISE";
+export type LicenseTier = "TRIAL" | "STANDARD" | "PROFESSIONAL" | "ENTERPRISE" | "AUDIT";
 
 export interface LicensePackage {
   tier: LicenseTier;
@@ -15,6 +15,8 @@ export interface LicensePackage {
   defaultMaxUsers: number;
   defaultMaxTransactionsPerMonth: number;
   color: string;
+  // true เฉพาะแพ็กเกจ AUDIT (audit-test user) — ใช้แยกจากลูกค้าจริง
+  isAudit?: boolean;
 }
 
 export const LICENSE_PACKAGES: Record<LicenseTier, LicensePackage> = {
@@ -76,8 +78,27 @@ export const LICENSE_PACKAGES: Record<LicenseTier, LicensePackage> = {
     defaultMaxTransactionsPerMonth: 10000,
     color: "#dc2626",
   },
+  AUDIT: {
+    tier: "AUDIT",
+    label: "AUDIT",
+    description: "Audit-test user — superadmin-only, not for production customers",
+    defaultFeatures: [
+      "basic_access",
+      "journal_engine",
+      "advanced_reports",
+      "automated_journaling",
+      "coa_management",
+      "tax_reporting",
+      "audit_mode",
+    ],
+    defaultMaxUsers: 5,
+    defaultMaxTransactionsPerMonth: 2000,
+    color: "#dc2626",
+    isAudit: true,
+  },
 };
 
+// derive จาก LICENSE_PACKAGES → AUDIT และ audit_mode รวมอยู่โดยอัตโนมัติ
 export const LICENSE_TIERS = Object.keys(LICENSE_PACKAGES) as LicenseTier[];
 
 export function getLicensePackage(tier?: string | null): LicensePackage {
@@ -88,3 +109,14 @@ export function getLicensePackage(tier?: string | null): LicensePackage {
 export function getDefaultFeatures(tier?: string | null): string[] {
   return getLicensePackage(tier).defaultFeatures;
 }
+
+// whitelist ฟีเจอร์ที่ระบบรู้จัก รวม audit_mode สำหรับ AUDIT license
+export const KNOWN_FEATURES = [
+  "basic_access",
+  "journal_engine",
+  "tax_reporting",
+  "coa_management",
+  "advanced_reports",
+  "automated_journaling",
+  "audit_mode",
+] as const;

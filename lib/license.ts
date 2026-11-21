@@ -9,7 +9,7 @@
 import crypto from "node:crypto";
 import { getProductMode } from "./product-mode";
 
-export type LicenseType = "TRIAL" | "STANDARD" | "PROFESSIONAL" | "ENTERPRISE";
+export type LicenseType = "TRIAL" | "STANDARD" | "PROFESSIONAL" | "ENTERPRISE" | "AUDIT";
 export type LicenseMode = "perpetual" | "subscription";
 
 export interface LicensePayload {
@@ -23,6 +23,7 @@ export interface LicensePayload {
   max_users: number;
   max_transactions_per_month: number;
   allowed_features: string[];
+  is_audit?: boolean; // true only for AUDIT licenses (optional: old keys lack this field)
 }
 
 export interface LicenseVerifyResult {
@@ -98,7 +99,7 @@ function isDateString(v: any): v is string {
   return !isNaN(new Date(v).getTime());
 }
 
-const LICENSE_TYPES = ["TRIAL", "STANDARD", "PROFESSIONAL", "ENTERPRISE"] as const;
+const LICENSE_TYPES = ["TRIAL", "STANDARD", "PROFESSIONAL", "ENTERPRISE", "AUDIT"] as const;
 const LICENSE_MODES = ["perpetual", "subscription"] as const;
 
 export function validateLicensePayload(payload: Record<string, unknown>): {
@@ -114,6 +115,15 @@ export function validateLicensePayload(payload: Record<string, unknown>): {
   const licenseType = payload.license_type as LicenseType | undefined;
   if (licenseType === undefined || !LICENSE_TYPES.includes(licenseType)) {
     return { ok: false, error: "License payload must include a valid license_type" };
+  }
+  // is_audit เป็น optional (key เก่าไม่มี) แต่ถ้ามีต้องเป็น boolean เท่านั้น
+  if (payload.is_audit !== undefined && typeof payload.is_audit !== "boolean") {
+    return { ok: false, error: "License payload is_audit must be a boolean" };
+  }
+  // กันปลอม flag: is_audit=true ได้เฉพาะ license AUDIT เท่านั้น
+  // (ทิศทางเดียว — key เก่าที่เป็น AUDIT แต่ไม่มี field นี้ยังใช้ได้)
+  if (payload.is_audit === true && licenseType !== "AUDIT") {
+    return { ok: false, error: "is_audit flag can only be set for AUDIT licenses" };
   }
   if (typeof payload.licensee !== "string" || payload.licensee.length === 0) {
     return { ok: false, error: "License payload must include a licensee" };

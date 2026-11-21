@@ -1,7 +1,7 @@
 # Backlog (Micro Business Suite)
 
 รายการงานค้างที่ตรวจสอบแล้วจริง (probe/grep จากโค้ดจริง ไม่ใช่การเดา) —
-เรียงตามลำดับความสำคัญคร่าวๆ อัปเดตล่าสุด: 2026-11-05
+เรียงตามลำดับความสำคัญคร่าวๆ อัปเดตล่าสุด: 2026-11-21
 
 > หมายเหตุ: เนื้อหานี้เป็นรายงานข้อเท็จจริง + แนวทางแนะนำ — ยังไม่ได้รับอนุมัติให้ลงมือทำ
 > เริ่มงานแต่ละรายการเมื่อพี่ (เจ้าของ) สั่งเท่านั้น
@@ -10,14 +10,16 @@
 
 ## 🆕 License: AUDIT tier + is_audit (2026-11-21)
 
-**สถานะ:** PRD/Spec + SQL migration เตรียมแล้ว — **ยังไม่ได้ implement โค้ด TS และยังไม่ได้รันกับ production**
+**สถานะ:** PRD/Spec + SQL migration + โค้ด TS ใน Core เสร็จแล้ว — **ยังไม่ได้รัน migration บน production และยังไม่ได้ deploy**
 
 - PRD/Spec (แอพ User & License Management): `../Micro-Admin-MBSuite/micro-admin-mbsuite/docs/PRD-user-license-management.md`
 - Migration (idempotent, additive): `migrations/mbs_core_add_audit_license.sql`
   - `companies.is_audit BOOLEAN NOT NULL DEFAULT FALSE` + partial index + COMMENT บน `plan_type`
   - ไม่มี CHECK constraint เดิมบน `plan_type` → ไม่ต้อง alter constraint
   - ลงทะเบียนใน `scripts/bootstrap-init-db.mjs` (`FILES`) แล้ว
-- ยังค้าง: เพิ่ม `"AUDIT"` ใน `lib/license.ts` / `lib/license-packages.ts`, ปรับ admin license route ให้บังคับ superadmin + ตั้ง `is_audit`, ออก subscription license ตอน signup ตรงผ่าน Bridge, หน้า UI ในแอพ admin
+- ✅ เสร็จแล้ว: `"AUDIT"` ใน `lib/license.ts` (type + `LICENSE_TYPES` + `is_audit?` + validation กัน `is_audit=true` บน tier อื่น) และ `lib/license-packages.ts` (tier matrix 5/2000 + `audit_mode` + `isAudit` flag) — ตรวจด้วย `tsc --noEmit` + 12 กรณี behavioral test ผ่าน
+- ยังค้าง: ปรับ admin license route ให้บังคับ superadmin + เซ็ต `is_audit: true` ใน payload ตอนออก AUDIT (ตอนนี้ payload ยังไม่มี field นี้ → ต้องทำก่อนบังคับกฎ reverse `AUDIT ⇒ is_audit=true`), ออก subscription license ตอน signup ตรงผ่าน Bridge, หน้า UI ในแอพ admin
+- หมายเหตุ `KNOWN_FEATURES`: มี `export const KNOWN_FEATURES` ใน `lib/license-packages.ts` (whitelist 7 ฟีเจอร์ รวม `audit_mode`) สำหรับฝั่ง Admin app; ส่วน `app/api/admin/customers/[id]/license/route.ts` ยัง derive รายการของตัวเองจาก `Object.values(LICENSE_PACKAGES).flatMap(p => p.defaultFeatures)` ตาม `LICENSE_STANDARD.md` §8.3 → `audit_mode` เข้ารวมโดยอัตโนมัติ (ทดสอบแล้ว) — whitelist ใหม่ไม่รวม `multi_company`/`api_access`/`custom_branding` ถ้า Admin app เปลี่ยนไป import ต้องขยายรายการด้วย
 - **Production:** ต้อง backup + อนุมัติจากพี่ฆังก่อนรัน migration เสมอ (ดู `MODULE_MIGRATION_RUNBOOK.md`)
 
 ## ✅ Implemented (rounds 1-3, 2026-11-05)
