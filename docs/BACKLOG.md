@@ -8,6 +8,18 @@
 
 ---
 
+## 🆕 License: AUDIT tier + is_audit (2026-11-21)
+
+**สถานะ:** PRD/Spec + SQL migration เตรียมแล้ว — **ยังไม่ได้ implement โค้ด TS และยังไม่ได้รันกับ production**
+
+- PRD/Spec (แอพ User & License Management): `../Micro-Admin-MBSuite/micro-admin-mbsuite/docs/PRD-user-license-management.md`
+- Migration (idempotent, additive): `migrations/mbs_core_add_audit_license.sql`
+  - `companies.is_audit BOOLEAN NOT NULL DEFAULT FALSE` + partial index + COMMENT บน `plan_type`
+  - ไม่มี CHECK constraint เดิมบน `plan_type` → ไม่ต้อง alter constraint
+  - ลงทะเบียนใน `scripts/bootstrap-init-db.mjs` (`FILES`) แล้ว
+- ยังค้าง: เพิ่ม `"AUDIT"` ใน `lib/license.ts` / `lib/license-packages.ts`, ปรับ admin license route ให้บังคับ superadmin + ตั้ง `is_audit`, ออก subscription license ตอน signup ตรงผ่าน Bridge, หน้า UI ในแอพ admin
+- **Production:** ต้อง backup + อนุมัติจากพี่ฆังก่อนรัน migration เสมอ (ดู `MODULE_MIGRATION_RUNBOOK.md`)
+
 ## ✅ Implemented (rounds 1-3, 2026-11-05)
 
 - POS คิดเงินด่วน (`/pos`) + barcode scan + multi-payment + stock deduction
