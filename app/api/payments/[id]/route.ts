@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import { NextRequest, NextResponse } from "next/server";
-import { query } from "@/lib/db";
+import pool, { query } from "@/lib/db";
 import { auth, getUserCompanyId } from "@/lib/auth";
 
 async function isAuthenticated(): Promise<boolean> {
@@ -101,6 +100,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let client;
   try {
     if (!(await isAuthenticated())) {
       return NextResponse.json(
@@ -110,47 +110,53 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    
+
     const session = await auth();
     const companyId = await getUserCompanyId(session?.user?.id);
 
-    const ownerCheck = await query(`SELECT company_id FROM payments WHERE id = $1`, [id]);
+    // ทุกคำสั่งใน transaction ต้องใช้ connection เดียวกัน — query() ใช้ pool.query
+    // ซึ่งอาจไปคนละ connection ทำให้ BEGIN/COMMIT ไม่ครอบคลุม work จริง
+    client = await pool.connect();
+    await client.query("BEGIN");
+
+    // ล็อกแถวของ tenant นี้ก่อนตรวจสิทธิ์ ป้องกัน race กับคำขออื่น
+    const ownerCheck = await client.query(
+      `SELECT company_id FROM payments WHERE id = $1 FOR UPDATE`,
+      [id]
+    );
     if (ownerCheck.rows.length === 0) {
+      await client.query("ROLLBACK");
       return NextResponse.json({ error: "Payment not found" }, { status: 404 });
     }
     if (Number(ownerCheck.rows[0].company_id) !== companyId) {
+      await client.query("ROLLBACK");
       return NextResponse.json(
         { error: "Forbidden — payment belongs to another company" },
         { status: 403 }
       );
     }
 
-    // ลบ payment และ journal entries ที่เกี่ยวข้อง
-    await query("BEGIN");
-    
-    // ลบ journal entries ที่ลิงก์กับ payment นี้ (เฉพาะ reference ของใบชำระนี้เท่านั้น
-    // — ไม่ลบโดยกวาด description เพราะเสี่ยงโดนของบริษัท/รายการอื่น)
-    await query(
-      `DELETE FROM journal_entries WHERE reference_no LIKE $1`,
-      [`%RC-${id}%`]
+    // ลบเฉพาะ journal ของใบรับเงินนี้ ผูกด้วย reference_id/reference_type และ company_id
+    // (เดิมใช้ LIKE '%RC-<id>%' ซึ่งไม่ผูก tenant และอาจตรงกับเลขที่ซ้ำกัน)
+    await client.query(
+      `DELETE FROM journal_entries
+       WHERE reference_type = 'receipt' AND reference_id = $1 AND company_id = $2`,
+      [id, companyId]
     );
-    
-    // ลบ payment
-    const result = await query(
-      "DELETE FROM payments WHERE id = $1 RETURNING *",
-      [id]
+
+    const result = await client.query(
+      `DELETE FROM payments WHERE id = $1 AND company_id = $2 RETURNING *`,
+      [id, companyId]
     );
-    
-    await query("COMMIT");
-    
-    if (result.rowCount === 0) {
-      return NextResponse.json({ error: "Payment not found" }, { status: 404 });
-    }
-    
+
+    await client.query("COMMIT");
+
     return NextResponse.json({ success: true, deleted: result.rows[0] });
   } catch (e) {
-    await query("ROLLBACK");
+    if (client) await client.query("ROLLBACK").catch(() => {});
     console.error("DELETE payment error:", e);
     return NextResponse.json({ error: "Failed to delete payment" }, { status: 500 });
+  } finally {
+    client?.release();
   }
 }

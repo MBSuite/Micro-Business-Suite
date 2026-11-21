@@ -1,6 +1,6 @@
 # Production Migration Runbook (Core)
 
-ใช้สำหรับ apply migration บน Production (Supabase) เท่านั้นหลัง owner อนุมัติ
+ใช้สำหรับ apply migration บน Production เท่านั้นหลัง owner อนุมัติ — เป้าหมายจริงต้องตรวจ live ทุกครั้ง (เอกสารเก่าระบุ Supabase แต่ Gate 3 พบ Neon)
 
 ## Pre-flight
 - [ ] Gate 1 (Dev signup/delete) ผ่านและบันทึกหลักฐาน
@@ -14,6 +14,8 @@
 - `migrations/add_integration_webhook_idempotency.sql`
 - `migrations/add_user_two_factor.sql`
 - `migrations/add_users_company_id_backfill.sql` (no-op review version)
+- `migrations/add_bridge_sync_tenant_scope.sql` (ต้องรันหลัง `add_bridge_sync_log.sql`)
+- `migrations/add_password_reset_single_use.sql`
 
 ## Apply
 1. เปิด maintenance window

@@ -70,7 +70,10 @@ export async function POST(req: Request) {
       return NextResponse.json(generic);
     }
 
-    // Create a signed, short-lived reset token (stateless, 1 hour).
+    // สร้าง reset token อายุ 1 ชม. และเก็บ jti ใน ledger เพื่อบังคับใช้ครั้งเดียว
+    // (ดู migration add_password_reset_single_use.sql)
+    const jti = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
     const token = await new SignJWT({
       sub: String(user.id),
       email: user.email,
@@ -79,8 +82,14 @@ export async function POST(req: Request) {
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
       .setExpirationTime("1h")
-      .setJti(crypto.randomUUID())
+      .setJti(jti)
       .sign(SECRET);
+
+    await query(
+      `INSERT INTO password_reset_tokens (jti, user_id, expires_at)
+       VALUES ($1, $2, $3)`,
+      [jti, user.id, expiresAt]
+    );
 
     const resetUrl = `${getBaseUrl(req)}/login?reset=${encodeURIComponent(token)}`;
 
@@ -105,8 +114,8 @@ export async function POST(req: Request) {
     });
 
     if (!result.sent) {
-      // Dev fallback: log link so developer can test without email config.
-      console.log("[forgot-password] reset link (email not sent):", resetUrl);
+      // ห้ามพิมพ์ reset URL/token ลง log — ผู้ที่อ่าน log สามารถเปลี่ยนรหัสผ่านได้
+      console.warn("[forgot-password] email delivery unavailable; reset link withheld from logs");
     }
 
     return NextResponse.json(generic);

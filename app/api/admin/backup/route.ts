@@ -1,14 +1,30 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { query } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { canAccessAdmin } from "@/lib/core-standards";
 
 export const dynamic = "force-dynamic";
 
 const MAX_ROWS_PER_TABLE = 10000;
 const MAX_BACKUP_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB limit for safety
+
+/**
+ * ความลับต้องไม่ถูกส่งออกจาก server ไม่ว่าจะเข้ารหัสหรือไม่
+ * ใช้ denylist ตามชื่อคอลัมน์เพื่อให้ตารางใหม่ inherits การป้องกันนี้โดยอัตโนมัติ
+ */
+const SENSITIVE_COLUMN =
+  /(^|_)(password|passwd|secret|token|credential|credentials|api_key|license_key|private_key)(_|$)/i;
+
+function redactSecrets(rows: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return rows.map((row) => {
+    const safe: Record<string, unknown> = { ...row };
+    for (const key of Object.keys(safe)) {
+      if (SENSITIVE_COLUMN.test(key)) safe[key] = "[REDACTED]";
+    }
+    return safe;
+  });
+}
 
 /**
  * Encrypt payload using AES-256-GCM
@@ -39,7 +55,7 @@ function encryptBackup(payload: string, keyHexOrString: string): { iv: string; a
  * Safety guards:
  *  - Password hash is strictly redacted ([REDACTED])
  *  - Size limits and row limits applied
- *  - Optional AES-256-GCM encryption with BACKUP_ENCRYPTION_KEY
+ *  - Secret columns are always redacted; AES-256-GCM is optional defense in depth
  */
 export async function GET(req: NextRequest) {
   try {
@@ -104,18 +120,8 @@ export async function GET(req: NextRequest) {
     for (const table of tables) {
       try {
         const res = await query(`SELECT * FROM ${table} ORDER BY id ASC LIMIT $1`, [MAX_ROWS_PER_TABLE]);
-        let rows = res.rows as Array<Record<string, unknown>>;
-
-        // CRITICAL SAFETY: Never export password hashes
-        if (table === "users") {
-          rows = rows.map((u) => {
-            const sanitized = { ...u };
-            if ("password" in sanitized) {
-              sanitized.password = "[REDACTED]";
-            }
-            return sanitized;
-          });
-        }
+        // CRITICAL SAFETY: redact password hashes, 2FA secrets, OAuth/RD credentials, ...
+        const rows = redactSecrets(res.rows as Array<Record<string, unknown>>);
 
         backupData[table] = rows;
         totalRowCount += rows.length;
@@ -140,6 +146,7 @@ export async function GET(req: NextRequest) {
           total_tables: tables.length,
           total_rows: totalRowCount,
           passwords_redacted: true,
+          secrets_redacted: true,
         },
         tables: backupData,
       };

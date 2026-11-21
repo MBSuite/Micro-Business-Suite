@@ -7,7 +7,7 @@
 
 | Variable | Required | ค่า / หมายเหตุ |
 |---|---|---|
-| `POSTGRES_URL` หรือ `DATABASE_URL` | ✅ | Supabase PostgreSQL URL สำหรับ Production runtime (ห้ามใช้ Neon Dev URL) |
+| `POSTGRES_URL` หรือ `DATABASE_URL` | ✅ | URL ของ Production runtime ตามที่ตรวจ live จริง (Gate 3 พบว่าเป็น Neon — เอกสารเก่าที่ระบุ Supabase ต้องตรวจซ้ำก่อนเปลี่ยนค่า) |
 | `DATABASE_URL_UNPOOLED` (optional) | ⚪ | Direct URL ของ environment เป้าหมายสำหรับ migration เท่านั้น; ตรวจ target และขออนุมัติก่อน |
 | `NEXTAUTH_SECRET` หรือ `AUTH_SECRET` | ✅ | JWT secret (มีอยู่แล้ว) |
 | `MBS_BRIDGE_TOKEN` | ✅ | service-to-service token (ต้องตรงกับ Suite) |
@@ -73,7 +73,9 @@ curl --fail-with-body --silent --show-error \
   cookie ของผู้ใช้ที่ล็อกอิน; หากไม่มี credentials ควรได้ `401`.
 - โค้ดและการตรวจแบบ integration บนฐานข้อมูล disposable ผ่านแล้ว แต่ยังไม่ได้
   deploy/ยืนยัน GET นี้บน production; อย่าถือว่า production ผ่านจนกว่าจะตรวจหลัง deploy.
-- Production ใช้ Supabase ตามที่เจ้าของยืนยัน; Neon ใช้ฝั่ง Dev. ก่อนพิจารณา
-  production ต้องผ่านการทดสอบ signup/delete บน Dev และทำ/ตรวจ 2FA ก่อน.
+- เอกสารเก่าระบุ Production ใช้ Supabase และ Neon ใช้ฝั่ง Dev; หลักฐาน live ใน
+  Gate 3 (`DECISIONS.md`) พบ Production ที่ deploy ใช้ Neon — ต้องตรวจ live ซ้ำก่อน
+  เปลี่ยน env/migration. ก่อนพิจารณา production ต้องผ่านการทดสอบ signup/delete บน Dev
+  และทำ/ตรวจ 2FA ก่อน.
 - Dry run (read-only, ไม่สร้างข้อมูล): เพิ่ม `--dry-run`
 - Non-dry-run จะสร้าง invoice + journal entry จริงใน production DB (cleanup ถ้าต้องการ)

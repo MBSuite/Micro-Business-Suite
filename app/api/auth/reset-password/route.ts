@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
-import { query } from "@/lib/db";
+import pool from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -56,26 +56,58 @@ export async function POST(req: Request) {
     }
     const userId = payload.sub;
     const email = typeof payload.email === "string" ? payload.email : "";
-    if (!userId || !email) {
+    const jti = typeof payload.jti === "string" ? payload.jti : "";
+    if (!userId || !email || !jti) {
       return NextResponse.json({ error: "Token ไม่ถูกต้อง" }, { status: 400 });
     }
 
-    const res = await query(
-      "SELECT id, email, status FROM users WHERE id = $1 AND LOWER(email) = LOWER($2)",
-      [userId, email]
-    );
-    if (res.rows.length === 0) {
-      return NextResponse.json({ error: "ไม่พบผู้ใช้" }, { status: 404 });
-    }
-    const user = res.rows[0];
-    if (user.status === "Inactive") {
-      return NextResponse.json({ error: "บัญชีถูกระงับ" }, { status: 403 });
-    }
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
 
-    const hashed = await bcrypt.hash(password, 10);
-    await query("UPDATE users SET password = $1 WHERE id = $2", [hashed, user.id]);
+      // บริโภค jti แบบ atomic — ใช้ได้ครั้งเดียวภายในอายุ token
+      const ledger = await client.query(
+        `SELECT user_id FROM password_reset_tokens
+         WHERE jti = $1 AND used_at IS NULL AND expires_at > NOW() FOR UPDATE`,
+        [jti]
+      );
+      if (ledger.rows.length === 0 || String(ledger.rows[0].user_id) !== String(userId)) {
+        await client.query("ROLLBACK");
+        return NextResponse.json(
+          { error: "Token หมดอายุหรือใช้ไปแล้ว กรุณาขอรีเซ็ตใหม่" },
+          { status: 400 }
+        );
+      }
 
-    return NextResponse.json({ success: true, message: "รีเซ็ตรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบใหม่" });
+      const res = await client.query(
+        "SELECT id, email, status FROM users WHERE id = $1 AND LOWER(email) = LOWER($2) FOR UPDATE",
+        [userId, email]
+      );
+      if (res.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return NextResponse.json({ error: "ไม่พบผู้ใช้" }, { status: 404 });
+      }
+      const user = res.rows[0];
+      if (user.status === "Inactive") {
+        await client.query("ROLLBACK");
+        return NextResponse.json({ error: "บัญชีถูกระงับ" }, { status: 403 });
+      }
+
+      const hashed = await bcrypt.hash(password, 10);
+      await client.query(
+        "UPDATE users SET password = $1, password_changed_at = NOW() WHERE id = $2",
+        [hashed, user.id]
+      );
+      await client.query("UPDATE password_reset_tokens SET used_at = NOW() WHERE jti = $1", [jti]);
+      await client.query("COMMIT");
+
+      return NextResponse.json({ success: true, message: "รีเซ็ตรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบใหม่" });
+    } catch (err) {
+      try { await client.query("ROLLBACK"); } catch {}
+      throw err;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     console.error("[reset-password] error:", err instanceof Error ? err.message : err);
     return NextResponse.json({ error: "Token หมดอายุหรือไม่ถูกต้อง กรุณาขอรีเซ็ตใหม่" }, { status: 400 });

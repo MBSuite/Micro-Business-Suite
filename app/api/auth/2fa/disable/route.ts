@@ -4,7 +4,6 @@ import pool from "@/lib/db";
 import {
   decryptSecret,
   verifyTotp,
-  normalizeRecoveryCode,
   hashRecoveryCode,
 } from "@/lib/two-factor";
 
@@ -39,17 +38,18 @@ export async function POST(req: Request) {
       verified = verifyTotp(secret, code);
     } else if (recoveryCode) {
       const hash = hashRecoveryCode(recoveryCode);
-      const recoveryResult = await client.query(
-        "SELECT id FROM user_recovery_codes WHERE user_id = $1 AND code_hash = $2 AND used_at IS NULL LIMIT 1",
+      // consume แบบ atomic ภายใน transaction เดิมกับการปิด 2FA
+      const consumed = await client.query(
+        `UPDATE user_recovery_codes SET used_at = NOW()
+         WHERE id = (
+           SELECT id FROM user_recovery_codes
+           WHERE user_id = $1 AND code_hash = $2 AND used_at IS NULL
+           ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
+         )
+         RETURNING id`,
         [session.user.id, hash],
       );
-      if (recoveryResult.rows[0]) {
-        await client.query(
-          "UPDATE user_recovery_codes SET used_at = NOW() WHERE id = $1",
-          [recoveryResult.rows[0].id],
-        );
-        verified = true;
-      }
+      verified = consumed.rows.length > 0;
     }
 
     if (!verified) {
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
     await client.query("COMMIT");
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     await client.query("ROLLBACK");
     return NextResponse.json({ error: "Failed to disable 2FA" }, { status: 500 });
   } finally {

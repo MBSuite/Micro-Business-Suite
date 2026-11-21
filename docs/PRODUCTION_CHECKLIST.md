@@ -132,7 +132,7 @@ production acceptance ของงานสมัคร/ลบสมาชิก
 - Rate limiter in-memory (single-instance only)
 - CSP ยังมี unsafe-inline (Next.js ต้องการ)
 - Historical credentials in git history (ควร rotate ถ้าเคย live)
-- เจ้าของยืนยันว่า Neon เป็นฐาน Dev และ Supabase เป็นฐาน Production
+- เอกสารระบุ Neon = Dev, Supabase = Production; หลักฐาน live ใน Gate 3 (`DECISIONS.md`) พบ Production ที่ deploy ใช้ Neon — ต้องตรวจ live และขออนุมัติก่อน migration/deploy ทุกครั้ง
 
 **สถานะ Dev gate: ยังไม่ผ่าน** — ต้องยืนยัน signup และ delete บนฐาน Dev ก่อน
 เริ่ม 2FA; Production release ยังถูกกั้นจนกว่า 2FA จะผ่านและได้รับอนุมัติ

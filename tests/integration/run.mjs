@@ -79,7 +79,7 @@ async function waitForDb() {
 async function applySchema(client) {
   // รีเซ็ตทุก run: กัน schema เก่า/ข้อมูลเก่าจากรอบที่แล้วแอบค้าง
   await client.query(
-    `DROP TABLE IF EXISTS user_recovery_codes, integration_webhook_events, integration_connections, user_groups, groups, activity_log, company_module_settings, payment_vouchers, expenses, quotations, payments, invoice_items, invoices, contacts,
+    `DROP TABLE IF EXISTS password_reset_tokens, bridge_sync_log, user_recovery_codes, integration_webhook_events, integration_connections, user_groups, groups, activity_log, company_module_settings, payment_vouchers, expenses, quotations, payments, invoice_items, invoices, contacts,
        company_settings, users, companies CASCADE`
   );
   const sql = readFileSync(path.join(import.meta.dirname, "schema.sql"), "utf8");
@@ -96,6 +96,13 @@ async function applySchema(client) {
     "utf8"
   );
   await client.query(twoFactorMigration);
+
+  for (const file of [
+    "migrations/add_bridge_sync_tenant_scope.sql",
+    "migrations/add_password_reset_single_use.sql",
+  ]) {
+    await client.query(readFileSync(path.join(ROOT, file), "utf8"));
+  }
 }
 
 async function waitForApp() {

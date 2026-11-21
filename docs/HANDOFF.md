@@ -227,6 +227,8 @@ MBSuite = **Platform รวม Software บริหารจัดการอ�
 - `lib/bridge-sync-validation.mjs` — validation helpers (testable)
 - `tests/bridge-sync-validation.test.mjs` — unit tests (15 pass)
 - `migrations/add_bridge_sync_log.sql` — idempotency store migration
+- `migrations/add_bridge_sync_tenant_scope.sql` — idempotency key แยกตาม tenant
+- `migrations/add_password_reset_single_use.sql` — reset-token ledger + session revocation column
 - `scripts/backup-prod.mjs`, `scripts/smoke-test-bridge.mjs` — production helpers
 - `docs/VERCEL_ENV_CHECKLIST.md` — Vercel env checklist
 - `docs/PRODUCTION_CHECKLIST.md` — production checklist

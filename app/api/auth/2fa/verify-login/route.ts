@@ -58,14 +58,19 @@ export async function POST(req: Request) {
     verified = verifyTotp(secret, code);
   } else if (recoveryCode) {
     const hash = hashRecoveryCode(recoveryCode);
-    const recoveryResult = await query(
-      "SELECT id FROM user_recovery_codes WHERE user_id = $1 AND code_hash = $2 AND used_at IS NULL LIMIT 1",
+    // consume แบบ atomic: เลือกโค้ดที่ยังไม่ใช้แล้วทำเครื่องหมายในคำสั่งเดียว
+    // ป้องกันสองคำขอพร้อมกันผ่านรหัสเดียวกันได้
+    const consumed = await query(
+      `UPDATE user_recovery_codes SET used_at = NOW()
+       WHERE id = (
+         SELECT id FROM user_recovery_codes
+         WHERE user_id = $1 AND code_hash = $2 AND used_at IS NULL
+         ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
+       )
+       RETURNING id`,
       [user.id, hash],
     );
-    if (recoveryResult.rows[0]) {
-      await query("UPDATE user_recovery_codes SET used_at = NOW() WHERE id = $1", [recoveryResult.rows[0].id]);
-      verified = true;
-    }
+    verified = consumed.rows.length > 0;
   }
 
   if (!verified) {

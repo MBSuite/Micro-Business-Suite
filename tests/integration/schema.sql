@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS users (
     totp_secret TEXT,
     totp_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     totp_verified_at TIMESTAMP WITH TIME ZONE,
+    password_changed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -295,6 +296,27 @@ CREATE TABLE IF NOT EXISTS user_recovery_codes (
     code_hash TEXT NOT NULL,
     used_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    jti UUID PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    used_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- UNIQUE ต่อ tenant ถูกสร้างโดย migrations/add_bridge_sync_tenant_scope.sql
+CREATE TABLE IF NOT EXISTS bridge_sync_log (
+    id SERIAL PRIMARY KEY,
+    idempotency_key VARCHAR(255) NOT NULL,
+    event VARCHAR(100) NOT NULL,
+    company_id INTEGER REFERENCES companies(id) ON DELETE CASCADE,
+    status VARCHAR(20) NOT NULL DEFAULT 'success',
+    result JSONB,
+    error TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 INSERT INTO company_settings (name)

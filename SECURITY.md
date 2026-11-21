@@ -28,7 +28,12 @@ These are implementation requirements and observed controls, not a guarantee tha
 - `proxy.ts` applies session and role-based route checks. API handlers must also enforce authorization for their operations; proxy pass-through/public paths do not grant permission.
 - Migration scripts should be reviewed and tested on an isolated disposable database before any production change; do not assume every migration has been proven idempotent.
 - There is no cross-site login or SSO. Each app (Core and the six modules) authenticates its own users with the custom `jose` JWT and issues its own session cookie; no token is shared across app domains.
-- The shared database (Neon for Dev, Supabase for Production) stores each app's users under its own table prefix. The legacy `core_user_id` columns remain for historical data but are no longer used by any flow.
+- Database target: Neon for Dev. Live verification recorded in `docs/DECISIONS.md` (Gate 3, 2026-11-11) found the currently deployed Production runtime also uses Neon; older documents naming Supabase for Production are historical and must not be used to choose a migration/deploy target without re-verifying the live target and obtaining owner approval. Each app's users live under its own table prefix; legacy `core_user_id` columns are unused.
+- Multi-statement writes use one pinned `pg` client (`BEGIN`/`COMMIT` on the same connection). `query()` in `lib/db.ts` is `pool.query` and must never be used for transaction control.
+- Bridge idempotency keys are unique per tenant: `(company_id, idempotency_key)`. A service token that may supply `company_id` must be scoped to the specific module/tenant; otherwise a shared token can write into another company.
+- Password-reset tokens are single-use (jti ledger) and expire in one hour. Reset URLs and tokens are never written to logs. A password change invalidates sessions issued before the change.
+- Backup exports redact secret columns by name before any optional AES encryption; encryption is defense in depth, not a substitute for redaction.
+- 2FA recovery codes are consumed with one conditional `UPDATE ... RETURNING` so concurrent requests cannot reuse a code.
 
 ## Out of Scope
 - Vulnerabilities in third-party dependencies (report upstream; we track via `npm audit`).

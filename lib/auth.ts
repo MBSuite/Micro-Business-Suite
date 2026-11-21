@@ -21,6 +21,8 @@ export type UserSession = {
   email: string;
   name?: string;
   role?: string;
+  /** JWT issued-at (seconds). ใช้ตรวจว่าออกโทเค็นก่อนการเปลี่ยนรหัสผ่านหรือไม่ */
+  issuedAt?: number;
 };
 
 type LicenseCheckResult = {
@@ -171,6 +173,7 @@ export async function verifyToken(token: string): Promise<UserSession | null> {
       email: payload.email as string,
       name: payload.name as string,
       role: payload.role as string,
+      issuedAt: typeof payload.iat === "number" ? payload.iat : undefined,
     };
   } catch {
     return null;
@@ -185,11 +188,21 @@ export async function auth(): Promise<{ user: UserSession } | null> {
   const session = await verifyToken(token);
   if (!session) return null;
   const userResult = await query(
-    "SELECT id, email, name, role FROM users WHERE id = $1 LIMIT 1",
+    "SELECT id, email, name, role, password_changed_at FROM users WHERE id = $1 LIMIT 1",
     [session.id]
   );
   const user = userResult.rows[0];
   if (!user) return null;
+
+  // Session ที่ออกก่อนการรีเซ็ตรหัสผ่านต้องใช้ไม่ได้อีกต่อไป
+  // เปรียบเทียบที่ความละเอียด "วินาที" เพราะ JWT iat (setIssuedAt) ตัดเป็นวินาที
+  // แต่ password_changed_at ใช้ NOW() แบบมิลลิวินาที — ถ้าเทียบตรง ๆ session ที่
+  // ออกใหม่หลัง reset ในวินาทีเดียวกันจะถูกปฏิเสธและล็อกผู้ใช้ออกทันที
+  if (user.password_changed_at && session.issuedAt) {
+    const changedAtSec = Math.floor(new Date(user.password_changed_at).getTime() / 1000);
+    if (Number.isFinite(changedAtSec) && session.issuedAt < changedAtSec) return null;
+  }
+
   return {
     user: {
       id: String(user.id),

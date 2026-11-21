@@ -7,17 +7,17 @@ Legend: `401` = ต้อง login · `403` = login แต่สิทธิ์�
 
 | Route | Method | ไม่มี token | user | admin | superadmin | หมายเหตุ |
 |---|---|---|---|---|---|---|
-| `/api/payments` | GET | 401 | ok | ok | ok | WS-1 ใส่ auth แล้ว · company scope รอ WS-3 #5 |
+| `/api/payments` | GET | 401 | ok (scoped) | ok (scoped) | ok (scoped) | `p.company_id = $companyId` (`app/api/payments/route.ts:38-39`) |
 | `/api/payments/[id]` | GET/PUT/DELETE | 401 | ok (scoped) | ok (scoped) | ok | ข้ามบริษัท → GET `404`, PUT/DELETE `403` หลัง migration company_id |
 | `/api/settings` | GET | 401 | ok | ok | ok | |
 | `/api/settings` | PUT | 401 | 403 | ok | ok | ปรับแต่งบริษัท = admin เท่านั้น |
 | `/api/import` | POST | 401 | ok | ok | ok | implementation ปัจจุบันอนุญาต user ทุก role |
-| `/api/admin/backup` | GET | 401 | 403 | ok | ok | WS-1: `canAccessAdmin()` |
+| `/api/admin/backup` | GET | 401 | 403 | 403 | ok | superadmin only (`backup/route.ts:57`); secret columns ถูก redact ก่อนส่งออก |
 | `/api/reset_billing` | POST | 401 | 403 | ok+token | ok+token | WS-1 + confirm token |
 | `/api/admin/google-sync` | POST | 401 | 403 | ok | ok | WS-1: `canAccessAdmin()` |
 | `/api/migrate` | POST | **404** | 404 | 404 | 404 | env-gated: เปิดเมื่อ `MIGRATE_ENDPOINT_ENABLED=true` (default ปิด) |
 | `/api/db_schema` | GET | 401 | 403 | ok | ok | WS-1 ใส่ auth+admin (ไม่ใช่ 404 — เห็น schema ต้อง admin) |
-| `/system-audit` | GET | **404** | 404 | 404 | 404 | env-gated: เปิดเมื่อ `SYSTEM_AUDIT_ENABLED=true` (default ปิด); เมื่อเปิดยังไม่มี auth guard |
+| `/system-audit` | GET | **404** | 404 | 404 | 404 | env-gated: เปิดเมื่อ `SYSTEM_AUDIT_ENABLED=true` (default ปิด); เมื่อเปิดมี `auth()` + `canAccessAdmin()` (`route.ts:18-30`) |
 | `/api/debug/auth` | GET/POST | **404** | 404 | 404 | 404 | disable ทั้งวิธี (WS-1) |
 
 ## กติกาที่ตกลงร่วมกัน
@@ -27,6 +27,6 @@ Legend: `401` = ต้อง login · `403` = login แต่สิทธิ์�
 
 ## การเปิดให้ใช้งาน (เมื่อต้องการ)
 - `migrate` → เปิด `MIGRATE_ENDPOINT_ENABLED=true` เฉพาะ env ที่จะรัน (เช่น staging)
-- `system-audit` → เปิด `SYSTEM_AUDIT_ENABLED=true` เฉพาะ dev และต้องเพิ่ม auth guard ก่อนเปิดใช้งานจริง
+- `system-audit` → เปิด `SYSTEM_AUDIT_ENABLED=true` เฉพาะ dev; auth guard มีแล้ว แต่ต้องตรวจ `testDatabaseSchema()` ว่าไม่เปิดเผยข้อมูลข้ามบริษัทก่อนเปิดใช้งานจริง
 
-— aligned โดยธาร; open issue ที่เหลือคือ auth guard ของ `/system-audit` เมื่อเปิด env และการแยก test DB สำหรับ integration harness
+— aligned กับโค้ดปัจจุบัน (2026-11-21); open issue ที่เหลือคือการแยก test DB สำหรับ integration harness และการตรวจ scope ของ `system-audit` กรณี `?test=database`

@@ -51,9 +51,12 @@ export async function POST(req: Request) {
   // log row is cleared and the event is processed again. Only a successful sync
   // short-circuits with the stored result.
   try {
+    // idempotency key ต้อง scoped ตาม tenant มิเช่นนั้นบริษัทอื่นที่ส่ง key ซ้ำ
+    // จะได้รับ result ของบริษัทเดิม (ดู migration add_bridge_sync_tenant_scope.sql)
     const { rows: existing } = await query(
-      `SELECT id, status, result FROM bridge_sync_log WHERE idempotency_key = $1 LIMIT 1`,
-      [idempotencyKey]
+      `SELECT id, status, result FROM bridge_sync_log
+       WHERE idempotency_key = $1 AND company_id = $2 LIMIT 1`,
+      [idempotencyKey, companyId]
     );
     if (existing.length > 0 && existing[0].status === "success") {
       return NextResponse.json({
@@ -64,16 +67,19 @@ export async function POST(req: Request) {
       });
     }
     if (existing.length > 0) {
-      await query(`DELETE FROM bridge_sync_log WHERE idempotency_key = $1 AND status <> 'success'`, [
-        idempotencyKey,
-      ]);
+      await query(
+        `DELETE FROM bridge_sync_log
+         WHERE idempotency_key = $1 AND company_id = $2 AND status <> 'success'`,
+        [idempotencyKey, companyId]
+      );
     }
   } catch (e: any) {
-    // Table may not exist yet
-    if (String(e?.message || "").includes("bridge_sync_log")) {
-      return bad("bridge_sync_log table missing. Run migration add_bridge_sync_log.sql first.", 503);
+    // ตารางอาจยังไม่มี หรือยังไม่ได้รัน migration ที่เพิ่ม company_id
+    const message = String(e?.message || "");
+    if (message.includes("bridge_sync_log") || message.includes("company_id")) {
+      return bad("bridge_sync_log is missing or not tenant-scoped. Run migrations add_bridge_sync_log.sql and add_bridge_sync_tenant_scope.sql first.", 503);
     }
-    return bad(e?.message || "Idempotency check failed", 500);
+    return bad(message || "Idempotency check failed", 500);
   }
 
   const pool = (await import("@/lib/db")).default;
@@ -213,6 +219,25 @@ export async function POST(req: Request) {
     });
   } catch (e: any) {
     try { await client.query("ROLLBACK"); } catch {}
+    // คำขอพร้อมกันของ tenant เดียวกันอาจชน unique index หลังผ่าน check ก่อนหน้า
+    // ถ้าอีกฝั่ง commit สำเร็จแล้วให้คืนผลเดิมแทนการรายงาน failure
+    if (e?.code === "23505" && String(e?.constraint || "").includes("tenant_idempotency")) {
+      try {
+        const { rows: committed } = await query(
+          `SELECT id, result FROM bridge_sync_log
+           WHERE company_id = $1 AND idempotency_key = $2 AND status = 'success' LIMIT 1`,
+          [companyId, idempotencyKey]
+        );
+        if (committed.length > 0) {
+          return NextResponse.json({
+            success: true,
+            idempotent: true,
+            sync_id: committed[0].id,
+            result: committed[0].result,
+          });
+        }
+      } catch {}
+    }
     // Record failure (best effort)
     try {
       await query(
