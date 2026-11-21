@@ -12,7 +12,7 @@
 
 **สถานะ:** PRD/Spec + SQL migration + โค้ด TS ใน Core เสร็จแล้ว — **ยังไม่ได้รัน migration บน production และยังไม่ได้ deploy**
 
-- PRD/Spec (แอพ User & License Management): `../Micro-Admin-MBSuite/micro-admin-mbsuite/docs/PRD-user-license-management.md`
+- PRD/Spec (แอพ User & License Management): `../Micro-Business-Admin/docs/PRD-user-license-management.md`
 - Migration (idempotent, additive): `migrations/mbs_core_add_audit_license.sql`
   - `companies.is_audit BOOLEAN NOT NULL DEFAULT FALSE` + partial index + COMMENT บน `plan_type`
   - ไม่มี CHECK constraint เดิมบน `plan_type` → ไม่ต้อง alter constraint

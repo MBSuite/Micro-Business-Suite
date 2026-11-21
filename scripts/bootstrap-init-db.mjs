@@ -26,7 +26,7 @@ const FILES = [
   "migrations/add_quotation_recurring_columns.sql",
   "migrations/fix_column_types.sql",
   "migrations/add_companies_table.sql",
-  // AUDIT license tier + is_audit flag (PRD: Micro-Admin-MBSuite/docs/PRD-user-license-management.md)
+  // AUDIT license tier + is_audit flag (PRD: Micro-Business-Admin/docs/PRD-user-license-management.md)
   "migrations/mbs_core_add_audit_license.sql",
   "migrations/add_users_company_id_column.sql",
   "migrations/add_users_company_id_backfill.sql",

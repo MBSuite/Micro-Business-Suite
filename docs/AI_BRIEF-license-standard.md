@@ -15,7 +15,7 @@ repo นี้คือ <MODULE_REPO> — ชื่อ module = <ชื่อ mo
 ขั้นตอนบังคับ (ห้ามข้าม):
 1. อ่านไฟล์นี้จริงก่อนแตะโค้ดใดๆ:
    /home/neon13/workspace/services/next/00-MAIN-WEB/Micro-Business-Suite/docs/LICENSE_STANDARD.md
-   และ PRD: /home/neon13/workspace/services/next/00-MAIN-WEB/Micro-Admin-MBSuite/micro-admin-mbsuite/docs/PRD-user-license-management.md
+   และ PRD: /home/neon13/workspace/services/next/00-MAIN-WEB/Micro-Business-Admin/docs/PRD-user-license-management.md
    ใช้ absolute path เสมอ ห้ามเดาจากความทรงจำ ห้ามเอาค่าจาก README เก่าที่ขัดกับไฟล์นี้
 
 2. ใช้มาตรฐานเดียวกันเป๊ะกับที่ Core กำหนด:

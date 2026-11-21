@@ -6,7 +6,7 @@
 | Owner | พี่ฆัง (owner) · ดูแลโดย OpenCode |
 | ที่อยู่ | ไฟล์นี้ = `/home/neon13/workspace/services/next/00-MAIN-WEB/Micro-Business-Suite/docs/LICENSE_STANDARD.md` |
 | ใช้กับ | `Micro-Business-Suite` (Core) + 7 modules: `Service`, `Retail`, `Rental`, `Pharmacy`, `Hotel`, `FNB`, `Contracts` |
-| อ้างอิงรายละเอียด | `../Micro-Admin-MBSuite/micro-admin-mbsuite/docs/PRD-user-license-management.md` |
+| อ้างอิงรายละเอียด | `../Micro-Business-Admin/docs/PRD-user-license-management.md` |
 | อัปเดตล่าสุด | 2026-11-21 |
 
 ---
@@ -132,4 +132,4 @@ grep -rln "createLicenseKey\|verifyLicenseKey\|LICENSE_PACKAGES" \
 - `KNOWN_FEATURES` derive จาก `LICENSE_PACKAGES` → ได้ `audit_mode` อัตโนมัติ
 - `PROTECTED_FEATURES` (`lib/license-check.ts`) เป็น map hardcode แยก → ต้องเพิ่มเองถ้าจะใช้ `withLicenseCheck("AUDIT_MODE")`
 - ไม่เพิ่ม feature ชื่ออื่นที่ไม่มีโค้ดรองรับ (กัน capability ปลอม)
-- รายละเอียด: `../Micro-Admin-MBSuite/micro-admin-mbsuite/docs/PRD-user-license-management.md` §15
+- รายละเอียด: `../Micro-Business-Admin/docs/PRD-user-license-management.md` §15
