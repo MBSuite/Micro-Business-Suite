@@ -1,6 +1,6 @@
 # Production Migration Runbook (Core)
 
-ใช้สำหรับ apply migration บน Production เท่านั้นหลัง owner อนุมัติ — เป้าหมายจริงต้องตรวจ live ทุกครั้ง (เอกสารเก่าระบุ Supabase แต่ Gate 3 พบ Neon)
+ใช้สำหรับ apply migration บน Production เท่านั้นหลัง owner อนุมัติ — เป้าหมายจริงต้องตรวจ live ทุกครั้ง (Gate 3 ยืนยันว่าเป็น Neon)
 
 ## Pre-flight
 - [ ] Gate 1 (Dev signup/delete) ผ่านและบันทึกหลักฐาน

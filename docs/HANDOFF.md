@@ -41,7 +41,7 @@ MBSuite = **Platform รวม Software บริหารจัดการอ�
 | **Retail Suite** | ร้านค้า/ค้าส่ง | POS, สต็อก, บาร์โค้ด, โปรโมชั่น |
 | **Pharmacy Suite** | ร้านขายยา | ใบสั่งยา, สต็อกยา, หมดอายุ |
 
-**ทุก Suite มีร่วมกัน (Shared Core):** การคิดเงิน, บันทึก รายรับ-รายจ่าย, ใบ paying, Tenant (company_id), License และฐานข้อมูล PostgreSQL ชุดเดียว (Neon = Dev, Supabase = Production) — ส่วน Auth เป็นของแต่ละแอป ไม่มี SSO ข้ามแอป
+**ทุก Suite มีร่วมกัน (Shared Core):** การคิดเงิน, บันทึก รายรับ-รายจ่าย, ใบ paying, Tenant (company_id), License และฐานข้อมูล PostgreSQL ชุดเดียว (Neon = ทั้ง Dev และ Production ที่ deploy จริง) — ส่วน Auth เป็นของแต่ละแอป ไม่มี SSO ข้ามแอป
 
 ---
 
@@ -197,7 +197,7 @@ MBSuite = **Platform รวม Software บริหารจัดการอ�
 
 1. **Sync method:** REST API + Webhook (อนุมัติแล้ว) — ใช้ `/api/bridge/sync` ใหม่ หรือ `/api/integrations/webhook` ที่มีอยู่?
 2. **Auth:** แต่ละแอปล็อกอินเอง (ไม่มี SSO) — ยืนยันแล้ว
-3. **Tenant / Database:** เจ้าของยืนยันให้ Core และทั้ง 6 modules ใช้ฐานข้อมูล PostgreSQL ชุดเดียวกัน (Neon = Dev, Supabase = Production); ทุกแอปเข้าถึงเฉพาะตาราง prefix ของตัวเองและเชื่อมกันผ่าน API/Bridge — ก่อนเปลี่ยน schema/migration ให้ปฏิบัติตาม §13
+3. **Tenant / Database:** เจ้าของยืนยันให้ Core และทั้ง 6 modules ใช้ฐานข้อมูล PostgreSQL ชุดเดียวกัน (Neon = ทั้ง Dev และ Production ที่ deploy จริง); ทุกแอปเข้าถึงเฉพาะตาราง prefix ของตัวเองและเชื่อมกันผ่าน API/Bridge — ก่อนเปลี่ยน schema/migration ให้ปฏิบัติตาม §13
 4. **Marketplace:** สร้างใน MBSuite.Dev (landing) — อนุมัติแล้ว
 5. **Priority Suite:** Micro-Menu-Online ก่อน — อนุมัติแล้ว
 

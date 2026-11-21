@@ -1,7 +1,7 @@
 # Capability Audit — Micro-Business-Suite (MBS)
 
 > Historical snapshot from 2026-11-05. Its original `prod Neon` label is superseded
-> by the owner's confirmation that Neon is Dev and Supabase is Production. This
+> by the live verification in Gate 3 that Neon is the deployed Production target. This
 > document does not establish the current Production database.
 > หลัก: ห้ามเดา — ทุกข้ออ้างอิงไฟล์/ตาราง/คอลัมน์จริง
 

@@ -65,7 +65,7 @@ MBS แก้ปัญหาทั้งหมดผ่าน **4 เสาห�
 - Mobile-responsive — ใช้งานบนมือถือได้
 
 ### เสาหลักที่ 3: สถาปัตยกรรมระดับสากล
-- PostgreSQL — Neon for Dev; Supabase for Production per owner confirmation
+- PostgreSQL — Neon for both Dev and the deployed Production runtime (Gate 3 live verification)
 - Multi-tenant (company isolation) — ข้อมูลแต่ละบริษัทแยกกัน
 - Role-based access control (superadmin/admin/user)
 - Module system (เปิด/ปิด module ต่อ company)
@@ -110,7 +110,7 @@ MBS แก้ปัญหาทั้งหมดผ่าน **4 เสาห�
 - **Security headers:** CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
 
 ### สถาปัตยกรรมระดับสากล
-- PostgreSQL (Neon for Dev, Supabase for Production per owner confirmation; SSL strict)
+- PostgreSQL (Neon for Dev and the deployed Production runtime; SSL strict)
 - Next.js 16 (App Router, Server Components, Server Actions)
 - JWT (jose) + bcryptjs, httpOnly cookie, secure (prod)
 - Offline license verification (HMAC-SHA256)
@@ -120,8 +120,8 @@ MBS แก้ปัญหาทั้งหมดผ่าน **4 เสาห�
 - ผล build ที่เคยบันทึกเป็นผลตรวจตามเวลานั้น ไม่ใช่การรับรอง production ปัจจุบัน
 - การตรวจล่าสุด: typecheck ผ่าน, unit 27 ผ่าน/12 ข้าม, integration 12/12 และ registration integration 1/1 ผ่านบน disposable DB เท่านั้น
 - การสมัคร Rental/Hotel และการลบข้อมูลทดสอบผ่านเฉพาะฐานข้อมูล disposable ในเครื่อง
-- เจ้าของยืนยันว่า Neon เป็นฐาน Dev และ Supabase เป็นฐาน Production
-- **Gate 1 ยังไม่ผ่าน:** ยังไม่ได้ทดสอบ signup และ delete จริงบนฐาน Dev; ไม่ได้เขียนข้อมูลลง Supabase Production
+- หลักฐาน live (Gate 3) ยืนยันว่า Neon เป็นฐานทั้ง Dev และ Production ที่ deploy จริง
+- **Gate 1 ยังไม่ผ่าน:** ยังไม่ได้ทดสอบ signup และ delete จริงบนฐาน Dev; ไม่ได้เขียนข้อมูลลง Production
 - หลัง Gate 1 ผ่าน ต้องทำและตรวจ 2FA; ห้ามพิจารณา Production ก่อน 2FA ผ่าน
 
 ---
@@ -187,7 +187,7 @@ MBS แก้ปัญหาทั้งหมดผ่าน **4 เสาห�
 - Bridge API `/api/bridge/sync` — Suite → MBS Core finance event sync (REST API + Webhook)
 - Idempotent sync (idempotency_key) — ป้องกัน duplicate invoice/journal
 - Service-to-service auth (`MBS_BRIDGE_TOKEN`); each app signs its own user session — no SSO or cross-site token
-- Core และโมดูลทั้งหกใช้ PostgreSQL ชุดเดียว (Neon = Dev, Supabase = Production) โดยแยกตารางตาม prefix และเชื่อมกันผ่าน API/Bridge
+- Core และโมดูลทั้งหกใช้ PostgreSQL ชุดเดียว (Neon = ทั้ง Dev และ Production ที่ deploy จริง) โดยแยกตารางตาม prefix และเชื่อมกันผ่าน API/Bridge
 - Suite standalone (Micro-Menu-Online ฯลฯ) → sync รายรับ/รายจ่าย/ใบ paying ไป MBS Core
 - MBS Core เป็น hub สำหรับภาษี (PP30, PND), P&L, รายงาน — Suite ใช้ standalone ได้แต่ถ้าต้องการรายละเอียดต้องซื้อ MBS Core
 
@@ -205,7 +205,7 @@ MBS แก้ปัญหาทั้งหมดผ่าน **4 เสาห�
 │  ├── Server Actions (app/actions)       │
 │  └── Proxy (proxy.ts) — auth + RBAC     │
 ├─────────────────────────────────────────┤
-│  PostgreSQL (Neon Dev / Supabase Prod)  │
+│  PostgreSQL (Neon — Dev + Prod)         │
 │  ├── 53 tables                          │
 │  ├── Multi-tenant (company_id)          │
 │  └── Migrations (scripts/bootstrap)     │
@@ -254,7 +254,7 @@ docker compose --env-file .env.local up -d --build
 **Micro-Business-Suite** มุ่งเป็นระบบบัญชีอัจฉริยะสำหรับ SME ที่:
 - ครอบคลุมบัญชี ภาษี เอกสาร และการจัดการธุรกิจในระบบเดียว
 - รองรับ multi-tenant + role-based access
-- ใช้ Next.js 16 + PostgreSQL (Neon for Dev; Supabase for Production)
+- ใช้ Next.js 16 + PostgreSQL (Neon for Dev and the deployed Production runtime)
 - สถานะ Dev gate: **ยังไม่ผ่าน** — signup/delete บนฐาน Dev ยังต้องยืนยัน; 2FA ต้องทำต่อก่อน Production
 - มี security headers, rate limiting, health endpoint
 - มีผล integration test แบบจำกัดขอบเขตตามที่บันทึกในเอกสารตรวจของแต่ละรอบ

@@ -43,7 +43,7 @@
 ### 🚫 NO CROSS-SITE LOGIN (NO SSO)
 ระบบนี้ **ไม่มี SSO** และไม่มีการล็อกอินข้ามเว็บระหว่าง Core กับโมดูล:
 - Core, Service, Retail, Rental, Pharmacy, Hotel และ F&B ต่างมีหน้า login/register และออก session cookie ของตัวเอง
-- ทุกแอปใช้ฐานข้อมูลร่วมกัน (Neon สำหรับ Dev, Supabase สำหรับ Production) แต่การยืนยันตัวตนแยกกันต่อแอป ไม่มีการส่ง token ข้ามโดเมน
+- ทุกแอปใช้ฐานข้อมูล PostgreSQL ร่วมกัน (Neon สำหรับ Dev และ Production ที่ deploy จริง) แต่การยืนยันตัวตนแยกกันต่อแอป ไม่มีการส่ง token ข้ามโดเมน
 - คอลัมน์ `core_user_id` ที่มีอยู่ในฐานข้อมูลถูกเก็บไว้เป็นข้อมูลเดิม แต่ไม่มี flow ใดใช้งานแล้ว
 - ห้ามเพิ่ม SSO, token exchange, JWKS หรือ callback ข้ามแอปกลับเข้ามาโดยไม่ได้รับคำสั่งจากเจ้าของ
 

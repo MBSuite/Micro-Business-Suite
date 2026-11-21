@@ -10,7 +10,7 @@
 
 แนวทางผลิตภัณฑ์ที่แนะนำคือให้บริการ Core และแต่ละโมดูลเป็น SaaS แยกตามความต้องการของลูกค้า โดย Core/โมดูลเป็นรูปแบบการให้บริการ ส่วน POS เป็นฟังก์ชันการขายหน้าร้าน ไม่ใช่รูปแบบผลิตภัณฑ์แทน SaaS
 
-คำว่า SaaS ในเอกสารนี้เป็น **ทิศทางการจัดแพ็กเกจผลิตภัณฑ์** โค้ด Core มี self-service registration ที่สร้างบริษัท Trial และผู้ใช้แรก พร้อมเลือกประเภทธุรกิจ General, Retail, F&B, Pharmacy, Service, Rental หรือ Hotel ได้ โดย Rental/Hotel ผ่าน integration test บนฐานข้อมูล disposable ในเครื่องแล้ว ส่วนการยอมรับงานฝั่ง Dev ยังรอทดสอบ signup และลบสมาชิกจริงบนฐาน Dev ตามเกณฑ์เจ้าของ หลังผ่านขั้นนี้จึงทำและตรวจ 2FA; ห้ามพิจารณาขึ้น Production ก่อน 2FA ผ่าน ฐานที่ deploy จริงตรวจพบว่าเป็น Neon ตามหลักฐาน Gate 3 ใน `docs/DECISIONS.md` (เอกสารเก่าที่ระบุ Supabase เป็นข้อมูลก่อนหน้า ต้องตรวจ live ซ้ำก่อน migration/deploy) และยังไม่มีการทดสอบเขียนข้อมูลในงานนี้ การระบุนี้ไม่ได้รับรองว่าการจัดการ tenant/สาขา การกำหนดสิทธิ์ตามแพ็กเกจ หรือการเรียกเก็บเงินอัตโนมัติครบแล้ว และ license mode ที่มีอยู่ไม่ใช่วงจร subscription billing ที่สมบูรณ์
+คำว่า SaaS ในเอกสารนี้เป็น **ทิศทางการจัดแพ็กเกจผลิตภัณฑ์** โค้ด Core มี self-service registration ที่สร้างบริษัท Trial และผู้ใช้แรก พร้อมเลือกประเภทธุรกิจ General, Retail, F&B, Pharmacy, Service, Rental หรือ Hotel ได้ โดย Rental/Hotel ผ่าน integration test บนฐานข้อมูล disposable ในเครื่องแล้ว ส่วนการยอมรับงานฝั่ง Dev ยังรอทดสอบ signup และลบสมาชิกจริงบนฐาน Dev ตามเกณฑ์เจ้าของ หลังผ่านขั้นนี้จึงทำและตรวจ 2FA; ห้ามพิจารณาขึ้น Production ก่อน 2FA ผ่าน ฐานที่ deploy จริงตรวจพบว่าเป็น Neon ตามหลักฐาน Gate 3 ใน `docs/DECISIONS.md` (ต้องตรวจ live ซ้ำก่อน migration/deploy ทุกครั้ง) และยังไม่มีการทดสอบเขียนข้อมูลในงานนี้ การระบุนี้ไม่ได้รับรองว่าการจัดการ tenant/สาขา การกำหนดสิทธิ์ตามแพ็กเกจ หรือการเรียกเก็บเงินอัตโนมัติครบแล้ว และ license mode ที่มีอยู่ไม่ใช่วงจร subscription billing ที่สมบูรณ์
 
 โมดูลธุรกิจทั้งหกเป็นแอปแยกและทำงานแบบ **standalone** ได้สำหรับร้านหรือ SME ที่ต้องการระบบปฏิบัติงานเฉพาะทาง การเชื่อม Core เป็นทางเลือก ไม่ใช่เงื่อนไขให้โมดูลใช้งานได้:
 
@@ -131,7 +131,7 @@ cron ภายนอก (ตั้งแล้วบนเครื่องพ�
 
 ### ฐานข้อมูลและการทดสอบ
 
-- แอปใช้ PostgreSQL ผ่าน `pg` Pool ใน `lib/db.ts`; เอกสารระบุ Neon ฝั่ง Dev และ Supabase ฝั่ง Production แต่หลักฐาน live ใน Gate 3 พบ Production ที่ deploy ใช้ Neon — ต้องตรวจเป้าหมายจริงก่อน migration/deploy ทุกครั้ง
+- แอปใช้ PostgreSQL ผ่าน `pg` Pool ใน `lib/db.ts`; หลักฐาน live ใน Gate 3 ยืนยันว่าทั้ง Dev และ Production ที่ deploy ใช้ Neon (endpoint เดียวกัน) — ต้องตรวจเป้าหมายจริงก่อน migration/deploy ทุกครั้ง
 - ก่อนรัน local dev, seed, bootstrap หรือ migration ให้ตรวจ branch ปลายทางก่อนเสมอ เพราะคำสั่งเหล่านี้อาจอ่าน/เขียนข้อมูลจริง
 - งานทดสอบที่เขียนข้อมูลต้องใช้ฐาน Dev ที่แยกและทิ้งได้; migration ให้ใช้ direct URL ส่วนแอปปกติใช้ connection URL ตาม environment
 - Legacy integration webhook ต้องส่ง `Idempotency-Key` (หรือ `event_id` ใน JSON body) ที่ไม่ซ้ำต่อ provider/event และต้องรัน `migrations/add_integration_webhook_idempotency.sql` บนฐานของ environment ก่อนเปิด endpoint; ทดสอบ migration กับฐาน disposable ก่อนเสมอ
@@ -190,7 +190,7 @@ docker compose --env-file .env.local up -d --build
 
 - **Stack:** Next.js 16 (App Router) + React 19 + TypeScript 5
 - **UI:** Tailwind CSS 4 + lucide-react
-- **ฐานข้อมูล:** PostgreSQL ผ่าน `pg` Pool (`lib/db.ts`); Dev ใช้ Neon; Production ที่ deploy จริงตรวจพบว่าเป็น Neon ตาม Gate 3 (เอกสารเก่าระบุ Supabase)
+- **ฐานข้อมูล:** PostgreSQL ผ่าน `pg` Pool (`lib/db.ts`); ทั้ง Dev และ Production ที่ deploy จริงใช้ Neon (endpoint เดียวกัน) ตาม Gate 3
 - **เอกสาร PDF:** jspdf / jspdf-autotable / exceljs · **Barcode/QR:** react-barcode / qrcode.react
 - **จ็อบเบื้องหลัง:** node-cron (recurring, tax, ai-audit)
 - **Integration:** googleapis (Drive / Sheets / Calendar) — อ่าน OAuth จาก `.env.local` ผ่าน `scripts/google-auth.mjs`

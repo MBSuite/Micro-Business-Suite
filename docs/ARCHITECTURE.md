@@ -3,7 +3,7 @@
 ## Stack
 
 - App: Next.js (App Router) + TypeScript
-- Database: PostgreSQL — Neon for Dev; the deployed Production runtime was verified as Neon in Gate 3 (`docs/DECISIONS.md`, 2026-11-11), while older docs naming Supabase are historical. Core and all six modules share one database and each app accesses only its own prefixed tables. Re-verify the live target before any migration or deploy.
+- Database: PostgreSQL — Neon for both Dev and the deployed Production runtime (verified in Gate 3, `docs/DECISIONS.md`, 2026-11-11). Core and all six modules share one database and each app accesses only its own prefixed tables. Re-verify the live target before any migration or deploy.
 - Auth: JWT (jose) + bcryptjs, httpOnly cookie, role-based (superadmin/admin/user) — per app; no cross-site login or SSO
 
 ## Product Topology

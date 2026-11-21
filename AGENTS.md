@@ -69,7 +69,7 @@ Pre-approved by the owner — these do not require a new approval each time:
 - Disposable local Docker / Neon test databases, including resetting them for tests.
 - Fixing a defect directly when the fix is small and verifiable, instead of adding another report round.
 
-Still require explicit owner approval every time: Supabase (Production) migrations or data changes, Vercel / environment-variable changes, deploy, `git push`, and any irreversible destructive operation (drop table/schema, truncate, delete data, force push). These guardrails kept the 2026-11-11 migration incident on Dev and non-destructive; do not remove them.
+Still require explicit owner approval every time: Production database migrations or data changes (Neon `ep-delicate-base-b31rx7ol`), Vercel / environment-variable changes, deploy, `git push`, and any irreversible destructive operation (drop table/schema, truncate, delete data, force push). These guardrails kept the 2026-11-11 migration incident on Dev and non-destructive; do not remove them.
 
 ## Deployed URLs
 

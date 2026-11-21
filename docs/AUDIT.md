@@ -95,7 +95,7 @@ Lint รายงานผลทั้ง repository; ยังไม่ได�
 | SEC-04 | สูง (ข้อมูล) | backup `SELECT *` redact เฉพาะ `users.password`; encryption เป็น optional | redact ทุกคอลัมน์ที่ตรง pattern ความลับ (RD/OAuth/2FA/license/credentials) ก่อนส่งออก |
 | SEC-05 | กลาง | recovery code ถูก `SELECT` แล้ว `UPDATE` คนละคำสั่ง (verify-login และ disable) | `UPDATE ... WHERE id = (SELECT ... FOR UPDATE SKIP LOCKED) RETURNING id` แบบ atomic |
 | DOC-01 | กลาง | `API_ACCESS_MATRIX.md` ระบุ payment scope ยังรอ, backup ใช้ `canAccessAdmin()`, system-audit ไม่มี auth guard — ไม่ตรงโค้ด | อัปเดตตารางให้ตรงโค้ดปัจจุบัน |
-| DOC-02 | กลาง | เอกสารระบุ Supabase=Production แต่ Gate 3 บันทึกหลักฐาน live ว่า Production ใช้ Neon | อัปเดต `SECURITY.md`, `README.md`, `ARCHITECTURE.md`, `PRODUCTION_CHECKLIST.md`, `VERCEL_ENV_CHECKLIST.md`, `MODULE_MIGRATION_RUNBOOK.md`, `PRODUCTION_MIGRATION_RUNBOOK.md` ให้ชี้ Gate 3 เป็นความจริงล่าสุด |
+| DOC-02 | ปิดแล้ว | แก้ข้อความที่ระบุผู้ให้บริการฐานข้อมูลผิดในเอกสารให้ชี้ Gate 3 (Neon เป็นเป้าหมายจริงของ Production) | อัปเดต `SECURITY.md`, `README.md`, `ARCHITECTURE.md`, `PRODUCTION_CHECKLIST.md`, `VERCEL_ENV_CHECKLIST.md`, `MODULE_MIGRATION_RUNBOOK.md`, `PRODUCTION_MIGRATION_RUNBOOK.md` ให้ชี้ Gate 3 เป็นความจริงล่าสุด |
 
 ### สิ่งที่ยังเป็นความเสี่ยง/ต้องทำก่อน deploy
 

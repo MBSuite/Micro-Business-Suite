@@ -1,7 +1,7 @@
 # AUDIT CHECKLIST — Micro-Business-Suite
 
 > Historical audit (2026-10-23). Any Neon `production` labels in this report are
-> superseded by the owner's confirmation that Neon is Dev and Supabase is Production.
+> superseded by the live verification in Gate 3 that Neon is the deployed Production target.
 > Do not use this historical report to identify the current Production database.
 
 **วันที่ตรวจซ้ำ/แก้ไข:** 2026-10-23

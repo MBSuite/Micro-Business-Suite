@@ -1,7 +1,7 @@
 # Module Migration Runbook (shared PostgreSQL)
 
 Applies to Core and the six modules that share one PostgreSQL database:
-**Neon = Dev**, **Supabase = Production** ตามมติเก่า — แต่หลักฐาน live ใน Gate 3 (`DECISIONS.md`) พบ Production ที่ deploy ใช้ Neon ให้ตรวจเป้าหมายจริงก่อนรัน migration ทุกครั้ง (ห้ามใช้เอกสารเป็นตัวตัดสินความเป็น production)
+**Neon = เป้าหมายจริงของทั้ง Dev และ Production ที่ deploy** ตามหลักฐาน live ใน Gate 3 (`DECISIONS.md`) — ให้ตรวจเป้าหมายจริงก่อนรัน migration ทุกครั้ง (ห้ามใช้เอกสารเป็นตัวตัดสินความเป็น production)
 
 Related: [SHARED_DB_DATA_PRESERVATION_PLAN.md](./SHARED_DB_DATA_PRESERVATION_PLAN.md) §4.4 (role/ownership),
 §2.6.3 (failed migrations), [HANDOFF.md](./HANDOFF.md) §13.

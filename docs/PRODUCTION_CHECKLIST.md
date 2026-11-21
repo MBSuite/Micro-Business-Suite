@@ -8,7 +8,7 @@
 - **Gate 2 (2FA บน Dev): ผ่าน** — 12/13 ขั้นตอน + design note เรื่อง pendingToken (ดู entry Gate 2 ใน `docs/DECISIONS.md`)
 - **Gate 3 (Production): ผ่าน** — ตรวจ environment จากระบบจริงตามคำสั่งเจ้าของ
   ("ตรวจสอบจาก CODE เท่านั้น") พบว่า production app กับ `.env.local` ใช้ฐานข้อมูล Neon
-  `ep-delicate-base-b31rx7ol` เดียวกัน และระบบไม่มี Supabase จริง; migration ทั้งสามไฟล์
+  `ep-delicate-base-b31rx7ol` เดียวกัน; migration ทั้งสามไฟล์
   apply อยู่แล้ว (verify read-only) · deploy ผ่าน `vercel --prod` · smoke test ผ่านครบ
 - **สิ่งที่ยังค้าง:** โค้ดชุดนี้ยังไม่ถูก commit/push ขึ้น git `main` (deploy ผ่าน CLI จาก
   working tree) — รออนุมัติเจ้าของ; แนะนำแยกฐานข้อมูล Dev/Production ในอนาคต
@@ -132,7 +132,7 @@ production acceptance ของงานสมัคร/ลบสมาชิก
 - Rate limiter in-memory (single-instance only)
 - CSP ยังมี unsafe-inline (Next.js ต้องการ)
 - Historical credentials in git history (ควร rotate ถ้าเคย live)
-- เอกสารระบุ Neon = Dev, Supabase = Production; หลักฐาน live ใน Gate 3 (`DECISIONS.md`) พบ Production ที่ deploy ใช้ Neon — ต้องตรวจ live และขออนุมัติก่อน migration/deploy ทุกครั้ง
+- หลักฐาน live ใน Gate 3 (`DECISIONS.md`) พบ Production ที่ deploy ใช้ Neon — ต้องตรวจ live และขออนุมัติก่อน migration/deploy ทุกครั้ง
 
 **สถานะ Dev gate: ยังไม่ผ่าน** — ต้องยืนยัน signup และ delete บนฐาน Dev ก่อน
 เริ่ม 2FA; Production release ยังถูกกั้นจนกว่า 2FA จะผ่านและได้รับอนุมัติ
