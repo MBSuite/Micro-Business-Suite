@@ -12,6 +12,12 @@
 - Impacted files/modules:
 - Rollback plan:
 
+### [2026-11-22] `audit@mbsuite.dev` is reserved for owner + OpenCode testing
+
+- Context: the owner clarified that the friend who will use the apps has separate accounts already; `audit@mbsuite.dev` must remain a dedicated test identity for the owner and OpenCode.
+- Decision: do not hand this account (or its `.env` credentials) to other users, and do not repurpose it as a normal customer/shop account. Keep using it only for smoke tests and admin-panel verification; its production role stays `admin` (see the owner-approved role-change entry below).
+- Impact: no deployment or DB change. Future audit/smoke scripts may continue to use `AUDIT_USERNAME`/`AUDIT_PASSWORD` from the Core and Admin `.env` files without exposing the values.
+
 ### [2026-11-22] Owner-approved production migration: tenant-scoped bridge sync idempotency
 
 - Context: `migrations/add_bridge_sync_tenant_scope.sql` was the last migration deliberately held back during the earlier incident because it drops a global UNIQUE constraint. The owner explicitly approved it on 2026-11-22 ("อนุมัติ").
