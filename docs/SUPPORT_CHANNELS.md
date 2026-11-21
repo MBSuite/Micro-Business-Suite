@@ -95,7 +95,7 @@ Migration: `migrations/add_support_tables.sql` (idempotent, อยู่ใน `
 - `postback` → ตอบรับคำขอ
 - ถ้า reply token หมดอายุ/ผิด → log warning แต่ยังเก็บข้อความและแจ้ง Discord (ไม่ทำให้ webhook fail)
 - ตอบกลับจากทีมงานได้ผ่าน API (push) พร้อมบันทึกสถานะการส่ง
-- **ยังไม่มีหน้า UI** — ส่งต่อ Kiro ใน `AI-HANDOFF/requests/REQ-0003-support-inbox-ui.md`
+- หน้า UI `/admin/support` เสร็จสมบูรณ์แล้ว (ดูสถานะสุดท้ายด้านล่าง)
 
 ## Security
 
@@ -180,7 +180,7 @@ curl -i -X POST http://localhost:3000/api/support/line/webhook \
 ## สถานะสุดท้าย (2026-11-12 — ปิดงานระบบ support เรียบร้อยแล้ว)
 
 - LINE webhook: URL `https://micro-business-suite.vercel.app/api/support/line/webhook` ตั้งแล้ว + **Verify ผ่านแล้ว** + ตอบ 200 (empty-events ≈1.1s, message-event ≈5.0s) → signature gate + storage + Discord notify ทำงานร่วมกัน
-- `/admin/support` inbox UI: เสร็จสมบูรณ์ (`app/admin/support/page.tsx`, 468 บรรทัด) ถูก commit + รวมกับ backend (`REQ-0003`, status `completed-by-kiro`)
+- `/admin/support` inbox UI: เสร็จสมบูรณ์ (`app/admin/support/page.tsx`, 468 บรรทัด) ถูก commit + รวมกับ backend (เสร็จโดย Kiro)
 - Production: migration + env vars (Core/6 modules) + deploy + smoke test (401/307/200) เรียบร้อย
 - Module Discord env: `DISCORD_WEBHOOK_URL` เพิ่มเข้า Vercel (production+preview) ของทุก module แล้ว deploy module ทั้งหมด (Retail/Service/Rental/Hotel/FNB/Pharmacy) → deploy เรียบร้อย (2026-11-12)
 - LINE ทดสอบจริง (2026-11-12): user ส่งข้อความ "ทดสอบ" → event `01M77KX3GGKE3F8T3EZZHA67RZ` (message/completed) → store ใน `support_messages` + thread + Discord notify ✅

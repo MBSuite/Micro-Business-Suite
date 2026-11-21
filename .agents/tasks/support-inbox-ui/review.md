@@ -1,4 +1,4 @@
-# Review: Support Inbox UI Implementation (REQ-0003)
+# Review: Support Inbox UI Implementation
 
 **Commit:** 4cbf3b0 — feat: implement Support Inbox UI for /admin/support
 **Reviewer:** Kiro
@@ -216,7 +216,7 @@ Implementation of `/admin/support` with inbox list and thread detail screens. Al
    - Proper error messaging and loading states
 
 2. **API Adherence:**
-   - All API calls match the contract from REQ-0003
+   - All API calls match the documented backend contract
    - Proper HTTP methods (GET, POST, PATCH) and status codes
    - Error handling respects 400, 403, 404, 500 responses
 

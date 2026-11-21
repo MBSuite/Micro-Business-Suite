@@ -4,8 +4,8 @@
 
 ## สถานะ Release gates — ผ่านครบทั้ง 3 gates (2026-11-11)
 
-- **Gate 1 (Dev signup/delete acceptance): ผ่าน** — หลักฐานใน `AUDIT.md`
-- **Gate 2 (2FA บน Dev): ผ่าน** — 12/13 ขั้นตอน + design note เรื่อง pendingToken (ดู `AUDIT.md`)
+- **Gate 1 (Dev signup/delete acceptance): ผ่าน** — หลักฐานใน entry Gate 2 ของ `docs/DECISIONS.md` (ระบุว่ Gate 1 ผ่านเมื่อ 2026-11-11)
+- **Gate 2 (2FA บน Dev): ผ่าน** — 12/13 ขั้นตอน + design note เรื่อง pendingToken (ดู entry Gate 2 ใน `docs/DECISIONS.md`)
 - **Gate 3 (Production): ผ่าน** — ตรวจ environment จากระบบจริงตามคำสั่งเจ้าของ
   ("ตรวจสอบจาก CODE เท่านั้น") พบว่า production app กับ `.env.local` ใช้ฐานข้อมูล Neon
   `ep-delicate-base-b31rx7ol` เดียวกัน และระบบไม่มี Supabase จริง; migration ทั้งสามไฟล์

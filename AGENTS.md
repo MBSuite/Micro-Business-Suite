@@ -31,11 +31,10 @@ Use these as test identities without asking the owner again unless the records a
 
 ## AI-to-AI handoff
 
-- Follow the bidirectional English communication protocol in [AI-HANDOFF.md](./AI-HANDOFF.md).
-- Either Kiro or OpenCode may create and assign a request to the other. Kiro owns visible UI; OpenCode owns all backend/system logic.
-- Use `AI-HANDOFF/requests/REQ-<id>.md`, set `ready-for-<owner>`, and record acceptance criteria, outcome, and verification. Do not assume one fixed sender/receiver direction.
-- Never let Kiro modify backend/system code or OpenCode implement presentation/UI. Coordinate shared-file ownership before edits; no concurrent edits to the same file.
-- For backend-to-UI handoff, OpenCode must document the contract and set `ready-for-kiro`; for UI-to-backend requests, Kiro must document the user need and set `ready-for-opencode`.
+- Kiro owns visible UI; OpenCode owns all backend/system logic. Never let Kiro modify backend/system code or OpenCode implement presentation/UI.
+- Coordinate shared-file ownership before edits; no concurrent edits to the same file. Do not assume one fixed sender/receiver direction.
+- Record handoffs, contracts, acceptance criteria, outcome and verification in `docs/DECISIONS.md` and task artifacts under `.agents/tasks/`. Do not create request files outside these locations.
+- For backend-to-UI work, document the contract before UI implementation starts; for UI-to-backend needs, document the user need and the required API/schema change.
 
 ## กฎการบันทึกรายงาน (Report Destination — ตรงข้อเท็จจริง)
 

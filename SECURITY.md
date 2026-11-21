@@ -18,7 +18,7 @@ responsibly. **Do not** open a public GitHub issue for security-sensitive bugs.
 
 ## Security Controls and Limitations
 
-These are implementation requirements and observed controls, not a guarantee that every route or query is already compliant. See [AUDIT.md](./AUDIT.md) for known findings and test limitations.
+These are implementation requirements and observed controls, not a guarantee that every route or query is already compliant. See [docs/AUDIT.md](./docs/AUDIT.md) for known findings and test limitations.
 
 - Tenant-owned data must be queried and changed using the authenticated user's company context. Do not assume every existing query has been verified; tenant isolation remains an audit concern.
 - Authentication uses a custom `jose` JWT in the `session-token` cookie (HS256, one-day expiry). The cookie is `httpOnly`, `sameSite=lax`, and `secure` in production.

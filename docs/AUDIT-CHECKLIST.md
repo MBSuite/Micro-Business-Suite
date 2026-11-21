@@ -5,8 +5,8 @@
 > Do not use this historical report to identify the current Production database.
 
 **วันที่ตรวจซ้ำ/แก้ไข:** 2026-10-23
-**วิธีตรวจ:** อ่านไฟล์จริงใน repository + `git diff` (ไม่เชื่อรายงาน `AUDIT.md` เพียงอย่างเดียว) แล้วรัน typecheck/test
-**ขอบเขต:** AUDIT.md Findings AUD-01 ถึง AUD-04
+**วิธีตรวจ:** อ่านไฟล์จริงใน repository + `git diff` (ไม่เชื่อรายงาน `docs/AUDIT.md` เพียงอย่างเดียว) แล้วรัน typecheck/test
+**ขอบเขต:** `docs/AUDIT.md` Findings AUD-01 ถึง AUD-04
 
 ---
 
