@@ -12,6 +12,26 @@
 - Impacted files/modules:
 - Rollback plan:
 
+### [2026-11-22] Owner-approved production migrations: Core `/settings`, Service and Retail dashboards
+
+- Context: the read-only audit above found three production 500s caused by schema drift (code deployed, matching migrations never applied): Core `company_settings.google_drive_account_email` missing (digest `2725032858`), Service `mbs_service_bookings.created_by_id` missing (P2022, digest `2474130159`), Retail `mbs_retail_stock_movements` missing (P2021, digest `4102016927`). The owner approved applying the Core migration, then both module migrations ("ทั้งสองตัว after backup"), and chose the temporary-role fallback path after Vercel CLI refused to expose `DIRECT_URL` secrets (`[SENSITIVE]` placeholders).
+- Decision / procedure (runbook `docs/MODULE_MIGRATION_RUNBOOK.md` §3, never bypassed):
+  1. Fresh `pg_dump -Fc` backup before each write: `/tmp/opencode/backup-mbs-prod-20261121-182238.dump` (before Core) and `/tmp/opencode/backup-mbs-prod-module-20261121-185234.dump` (521,546 bytes, 1405 TOC entries, before the two module migrations).
+  2. Core: applied the additive `migrations/add_google_drive_account_email.sql` as `ALTER TABLE ... ADD COLUMN IF NOT EXISTS google_drive_account_email VARCHAR(320)`; 7 `company_settings` rows untouched.
+  3. Granted `SET` temporarily to the database owner for `mbs_service_migrator` and `mbs_retail_migrator` (`GRANT ... WITH SET TRUE, INHERIT FALSE`), leaving the original `ADMIN` memberships intact.
+  4. Applied each `migration.sql` in one `BEGIN ... SET LOCAL ROLE mbs_<module>_migrator ... COMMIT` session with `ON_ERROR_STOP=1`, then recorded each ledger row only after success with `prisma migrate resolve --applied` using the owner direct URL.
+  5. Re-granted DML to `mbs_<module>_app` on all module tables/sequences (runbook §5), so the new Retail stock table is usable by the runtime role.
+  6. Immediately `REVOKE SET OPTION FOR` both roles from the owner. Verified `SET ROLE mbs_retail_migrator` now answers `permission denied`, `set_option=f` for both, original `admin_option=t` rows unchanged.
+- Verification (read-only checks plus authenticated HTTP smoke tests):
+  - Core `/settings` returned 500 before → **200** after; `/`, `/invoices`, `/inventory`, `/contacts` remain 200.
+  - Service: 6 new columns on categories/products/bookings/contracts; `_prisma_migrations` has `mbs_service_add_record_ownership` applied, not rolled back; `/staff/dashboard` **200** for all three `.env` credential sets.
+  - Retail: `mbs_retail_stock_movements` exists with 5 enum labels, SKU/barcode/unit/cost/track_stock/min_stock columns present; destructive DDL (drop `mbs_retail_tables`, drop `table_id`/`source`/`customer_note`/`status` columns, enum rewrites) completed inside the single transaction; ledger has `mbs_retail_retail_pos_and_stock` applied, not rolled back; `/staff/dashboard` **200** with `EXAMPLE_*` credentials.
+  - Table ownership unchanged: 9 Service tables owned by `mbs_service_migrator`, 11 Retail tables by `mbs_retail_migrator`; runtime app roles keep `SELECT/INSERT/UPDATE/DELETE` on their tables including the new stock ledger.
+  - Vercel CLI logged out again after use; `vercel whoami` → `Logged out.` and the CLI auth file was removed. Credential backup kept at `/tmp/opencode/vercel-auth-backup-20261122-final.json` (mode 600).
+- Alternatives considered: pulling the per-module `DIRECT_URL` from Vercel (blocked: CLI masks secret values) or an owner-written migrator URL file (contained only placeholders). The fallback role hand-off avoided storing any production migrator password.
+- Rollback plan: restore the corresponding `pg_dump` with `pg_restore`, or re-run `REVOKE`/`GRANT` statements above; the Retail migration is destructive, so a restore would be required to recover dropped legacy structures. No rollback was needed.
+- Still pending: `migrations/add_bridge_sync_tenant_scope.sql` (drops a constraint) remains unapproved and was NOT applied.
+
 ### [2026-11-22] Read-only production login audit after the 2026-11-21 deploy
 
 - Context: after the owner pushed and Vercel finished deploying all commits, the owner asked to verify that the remaining production sites can still log in, using credentials stored in each repo's `.env`. All Vercel projects in this account are production, so this round was read-only: no DB, env, deployment or code change was made.
