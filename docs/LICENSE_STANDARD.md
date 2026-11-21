@@ -62,7 +62,7 @@ MBS.<base64url(payload)>.<base64url(HMAC-SHA256(payloadB64, LICENSE_SALT))>
 | `STANDARD` | 3 | 500 | **default สำหรับสมัครตรงทุก module** |
 | `PROFESSIONAL` | 5 | 2000 | |
 | `ENTERPRISE` | 20 | 10000 | |
-| `AUDIT` | 5 | 2000 | features = PROFESSIONAL + `audit_mode`; subscription เสมอ; `is_audit=true` |
+| `AUDIT` | 5 | 2000 | features = PROFESSIONAL + `audit_mode`; subscription เสมอ; `is_audit=true`; **ห้ามได้** `multi_company`/`api_access`/`custom_branding` (สงวน ENTERPRISE) |
 
 Source ของ matrix: `Micro-Business-Suite/lib/license-packages.ts` — แก้ที่เดียว ทุก module ได้ผลเหมือนกัน
 
@@ -111,3 +111,26 @@ grep -rln "createLicenseKey\|verifyLicenseKey\|LICENSE_PACKAGES" \
 ```
 
 ผลที่คาด: บรรทัดแรกเจอ pointer ในทุก repo; บรรทัดที่สอง **ไม่มีผลลัพธ์** (ยกเว้น Core)
+
+---
+
+## 8. ผลตรวจ live 2026-11-21 (ข้อเท็จจริงที่ต้องยึด)
+
+### 8.1 Production DB = **Neon** `ep-delicate-base-b31rx7ol` (ap-southeast-1)
+
+ไม่ใช่ Supabase — ตรวจจาก `.env.local` (DATABASE_URL/POSTGRES_URL/UNPOOLED/NEON_DATA_API ชี้ neon.tech), `lib/db.ts`, `next.config.ts` CSP, `docs/DECISIONS.md:55-56` (Vercel prod มี Neon env vars และ zero Supabase), `docs/PRODUCTION_MIGRATION_RESULTS.md`
+เอกสารเก่าที่บอก "Neon=Dev, Supabase=Production" **ขัดกับ live evidence แล้ว**
+→ ยังต้องตรวจซ้ำก่อนรัน migration ทุกครั้งตาม runbook; AI ห้าม login Vercel ให้พี่ฆังตรวจ Dashboard เอง
+
+### 8.2 🚨 `PRODUCT_MODE` — จุดบล็อกที่ต้องตรวจก่อน implement
+
+`.env.local` = `perpetual` แต่ `lib/license.ts::verifyLicenseKey()` ปฏิเสธ subscription key ทันทีเมื่อ `PRODUCT_MODE=perpetual`
+ถ้า Vercel production เป็น `perpetual` → **subscription license ที่ออกให้ลูกค้าสมัครตรงจะ verify ไม่ผ่าน** ทำให้เป้าหมายหลักของมาตรฐานนี้ล้มเหลว
+→ **MISSING:** ให้พี่ฆังตรวจค่า `PRODUCT_MODE` บน Vercel แล้วตัดสินก่อน implement (เปลี่ยนเป็น subscription หรือแก้กฎ verify) ห้าม AI เดาหรือเปลี่ยนเอง
+
+### 8.3 `audit_mode` — feature เดียวพอ แต่ต้องเลือกให้ชัดว่าเป็น gate หรือ label
+
+- `KNOWN_FEATURES` derive จาก `LICENSE_PACKAGES` → ได้ `audit_mode` อัตโนมัติ
+- `PROTECTED_FEATURES` (`lib/license-check.ts`) เป็น map hardcode แยก → ต้องเพิ่มเองถ้าจะใช้ `withLicenseCheck("AUDIT_MODE")`
+- ไม่เพิ่ม feature ชื่ออื่นที่ไม่มีโค้ดรองรับ (กัน capability ปลอม)
+- รายละเอียด: `../Micro-Admin-MBSuite/micro-admin-mbsuite/docs/PRD-user-license-management.md` §15
